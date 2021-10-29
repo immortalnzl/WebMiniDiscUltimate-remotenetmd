@@ -89,10 +89,8 @@ export class NetMDUSBService implements NetMDService {
 
     private async writeRawTitles(titleObject: { newRawTitle: string; newRawFullWidthTitle: string } | null) {
         if (titleObject === null) return;
-        await this.netmdInterface!.cacheTOC();
         await this.netmdInterface!.setDiscTitle(sanitizeHalfWidthTitle(titleObject.newRawTitle));
         await this.netmdInterface!.setDiscTitle(sanitizeFullWidthTitle(titleObject.newRawFullWidthTitle), true);
-        await this.netmdInterface!.syncTOC();
         this.dropCachedContentList();
     }
 
@@ -163,12 +161,10 @@ export class NetMDUSBService implements NetMDService {
     @asyncMutex
     async renameTrack(index: number, title: string, fullWidthTitle?: string) {
         title = sanitizeHalfWidthTitle(title);
-        await this.netmdInterface!.cacheTOC();
         await this.netmdInterface!.setTrackTitle(index, title);
         if (fullWidthTitle !== undefined) {
             await this.netmdInterface!.setTrackTitle(index, sanitizeFullWidthTitle(fullWidthTitle), true);
         }
-        await this.netmdInterface!.syncTOC();
         this.dropCachedContentList();
     }
 

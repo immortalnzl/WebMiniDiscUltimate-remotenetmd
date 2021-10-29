@@ -10,6 +10,7 @@ export const W95TopMenu = (props: {
     handleRenameDisc: () => void;
     handleExit: () => void;
     handleShowAbout: () => void;
+    handleShowChangelog: () => void;
     handleVintageMode: () => void;
 }) => {
     const items = [];
@@ -44,6 +45,11 @@ export const W95TopMenu = (props: {
         );
         items.push(<Divider key="d2" />);
     }
+    items.push(
+        <ListItem key="changelog" onClick={props.handleShowChangelog}>
+            Changelog...
+        </ListItem>
+    );
     items.push(
         <ListItem key="about" onClick={props.handleShowAbout}>
             About...

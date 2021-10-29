@@ -1,8 +1,19 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { belowDesktop, useShallowEqualSelector } from '../utils';
+import {
+    belowDesktop,
+    useShallowEqualSelector,
+    getMetadataFromFile,
+    sanitizeFullWidthTitle,
+    sanitizeHalfWidthTitle,
+    removeExtension,
+    getAvailableCharsForTitle,
+    secondsToNormal,
+    getCellsForTitle,
+} from '../utils';
 
-import { actions as convertDialogActions } from '../redux/convert-dialog-feature';
+import { actions as convertDialogActions, TitleFormatType } from '../redux/convert-dialog-feature';
+import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
 import { convertAndUpload } from '../redux/actions';
 
 import Dialog from '@material-ui/core/Dialog';
@@ -26,6 +37,7 @@ import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import ExpandLessIcon from '@material-ui/icons/ExpandLess';
 import AddIcon from '@material-ui/icons/Add';
 import RemoveIcon from '@material-ui/icons/Remove';
+import TitleIcon from '@material-ui/icons/Title';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
@@ -37,6 +49,8 @@ import Radio from '@material-ui/core/Radio';
 import { useDropzone } from 'react-dropzone';
 import Backdrop from '@material-ui/core/Backdrop';
 import { W95ConvertDialog } from './win95/convert-dialog';
+import { batchActions } from 'redux-batched-actions';
+import { Disc, Track } from 'netmd-js';
 
 const Transition = React.forwardRef(function Transition(
     props: TransitionProps & { children?: React.ReactElement<any, any> },
@@ -111,18 +125,113 @@ const useStyles = makeStyles(theme => ({
         zIndex: theme.zIndex.drawer + 1,
         color: '#fff',
     },
+    nameNotFit: {
+        color: theme.palette.warning.main,
+    },
+    durationNotFit: {
+        color: theme.palette.error.main,
+    },
 }));
 
 export const ConvertDialog = (props: { files: File[] }) => {
     const dispatch = useDispatch();
     const classes = useStyles();
 
-    let { visible, format, titleFormat } = useShallowEqualSelector(state => state.convertDialog);
+    let { visible, format, titleFormat, titles } = useShallowEqualSelector(state => state.convertDialog);
+    let { fullWidthSupport } = useShallowEqualSelector(state => state.appState);
+    let { disc } = useShallowEqualSelector(state => state.main);
 
-    // Track reodering
-    const [files, setFiles] = useState(props.files);
+    type FileWithMetadata = {
+        file: File;
+        title: string;
+        album: string;
+        artist: string;
+        duration: number;
+    };
+    const [files, setFiles] = useState<FileWithMetadata[]>([]);
     const [selectedTrackIndex, setSelectedTrack] = useState(-1);
+    const [availableCharacters, setAvailableCharacters] = useState(0);
+    const [beforeConversionAvailableCharacters, setBeforeConversionAvailableCharacters] = useState(0);
+    const [beforeConversionAvailableSeconds, setBeforeConversionAvailableSeconds] = useState(0);
+    const [availableSeconds, setAvailableSeconds] = useState(0);
+    const [loadingMetadata, setLoadingMetadata] = useState(true);
 
+    const loadMetadataFromFiles = async (files: File[]): Promise<FileWithMetadata[]> => {
+        setLoadingMetadata(true);
+        let titledFiles = [];
+        for (let file of files) {
+            let metadata = await getMetadataFromFile(file);
+            titledFiles.push({
+                file,
+                ...metadata,
+            });
+        }
+        setLoadingMetadata(false);
+        return titledFiles;
+    };
+
+    const refreshTitledFiles = useCallback(
+        (files: FileWithMetadata[], format: TitleFormatType) => {
+            dispatch(
+                convertDialogActions.setTitles(
+                    files.map(file => {
+                        let rawTitle = '';
+                        switch (titleFormat) {
+                            case 'title': {
+                                rawTitle = file.title;
+                                break;
+                            }
+                            case 'artist-title': {
+                                rawTitle = `${file.artist} - ${file.title}`;
+                                break;
+                            }
+                            case 'title-artist': {
+                                rawTitle = `${file.title} - ${file.artist}`;
+                                break;
+                            }
+                            case 'album-title': {
+                                rawTitle = `${file.album} - ${file.title}`;
+                                break;
+                            }
+                            case 'artist-album-title': {
+                                rawTitle = `${file.artist} - ${file.album} - ${file.title}`;
+                                break;
+                            }
+                            case 'filename': {
+                                rawTitle = removeExtension(file.file.name);
+                                break;
+                            }
+                        }
+                        return {
+                            title: sanitizeHalfWidthTitle(rawTitle),
+                            fullWidthTitle: fullWidthSupport ? sanitizeFullWidthTitle(rawTitle) : '',
+                            duration: file.duration,
+                        };
+                    })
+                )
+            );
+        },
+        [fullWidthSupport, titleFormat, dispatch]
+    );
+
+    const renameTrackManually = useCallback(
+        index => {
+            let track = titles[index];
+            dispatch(
+                batchActions([
+                    renameDialogActions.setVisible(true),
+                    renameDialogActions.setGroupIndex(null),
+                    renameDialogActions.setCurrentName(track.title),
+                    renameDialogActions.setCurrentFullWidthName(track.fullWidthTitle),
+                    renameDialogActions.setIndex(index),
+                    renameDialogActions.setOfConvert(true),
+                ])
+            );
+        },
+        [titles, dispatch]
+    );
+
+    // Track reordering
     const moveFile = useCallback(
         (offset: number) => {
             const targetIndex = selectedTrackIndex + offset;
@@ -174,8 +283,13 @@ export const ConvertDialog = (props: { files: File[] }) => {
 
     const handleConvert = useCallback(() => {
         handleClose();
-        dispatch(convertAndUpload(files, format, titleFormat));
-    }, [dispatch, files, format, titleFormat, handleClose]);
+        dispatch(
+            convertAndUpload(
+                titles.map((n, i) => ({ ...n, file: files[i].file })),
+                format
+            )
+        );
+    }, [dispatch, titles, format, handleClose, files]);
 
     const [tracksOrderVisible, setTracksOrderVisible] = useState(false);
     const handleToggleTracksOrder = useCallback(() => {
@@ -185,10 +299,53 @@ export const ConvertDialog = (props: { files: File[] }) => {
     // Dialog init on new files
     useEffect(() => {
         const newFiles = Array.from(props.files);
-        setFiles(newFiles);
+        setFiles(newFiles.map(n => ({ file: n, artist: '', album: '', title: '', duration: 0 }))); // If this line isn't present, the dialog doesn't show up
+        loadMetadataFromFiles(newFiles)
+            .then(withMetadata => {
+                setFiles(withMetadata);
+            })
+            .catch(console.error);
         setSelectedTrack(-1);
         setTracksOrderVisible(false);
-    }, [props.files, setSelectedTrack, setTracksOrderVisible]);
+        setAvailableCharacters(255);
+        setAvailableSeconds(1);
+        setBeforeConversionAvailableCharacters(1);
+        setBeforeConversionAvailableSeconds(1);
+    }, [props.files]);
+
+    useEffect(() => {
+        if (!disc) return;
+        let testedDisc = JSON.parse(JSON.stringify(disc)) as Disc;
+        let ungrouped = testedDisc.groups.find(n => n.title === null);
+        if (!ungrouped) {
+            ungrouped = {
+                title: null,
+                fullWidthTitle: null,
+                index: -1,
+                tracks: [],
+            };
+            testedDisc.groups.push(ungrouped);
+        }
+        for (let track of titles) {
+            ungrouped.tracks.push({
+                title: track.title,
+                fullWidthTitle: track.fullWidthTitle,
+            } as Track);
+        }
+        setAvailableCharacters(getAvailableCharsForTitle(testedDisc));
+        setAvailableSeconds(disc.left / 512 - titles.reduce((a, b) => a + b.duration, 0));
+        setBeforeConversionAvailableSeconds(disc.left / 512);
+        setBeforeConversionAvailableCharacters(getAvailableCharsForTitle(disc));
+    }, [disc, setAvailableCharacters, titles]);
+
+    // Reload titles when files changed
+    useEffect(() => {
+        refreshTitledFiles(files, titleFormat);
+    }, [refreshTitledFiles, files, titleFormat]);
+
+    const handleRenameSelectedTrack = useCallback(() => {
+        renameTrackManually(selectedTrackIndex);
+    }, [selectedTrackIndex, renameTrackManually]);
 
     // scroll selected track into view
     const selectedTrackRef = useRef<HTMLDivElement | null>(null);
@@ -197,25 +354,54 @@ export const ConvertDialog = (props: { files: File[] }) => {
     }, [selectedTrackRef, selectedTrackIndex]);
 
     const renderTracks = useCallback(() => {
-        return files.map((file, i) => {
+        let currentSeconds = beforeConversionAvailableSeconds;
+        let currentTextLeft = beforeConversionAvailableCharacters;
+        return titles.map((file, i) => {
             const isSelected = selectedTrackIndex === i;
             const ref = isSelected ? selectedTrackRef : null;
+            currentSeconds -= file.duration;
+            currentTextLeft -= getCellsForTitle(file as Track) * 7;
             return (
-                <ListItem key={`${i}`} disableGutters={true} onClick={() => setSelectedTrack(i)} ref={ref} button>
+                <ListItem
+                    key={`${i}`}
+                    disableGutters={true}
+                    onDoubleClick={() => renameTrackManually(i)}
+                    onClick={() => setSelectedTrack(i)}
+                    ref={ref}
+                    button
+                >
                     <ListItemIcon>
                         <Radio checked={isSelected} value={`track-${i}`} size="small" />
                     </ListItemIcon>
-                    <ListItemText primary={file.name} />
+                    <ListItemText
+                        className={currentSeconds <= 0 ? classes.durationNotFit : currentTextLeft < 0 ? classes.nameNotFit : undefined}
+                        primary={`${file.fullWidthTitle && file.fullWidthTitle + ' / '}${file.title}`}
+                        secondary={secondsToNormal(file.duration)}
+                    />
                 </ListItem>
             );
         });
-    }, [files, selectedTrackIndex, setSelectedTrack, selectedTrackRef]);
+    }, [
+        titles,
+        selectedTrackIndex,
+        setSelectedTrack,
+        selectedTrackRef,
+        renameTrackManually,
+        beforeConversionAvailableCharacters,
+        beforeConversionAvailableSeconds,
+        classes.durationNotFit,
+        classes.nameNotFit,
+    ]);
 
     // Add/Remove tracks
     const onDrop = useCallback(
         (acceptedFiles: File[], rejectedFiles: File[]) => {
-            const newFileArray = files.slice().concat(acceptedFiles);
-            setFiles(newFileArray);
+            loadMetadataFromFiles(acceptedFiles)
+                .then(acceptedTitledFiles => {
+                    const newFileArray = files.slice().concat(acceptedTitledFiles);
+                    setFiles(newFileArray);
+                })
+                .catch(console.error);
         },
         [files, setFiles]
     );
@@ -247,10 +433,15 @@ export const ConvertDialog = (props: { files: File[] }) => {
             format,
             titleFormat,
 
-            files,
-            setFiles,
+            titles,
             selectedTrackIndex,
             setSelectedTrack,
+
+            availableCharacters,
+            availableSeconds,
+            loadingMetadata,
+
+            renameTrackManually,
 
             moveFileUp,
             moveFileDown,
@@ -272,6 +463,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
 
             disableRemove,
             handleRemoveSelectedTrack,
+            handleRenameSelectedTrack,
             dialogVisible,
         };
         return <W95ConvertDialog {...p} />;
@@ -323,6 +515,28 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         </FormControl>
                     </div>
                 </div>
+                <div></div>
+                <Typography
+                    component="h3"
+                    className={classes.nameNotFit}
+                    hidden={availableCharacters > 0}
+                    style={{ marginTop: '1em' }}
+                    align="center"
+                >
+                    Warning: You have used up all the available characters. Some titles might get cut off.
+                </Typography>
+                <Typography
+                    component="h3"
+                    className={classes.durationNotFit}
+                    hidden={availableSeconds >= 0}
+                    style={{ marginTop: '1em' }}
+                    align="center"
+                >
+                    Warning: You have used up all the available space on the disc.
+                </Typography>
+                <Typography component="h3" color="error" hidden={!loadingMetadata} style={{ marginTop: '1em' }} align="center">
+                    Reading Metadata...
+                </Typography>
                 <Accordion expanded={tracksOrderVisible} className={classes.tracksOrderAccordion} square={true}>
                     <div></div>
                     <div {...getRootProps()} style={{ outline: 'none' }}>
@@ -332,6 +546,9 @@ export const ConvertDialog = (props: { files: File[] }) => {
                             </IconButton>
                             <IconButton edge="start" aria-label="remove track" onClick={handleRemoveSelectedTrack} disabled={disableRemove}>
                                 <RemoveIcon />
+                            </IconButton>
+                            <IconButton edge="start" aria-label="rename track" onClick={handleRenameSelectedTrack} disabled={disableRemove}>
+                                <TitleIcon />
                             </IconButton>
                             <div className={classes.spacer}></div>
                             <IconButton edge="end" aria-label="move up" onClick={moveFileDown}>
@@ -354,12 +571,16 @@ export const ConvertDialog = (props: { files: File[] }) => {
                 </Accordion>
             </DialogContent>
             <DialogActions>
-                <Button onClick={handleToggleTracksOrder} className={classes.showTracksOrderBtn}>
+                <Button onClick={handleToggleTracksOrder} disabled={loadingMetadata} className={classes.showTracksOrderBtn}>
                     {`${tracksOrderVisible ? 'Hide' : 'Show'} Tracks`}
                 </Button>
                 <div className={classes.spacer}></div>
-                <Button onClick={handleClose}>Cancel</Button>
-                <Button onClick={handleConvert}>Ok</Button>
+                <Button onClick={handleClose} disabled={loadingMetadata}>
+                    Cancel
+                </Button>
+                <Button onClick={handleConvert} disabled={loadingMetadata || availableSeconds < 0}>
+                    Ok
+                </Button>
             </DialogActions>
         </Dialog>
     );

@@ -6,8 +6,9 @@ import { actions as errorDialogAction } from './error-dialog-feature';
 import { actions as recordDialogAction } from './record-dialog-feature';
 import { actions as appStateActions } from './app-feature';
 import { actions as mainActions } from './main-feature';
+import { actions as convertDialogAction } from './convert-dialog-feature';
 import serviceRegistry from '../services/registry';
-import { Wireformat, getTracks } from 'netmd-js';
+import { Wireformat, getTracks, Disc } from 'netmd-js';
 import { AnyAction } from '@reduxjs/toolkit';
 import {
     getAvailableCharsForTitle,
@@ -18,9 +19,9 @@ import {
     getGroupedTracks,
     getHalfWidthTitleLength,
     timeToSeekArgs,
+    TitledFile,
 } from '../utils';
-import * as mm from 'music-metadata-browser';
-import { TitleFormatType, UploadFormat } from './convert-dialog-feature';
+import { UploadFormat } from './convert-dialog-feature';
 import NotificationCompleteIconUrl from '../images/record-complete-notification-icon.png';
 import { assertNumber } from 'netmd-js/dist/utils';
 
@@ -231,6 +232,11 @@ export function listContent() {
         // Issue loading
         dispatch(appStateActions.setLoading(true));
         let disc;
+        let status = await serviceRegistry.netmdService?.getDeviceStatus();
+        while (!status?.discPresent || ['readingTOC', 'noDisc', 'loadingDisc'].includes(status?.state)) {
+            alert('No disc present');
+            status = await serviceRegistry.netmdService?.getDeviceStatus();
+        }
         try {
             disc = await serviceRegistry.netmdService!.listContent();
         } catch (err) {
@@ -390,6 +396,186 @@ export function recordTracks(indexes: number[], deviceId: string) {
     };
 }
 
+export function renameInConvertDialog({ index, newName, newFullWidthName }: { index: number; newName: string; newFullWidthName: string }) {
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        let newTitles = [...getState().convertDialog.titles];
+        newTitles.splice(index, 1, {
+            title: newName,
+            fullWidthTitle: newFullWidthName,
+            duration: newTitles[index].duration,
+        });
+        dispatch(convertDialogAction.setTitles(newTitles));
+    };
+}
+
+export function selfTest() {
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        if (!window.confirm('Warning - This is a destructive self test. THE DISC WILL BE ERASED! Continue?')) return;
+
+        const { netmdService } = serviceRegistry;
+
+        const allTracks = (disc: Disc) => disc.groups.sort((a, b) => a.tracks[0].index - b.tracks[0].index).flatMap(n => n.tracks);
+
+        const compareOrThrow = (a: any, b: any) => {
+            if (a === b) return true;
+            throw new Error(`Compare: ${a} and ${b} is not the same.`);
+        };
+
+        const tests = [
+            {
+                name: 'Reload TOC',
+                func: async () => {
+                    await netmdService!.listContent();
+                    return true;
+                },
+            },
+            {
+                name: 'Rename Disc',
+                func: async () => {
+                    const titleToSet = 'Self-Test Half-Width';
+                    await netmdService!.renameDisc(titleToSet);
+                    return compareOrThrow((await netmdService!.listContent()).title, titleToSet);
+                },
+            },
+            {
+                name: 'Full-Width Rename Disc',
+                func: async () => {
+                    const titleToSet = 'Ｓｅｌｆ－Ｔｅｓｔ\u3000Ｆｕｌｌ－Ｗｉｄｔｈ';
+                    await netmdService!.renameDisc('1', titleToSet);
+                    return compareOrThrow((await netmdService!.listContent()).fullWidthTitle, titleToSet);
+                },
+            },
+            {
+                name: 'Rename Track 1, 2',
+                func: async () => {
+                    await netmdService!.renameTrack(0, '1');
+                    await netmdService!.renameTrack(1, '2');
+                    const content = allTracks(await netmdService!.listContent());
+                    return compareOrThrow(content[0].title, '1') && compareOrThrow(content[1].title, '2');
+                },
+            },
+            {
+                name: 'Full-Width Rename Track 1',
+                func: async () => {
+                    const titleToSet = 'Ｓｅｌｆ－Ｔｅｓｔ\u3000Ｔｒａｃｋ\u3000Ｆｕｌｌ－Ｗｉｄｔｈ';
+                    await netmdService!.renameTrack(1, '2', titleToSet);
+                    return compareOrThrow(allTracks(await netmdService!.listContent())[1].fullWidthTitle, titleToSet);
+                },
+            },
+            {
+                name: 'Move Track 1 to 2',
+                func: async () => {
+                    await netmdService!.moveTrack(0, 1, false);
+                    const content = allTracks(await netmdService!.listContent());
+                    return compareOrThrow(content[0].title, '2') && compareOrThrow(content[1].title, '1');
+                },
+            },
+            {
+                name: 'Play Track 1',
+                func: async () => {
+                    await netmdService!.gotoTrack(0);
+                    await netmdService!.play();
+                    await sleep(1000);
+                    return true;
+                },
+            },
+            {
+                name: 'Next Track',
+                func: async () => {
+                    await netmdService!.next();
+                    await sleep(1000);
+                    return true;
+                },
+            },
+            {
+                name: 'Previous Track',
+                func: async () => {
+                    await netmdService!.prev();
+                    await sleep(1000);
+                    return true;
+                },
+            },
+            {
+                name: 'Go To Track 2',
+                func: async () => {
+                    await netmdService!.gotoTrack(1);
+                    await sleep(1000);
+                    return true;
+                },
+            },
+            {
+                name: 'Pause',
+                func: async () => {
+                    await netmdService!.pause();
+                    await sleep(1000);
+                    return true;
+                },
+            },
+            {
+                name: 'Stop',
+                func: async () => {
+                    await netmdService!.stop();
+                    await sleep(1000);
+                    return true;
+                },
+            },
+            {
+                name: 'Delete Track 1',
+                func: async () => {
+                    const beforeDelete = allTracks(await netmdService!.listContent()).length;
+                    await netmdService!.deleteTracks([0]);
+                    const afterDelete = allTracks(await netmdService!.listContent()).length;
+                    return compareOrThrow(beforeDelete, afterDelete + 1);
+                },
+            },
+            {
+                name: 'Erase Disc',
+                func: async () => {
+                    await netmdService!.wipeDisc();
+                    return compareOrThrow(allTracks(await netmdService!.listContent()).length, 0);
+                },
+            },
+        ];
+
+        const progress = { trackTotal: tests.length, trackDone: 0, trackCurrent: 0, titleCurrent: '' };
+
+        // As this isn't a feature that's going to be used a lot, I decided to just use the recording dialog for it
+        // And not define a new one.
+        dispatch(batchActions([recordDialogAction.setVisible(true), recordDialogAction.setProgress(progress)]));
+
+        for (let i = 0; i < tests.length; i++) {
+            const test = tests[i];
+            progress.trackCurrent = (i / (tests.length - 1)) * 100;
+            progress.trackDone = i;
+            progress.titleCurrent = `Self-Test: ${test.name}`;
+            dispatch(recordDialogAction.setProgress(progress));
+            console.group(`Test: ${test.name}`);
+            let success = false;
+            try {
+                success = await test.func();
+            } catch (ex) {
+                console.log(ex);
+            }
+            if (!success) {
+                console.log('FAIL');
+                console.groupEnd();
+                progress.titleCurrent = `Self-Test: ${test.name} - FAILED`;
+                dispatch(recordDialogAction.setProgress(progress));
+                alert(`Test '${test.name}' has failed. There's more info in the console.`);
+                return;
+            }
+            console.log('PASS');
+            console.groupEnd();
+            progress.titleCurrent = `Self-Test: ${test.name} - PASSED`;
+            dispatch(recordDialogAction.setProgress(progress));
+            await sleep(250); //Just to see what's happening
+        }
+        alert('All tests have passed. The page will now reload');
+        await sleep(1000);
+        window.location.reload();
+        dispatch(recordDialogAction.setVisible(false));
+    };
+}
 export function setNotifyWhenFinished(value: boolean) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         if (Notification.permission !== 'granted') {
@@ -415,42 +601,7 @@ export const WireformatDict: { [k: string]: Wireformat } = {
     LP4: Wireformat.lp4,
 };
 
-async function getTrackNameFromMediaTags(file: File, titleFormat: TitleFormatType) {
-    const fileData = await file.arrayBuffer();
-    const blob = new Blob([new Uint8Array(fileData)]);
-    let metadata = await mm.parseBlob(blob);
-    const title = metadata.common.title ?? 'Unknown Title';
-    const artist = metadata.common.artist ?? 'Unknown Artist';
-    const album = metadata.common.album ?? 'Unknown Album';
-    switch (titleFormat) {
-        case 'title': {
-            return title;
-        }
-        case 'artist-title': {
-            return `${artist} - ${title}`;
-        }
-        case 'title-artist': {
-            return `${title} - ${artist}`;
-        }
-        case 'album-title': {
-            return `${album} - ${title}`;
-        }
-        case 'artist-album-title': {
-            return `${artist} - ${album} - ${title}`;
-        }
-        case 'filename': {
-            let title = file.name;
-            // Remove file extension
-            const extStartIndex = title.lastIndexOf('.');
-            if (extStartIndex > 0) {
-                title = title.substring(0, extStartIndex);
-            }
-            return title;
-        }
-    }
-}
-
-export function convertAndUpload(files: File[], format: UploadFormat, titleFormat: TitleFormatType) {
+export function convertAndUpload(files: TitledFile[], format: UploadFormat) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         const { audioExportService, netmdService } = serviceRegistry;
         const wireformat = WireformatDict[format];
@@ -497,8 +648,8 @@ export function convertAndUpload(files: File[], format: UploadFormat, titleForma
             dispatch(uploadDialogActions.setTrackProgress(trackUpdate));
         };
 
-        let conversionIterator = async function*(files: File[]) {
-            let converted: Promise<{ file: File; data: ArrayBuffer }>[] = [];
+        let conversionIterator = async function*(files: TitledFile[]) {
+            let converted: Promise<{ file: TitledFile; data: ArrayBuffer }>[] = [];
 
             let i = 0;
             function convertNext() {
@@ -511,7 +662,7 @@ export function convertAndUpload(files: File[], format: UploadFormat, titleForma
 
                 let f = files[i];
                 trackUpdate.converting = i;
-                trackUpdate.titleConverting = f.name;
+                trackUpdate.titleConverting = f.title;
                 updateTrack();
                 i++;
 
@@ -519,13 +670,13 @@ export function convertAndUpload(files: File[], format: UploadFormat, titleForma
                     new Promise(async (resolve, reject) => {
                         let data: ArrayBuffer;
                         try {
-                            await audioExportService!.prepare(f);
+                            await audioExportService!.prepare(f.file);
                             data = await audioExportService!.export({ format });
                             convertNext();
                             resolve({ file: f, data: data });
                         } catch (err) {
                             error = err;
-                            errorMessage = `${f.name}: Unsupported or unrecognized format`;
+                            errorMessage = `${f.file.name}: Unsupported or unrecognized format`;
                             reject(err);
                         }
                     })
@@ -555,20 +706,18 @@ export function convertAndUpload(files: File[], format: UploadFormat, titleForma
 
             const { file, data } = item;
 
-            let title = file.name;
-            try {
-                title = await getTrackNameFromMediaTags(file, titleFormat);
-            } catch (err) {
-                console.error(err);
-            }
+            let title = file.title;
 
-            const fixLength = (l: number) => Math.ceil(l / 7) * 7;
+            const fixLength = (l: number) => Math.max(Math.ceil(l / 7) * 7, 7);
             let halfWidthTitle = title.substr(0, Math.min(getHalfWidthTitleLength(title), availableCharacters));
             availableCharacters -= fixLength(getHalfWidthTitleLength(halfWidthTitle));
 
-            let fullWidthTitle = '';
+            let fullWidthTitle = file.fullWidthTitle;
             if (useFullWidth) {
-                fullWidthTitle = title.substr(0, Math.min(title.length * 2, availableCharacters, 210 /* limit is 105 */) / 2);
+                fullWidthTitle = fullWidthTitle.substr(
+                    0,
+                    Math.min(fullWidthTitle.length * 2, availableCharacters, 210 /* limit is 105 */) / 2
+                );
                 availableCharacters -= fixLength(fullWidthTitle.length * 2);
             }
 
@@ -580,7 +729,7 @@ export function convertAndUpload(files: File[], format: UploadFormat, titleForma
                 await netmdService?.upload(halfWidthTitle, fullWidthTitle, data, wireformat, updateProgressCallback);
             } catch (err) {
                 error = err;
-                errorMessage = `${file.name}: Error uploading to device. There might not be enough space left.`;
+                errorMessage = `${file.file.name}: Error uploading to device. There might not be enough space left.`;
                 break;
             }
         }

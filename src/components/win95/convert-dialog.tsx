@@ -7,6 +7,7 @@ import { ThemeContext } from 'styled-components';
 import ArrowUpIconUrl from '../../images/win95/arrowup.png';
 import ArrowDownIconUrl from '../../images/win95/arrowdown.png';
 import DeleteIconUrl from '../../images/win95/delete.png';
+import RenameIconUrl from '../../images/win95/rename.png';
 
 const trackTitleOptions = [
     { value: 'filename', label: 'Filename' },
@@ -27,9 +28,12 @@ export const W95ConvertDialog = (props: {
     visible: boolean;
     format: UploadFormat;
     titleFormat: TitleFormatType;
-    files: File[];
-    setFiles: React.Dispatch<React.SetStateAction<File[]>>;
+    titles: { title: string; fullWidthTitle: string }[];
+    loadingMetadata: boolean;
+    availableCharacters: number;
+    availableSeconds: number;
     selectedTrackIndex: number;
+    renameTrackManually: (index: number) => void;
     setSelectedTrack: React.Dispatch<React.SetStateAction<number>>;
     moveFileUp: () => void;
     moveFileDown: () => void;
@@ -51,22 +55,24 @@ export const W95ConvertDialog = (props: {
     open: () => void;
     disableRemove: boolean;
     handleRemoveSelectedTrack: () => void;
+    handleRenameSelectedTrack: () => void;
     dialogVisible: boolean;
 }) => {
     const themeContext = useContext(ThemeContext);
 
     const renderTracks = useCallback(() => {
-        return props.files.map((file, i) => {
+        return props.titles.map((file, i) => {
             const isSelected = props.selectedTrackIndex === i;
             const ref = isSelected ? props.selectedTrackRef : null;
             return (
                 <CustomTableRow
                     key={`${i}`}
                     onClick={() => props.setSelectedTrack(i)}
+                    onDoubleClick={() => props.renameTrackManually(i)}
                     ref={ref}
                     style={isSelected ? themeContext.selectedTableRow : {}}
                 >
-                    <TableDataCell>{file.name}</TableDataCell>
+                    <TableDataCell>{file.title}</TableDataCell>
                 </CustomTableRow>
             );
         });
@@ -104,6 +110,16 @@ export const W95ConvertDialog = (props: {
                             />
                         </Fieldset>
                     </div>
+                    <p hidden={props.availableCharacters > 0} style={{ marginTop: '1em' }}>
+                        Warning: You have used up all the available characters. Some titles might get cut off.
+                    </p>
+                    <p hidden={props.availableSeconds >= 0} style={{ marginTop: '1em' }}>
+                        Warning: You have used up all the space available on the disc.
+                    </p>
+                    <p hidden={!props.loadingMetadata} style={{ marginTop: '1em' }}>
+                        Reading Metadata...
+                    </p>
+
                     {props.tracksOrderVisible ? (
                         <div {...props.getRootProps()} style={{ width: '100%', marginTop: 16 }}>
                             <Divider style={{ marginTop: 16 }} />
@@ -114,6 +130,10 @@ export const W95ConvertDialog = (props: {
                                 <Button variant="menu" disabled={props.disableRemove} onClick={props.handleRemoveSelectedTrack}>
                                     <img alt="delete" src={DeleteIconUrl} style={{ marginRight: 4 }} />
                                     Remove
+                                </Button>
+                                <Button variant="menu" disabled={props.disableRemove} onClick={props.handleRenameSelectedTrack}>
+                                    <img alt="rename" src={RenameIconUrl} style={{ marginRight: 4 }} />
+                                    Rename
                                 </Button>
                                 <div style={{ flex: '1 1 auto' }}></div>
                                 <Button variant="menu" disabled={props.disableRemove} onClick={props.moveFileDown}>
@@ -133,10 +153,16 @@ export const W95ConvertDialog = (props: {
                     ) : null}
 
                     <DialogFooter>
-                        <Button onClick={props.handleToggleTracksOrder}>{`${props.tracksOrderVisible ? 'Hide' : 'Show'} Tracks`}</Button>
+                        <Button disabled={props.loadingMetadata} onClick={props.handleToggleTracksOrder}>{`${
+                            props.tracksOrderVisible ? 'Hide' : 'Show'
+                        } Tracks`}</Button>
                         <div style={{ flex: '1 1 auto' }}></div>
-                        <FooterButton onClick={props.handleConvert}>OK</FooterButton>
-                        <FooterButton onClick={props.handleClose}>Cancel</FooterButton>
+                        <FooterButton disabled={props.loadingMetadata || props.availableSeconds < 0} onClick={props.handleConvert}>
+                            OK
+                        </FooterButton>
+                        <FooterButton disabled={props.loadingMetadata} onClick={props.handleClose}>
+                            Cancel
+                        </FooterButton>
                     </DialogFooter>
                 </DialogWindowContent>
             </DialogWindow>

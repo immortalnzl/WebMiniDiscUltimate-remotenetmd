@@ -58,6 +58,7 @@ import Checkbox from '@material-ui/core/Checkbox';
 import Button from '@material-ui/core/Button';
 import { W95Main } from './win95/main';
 import { useMemo } from 'react';
+import { ChangelogDialog } from './changelog-dialog';
 
 const useStyles = makeStyles(theme => ({
     add: {
@@ -266,6 +267,7 @@ export const Main = (props: {}) => {
                     renameDialogActions.setCurrentName(track.title),
                     renameDialogActions.setCurrentFullWidthName(track.fullWidthTitle),
                     renameDialogActions.setIndex(track.index),
+                    renameDialogActions.setOfConvert(false),
                 ])
             );
         },
@@ -286,6 +288,7 @@ export const Main = (props: {}) => {
                     renameDialogActions.setCurrentName(group.title ?? ''),
                     renameDialogActions.setCurrentFullWidthName(group.fullWidthTitle ?? ''),
                     renameDialogActions.setIndex(-1),
+                    renameDialogActions.setOfConvert(false),
                 ])
             );
         },
@@ -549,6 +552,7 @@ export const Main = (props: {}) => {
             <RecordDialog />
             <DumpDialog trackIndexes={selected} />
             <AboutDialog />
+            <ChangelogDialog />
             <PanicDialog />
         </React.Fragment>
     );

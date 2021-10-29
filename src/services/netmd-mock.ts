@@ -371,6 +371,9 @@ class NetMDMockService implements NetMDService {
         }
         return [this._status.track, 0, this._status.time.minute, this._status.time.second, this._status.time.frame];
     }
+
+    @asyncMutex
+    async prepareForUpload() {}
 }
 
 export { NetMDMockService };

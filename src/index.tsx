@@ -26,6 +26,15 @@ serviceRegistry.audioExportService = new FFMpegAudioExportService();
 serviceRegistry.mediaRecorderService = new MediaRecorderService();
 serviceRegistry.mediaSessionService = new BrowserMediaSessionService(store);
 
+Object.defineProperty(window, 'wmdVersion', {
+    value: '0.2.4',
+    writable: false,
+});
+
+if (localStorage.getItem('version') !== (window as any).wmdVersion) {
+    store.dispatch(appActions.showChangelogDialog(true));
+}
+
 (function setupEventHandlers() {
     window.addEventListener('beforeunload', ev => {
         let isUploading = store.getState().uploadDialog.visible;

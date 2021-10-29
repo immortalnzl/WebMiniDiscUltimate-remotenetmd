@@ -1,10 +1,13 @@
-import { Disc, formatTimeFromFrames, Encoding, getTracks, Group } from 'netmd-js';
+import { Disc, formatTimeFromFrames, Encoding, getTracks, Group, Track } from 'netmd-js';
 import { useSelector, shallowEqual } from 'react-redux';
 import { RootState } from './redux/store';
 import { Mutex } from 'async-mutex';
 import { Theme } from '@material-ui/core';
 import jconv from 'jconv';
 import { halfWidthToFullWidthRange } from 'netmd-js/dist/utils';
+import * as mm from 'music-metadata-browser';
+
+const fixLength = (len: number) => Math.ceil(len / 7);
 
 export function sleep(ms: number) {
     return new Promise(resolve => {
@@ -22,6 +25,45 @@ export function debounce<T extends Function>(func: T, timeout = 300): T {
     };
     return (debouncedFn as any) as T;
 }
+
+export function removeExtension(filename: string) {
+    const extStartIndex = filename.lastIndexOf('.');
+    if (extStartIndex > 0) {
+        filename = filename.substring(0, extStartIndex);
+    }
+    return filename;
+}
+
+//TEMP: Messing with renaming in convert-dialog
+
+export type TitledFile = {
+    file: File;
+    title: string;
+    fullWidthTitle: string;
+};
+
+export async function getMetadataFromFile(file: File) {
+    try {
+        const fileData = await file.arrayBuffer();
+        const blob = new Blob([new Uint8Array(fileData)]);
+        let metadata = await mm.parseBlob(blob, { duration: true });
+        let duration = metadata.format.duration ?? 0;
+        const title = metadata.common.title ?? removeExtension(file.name); //Fallback to file name if there's no title in the metadata.
+        const artist = metadata.common.artist ?? 'Unknown Artist';
+        const album = metadata.common.album ?? 'Unknown Album';
+        return { title, artist, album, duration };
+    } catch (ex) {
+        console.log(ex);
+        return {
+            title: removeExtension(file.name),
+            artist: 'Unknown Artist',
+            album: 'Unknown Album',
+            duration: 0,
+        };
+    }
+}
+
+//TEMP: END
 
 export async function sleepWithProgressCallback(ms: number, cb: (perc: number) => void) {
     let elapsedSecs = 1;
@@ -62,10 +104,13 @@ export function loadPreference<T>(key: string, defaultValue: T): T {
     }
 }
 
+export function getCellsForTitle(trk: Track) {
+    return Math.max(1, fixLength((trk.fullWidthTitle?.length ?? 0) * 2)) + Math.max(1, fixLength(getHalfWidthTitleLength(trk.title ?? '')));
+}
+
 export function getAvailableCharsForTitle(disc: Disc, includeGroups?: boolean) {
     const cellLimit = 255;
     // see https://www.minidisc.org/md_toc.html
-    const fixLength = (len: number) => Math.ceil(len / 7);
 
     let groups = disc.groups.filter(n => n.title !== null);
 
@@ -85,8 +130,8 @@ export function getAvailableCharsForTitle(disc: Disc, includeGroups?: boolean) {
     usedCells += fixLength(fwTitle.length * 2);
     usedCells += fixLength(getHalfWidthTitleLength(hwTitle));
     for (let trk of getTracks(disc)) {
-        usedCells += fixLength((trk.fullWidthTitle?.length ?? 0) * 2);
-        usedCells += fixLength(getHalfWidthTitleLength(trk.title ?? ''));
+        //Sometimes 'LP: ' is added to track names even if the title is '' (+1 cell)
+        usedCells += getCellsForTitle(trk);
     }
     return Math.max(cellLimit - usedCells, 0) * 7;
 }
@@ -107,6 +152,11 @@ export function timeToSeekArgs(timeInSecs: number): number[] {
     let h = value;
 
     return [h, m, s, 0];
+}
+
+export function secondsToNormal(time: number): string {
+    const [h, m, s] = timeToSeekArgs(time);
+    return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
 export function sanitizeTitle(title: string) {
@@ -185,10 +235,13 @@ export function sanitizeHalfWidthTitle(title: string) {
 
     const newTitle = title
         .split('')
-        .map(n => {
-            if (mappings[n]) return mappings[n];
-            if (n.charCodeAt(0) < 0x7f || allowedHalfWidthKana.includes(n)) return n;
-            return ' ';
+        .map(c => {
+            function check(n: string) {
+                if (mappings[n]) return mappings[n];
+                if (n.charCodeAt(0) < 0x7f || allowedHalfWidthKana.includes(n)) return n;
+                return null;
+            }
+            return check(c) ?? check(c.normalize('NFD').replace(/[\u0300-\u036f]/g, '')) ?? ' ';
         })
         .join('');
     // Check if the amount of characters is the same as the amount of encoded bytes (when accounting for dakuten). Otherwise the disc might end up corrupted
@@ -377,8 +430,6 @@ export function compileDiscTitles(disc: Disc) {
             .reduce((a, b) => a.concat(b), [])
             .filter(n => !!n.fullWidthTitle).length > 0;
 
-    const fixLength = (l: number) => Math.ceil(l / 7) * 7;
-
     let newRawTitle = '',
         newRawFullWidthTitle = '';
     if (disc.title) newRawTitle = `0;${disc.title}//`;
@@ -394,9 +445,9 @@ export function compileDiscTitles(disc: Disc) {
         let newRawTitleAfterGroup = newRawTitle + `${range};${n.title}//`,
             newRawFullWidthTitleAfterGroup = newRawFullWidthTitle + halfWidthToFullWidthRange(range) + `；${n.fullWidthTitle ?? ''}／／`;
 
-        let titlesLengthInTOC = fixLength(getHalfWidthTitleLength(newRawTitleAfterGroup));
+        let titlesLengthInTOC = fixLength(getHalfWidthTitleLength(newRawTitleAfterGroup)) * 7;
 
-        if (useFullWidth) titlesLengthInTOC += fixLength(newRawFullWidthTitleAfterGroup.length * 2);
+        if (useFullWidth) titlesLengthInTOC += fixLength(newRawFullWidthTitleAfterGroup.length * 2) * 7;
 
         if (availableCharactersForTitle - titlesLengthInTOC < 0) break;
 
@@ -404,7 +455,7 @@ export function compileDiscTitles(disc: Disc) {
         newRawFullWidthTitle = newRawFullWidthTitleAfterGroup;
     }
 
-    let titlesLengthInTOC = fixLength(getHalfWidthTitleLength(newRawTitle));
+    let titlesLengthInTOC = fixLength(getHalfWidthTitleLength(newRawTitle)) * 7;
     if (useFullWidth) titlesLengthInTOC += fixLength(newRawFullWidthTitle.length * 2); // If this check fails the titles without the groups already take too much space, don't change anything
     if (availableCharactersForTitle - titlesLengthInTOC < 0) {
         return null;

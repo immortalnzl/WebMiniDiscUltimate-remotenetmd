@@ -13,6 +13,7 @@ export interface AppState {
     darkMode: boolean;
     vintageMode: boolean;
     aboutDialogVisible: boolean;
+    changelogDialogVisible: boolean;
     notifyWhenFinished: boolean;
     hasNotificationSupport: boolean;
     fullWidthSupport: boolean;
@@ -27,6 +28,7 @@ export const buildInitialState = (): AppState => {
         browserSupported: true,
         darkMode: loadPreference('darkMode', false),
         vintageMode: loadPreference('vintageMode', false),
+        changelogDialogVisible: false,
         aboutDialogVisible: false,
         notifyWhenFinished: loadPreference('notifyWhenFinished', false),
         hasNotificationSupport: true,
@@ -73,6 +75,9 @@ export const slice = createSlice({
         },
         showAboutDialog: (state, action: PayloadAction<boolean>) => {
             state.aboutDialogVisible = action.payload;
+        },
+        showChangelogDialog: (state, action: PayloadAction<boolean>) => {
+            state.changelogDialogVisible = action.payload;
         },
         setFullWidthSupport: (state, action: PayloadAction<boolean>) => {
             state.fullWidthSupport = action.payload;

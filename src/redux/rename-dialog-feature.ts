@@ -7,6 +7,7 @@ export interface RenameDialogState {
     fullWidthTitle: string;
     index: number;
     groupIndex: number | null;
+    ofConvert: boolean;
 }
 
 const initialState: RenameDialogState = {
@@ -15,6 +16,7 @@ const initialState: RenameDialogState = {
     fullWidthTitle: '',
     index: -1,
     groupIndex: null,
+    ofConvert: false,
 };
 
 export const slice = createSlice({
@@ -35,6 +37,9 @@ export const slice = createSlice({
         },
         setGroupIndex: (state: RenameDialogState, action: PayloadAction<number | null>) => {
             state.groupIndex = action.payload;
+        },
+        setOfConvert: (state: RenameDialogState, action: PayloadAction<boolean>) => {
+            state.ofConvert = action.payload;
         },
     },
 });

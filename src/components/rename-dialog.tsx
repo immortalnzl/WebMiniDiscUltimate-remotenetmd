@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { useShallowEqualSelector } from '../utils';
 import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
-import { renameTrack, renameDisc, renameGroup } from '../redux/actions';
+import { renameTrack, renameDisc, renameGroup, renameInConvertDialog } from '../redux/actions';
 
 import { makeStyles } from '@material-ui/core/styles';
 import Dialog from '@material-ui/core/Dialog';
@@ -38,6 +38,7 @@ export const RenameDialog = (props: {}) => {
     let renameDialogFullWidthTitle = useShallowEqualSelector(state => state.renameDialog.fullWidthTitle);
     let renameDialogIndex = useShallowEqualSelector(state => state.renameDialog.index);
     let renameDialogGroupIndex = useShallowEqualSelector(state => state.renameDialog.groupIndex);
+    let renameDialogIsOfConvert = useShallowEqualSelector(state => state.renameDialog.ofConvert);
     let allowFullWidth = useShallowEqualSelector(state => state.appState.fullWidthSupport);
 
     const what = renameDialogGroupIndex !== null ? `Group` : renameDialogIndex < 0 ? `Disc` : `Track`;
@@ -47,7 +48,15 @@ export const RenameDialog = (props: {}) => {
     }, [dispatch]);
 
     const handleDoRename = useCallback(() => {
-        if (renameDialogGroupIndex !== null) {
+        if (renameDialogIsOfConvert) {
+            dispatch(
+                renameInConvertDialog({
+                    index: renameDialogIndex,
+                    newName: renameDialogTitle,
+                    newFullWidthName: renameDialogFullWidthTitle,
+                })
+            );
+        } else if (renameDialogGroupIndex !== null) {
             // Just rename the group with this range
             dispatch(
                 renameGroup({
@@ -73,7 +82,15 @@ export const RenameDialog = (props: {}) => {
             );
         }
         handleCancelRename(); // Close the dialog
-    }, [dispatch, handleCancelRename, renameDialogFullWidthTitle, renameDialogGroupIndex, renameDialogIndex, renameDialogTitle]);
+    }, [
+        dispatch,
+        handleCancelRename,
+        renameDialogFullWidthTitle,
+        renameDialogGroupIndex,
+        renameDialogIndex,
+        renameDialogTitle,
+        renameDialogIsOfConvert,
+    ]);
 
     const handleChange = useCallback(
         (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {

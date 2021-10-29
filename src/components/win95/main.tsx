@@ -38,6 +38,7 @@ import { ErrorDialog } from '../error-dialog';
 import { RecordDialog } from '../record-dialog';
 import { DumpDialog } from '../dump-dialog';
 import { PanicDialog } from '../panic-dialog';
+import { ChangelogDialog } from '../changelog-dialog';
 
 const useStyles = makeStyles((theme: any) => ({
     container: {
@@ -224,12 +225,13 @@ export const W95Main = (props: {
             <FloatingButton onClick={props.open} />
 
             <UploadDialog />
-            <RenameDialog />
             <ErrorDialog />
             <ConvertDialog files={props.uploadedFiles} />
+            <RenameDialog />
             <RecordDialog />
             <DumpDialog trackIndexes={props.selected} />
             <AboutDialog />
+            <ChangelogDialog />
             <PanicDialog />
         </>
     );

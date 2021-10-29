@@ -8,7 +8,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import Divider from '@material-ui/core/Divider';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 
-import { wipeDisc, listContent } from '../redux/actions';
+import { wipeDisc, listContent, selfTest } from '../redux/actions';
 import { actions as appActions } from '../redux/app-feature';
 import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
 import { useShallowEqualSelector } from '../utils';
@@ -22,6 +22,7 @@ import RefreshIcon from '@material-ui/icons/Refresh';
 import EditIcon from '@material-ui/icons/Edit';
 import GitHubIcon from '@material-ui/icons/GitHub';
 import DeleteForeverIcon from '@material-ui/icons/DeleteForever';
+import BugReportIcon from '@material-ui/icons/BugReport';
 import ExitToAppIcon from '@material-ui/icons/ExitToApp';
 import InfoIcon from '@material-ui/icons/Info';
 import ToggleOffIcon from '@material-ui/icons/ToggleOff';
@@ -52,13 +53,15 @@ export const TopMenu = function(props: { onClick?: () => void }) {
     const githubLinkRef = React.useRef<null | HTMLAnchorElement>(null);
     const helpLinkRef = React.useRef<null | HTMLAnchorElement>(null);
     const [menuAnchorEl, setMenuAnchorEl] = React.useState<null | HTMLElement>(null);
+    const [showSelfTest, setShowSelfTest] = React.useState(false);
     const menuOpen = Boolean(menuAnchorEl);
 
     const handleMenuOpen = useCallback(
         (event: React.MouseEvent<HTMLElement>) => {
+            setShowSelfTest(event.shiftKey);
             setMenuAnchorEl(event.currentTarget);
         },
-        [setMenuAnchorEl]
+        [setMenuAnchorEl, setShowSelfTest]
     );
 
     const handleDarkMode = useCallback(() => {
@@ -95,10 +98,16 @@ export const TopMenu = function(props: { onClick?: () => void }) {
                 renameDialogActions.setGroupIndex(null),
                 renameDialogActions.setCurrentFullWidthName(fullWidthDiscTitle),
                 renameDialogActions.setIndex(-1),
+                renameDialogActions.setOfConvert(false),
             ])
         );
         handleMenuClose();
     }, [dispatch, handleMenuClose, discTitle, fullWidthDiscTitle]);
+
+    const handleSelfTest = useCallback(() => {
+        handleMenuClose();
+        dispatch(selfTest());
+    }, [dispatch, handleMenuClose]);
 
     const handleExit = useCallback(() => {
         dispatch(appActions.setMainView('WELCOME'));
@@ -107,6 +116,11 @@ export const TopMenu = function(props: { onClick?: () => void }) {
 
     const handleShowAbout = useCallback(() => {
         dispatch(appActions.showAboutDialog(true));
+        handleMenuClose();
+    }, [dispatch, handleMenuClose]);
+
+    const handleShowChangelog = useCallback(() => {
+        dispatch(appActions.showChangelogDialog(true));
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
@@ -206,6 +220,17 @@ export const TopMenu = function(props: { onClick?: () => void }) {
                 <ListItemText>Retro Mode (beta)</ListItemText>
             </MenuItem>
         );
+
+        if (showSelfTest) {
+            menuItems.push(
+                <MenuItem key="test" onClick={handleSelfTest}>
+                    <ListItemIcon className={classes.listItemIcon}>
+                        <BugReportIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Self Test</ListItemText>
+                </MenuItem>
+            );
+        }
     }
     if (mainView === 'MAIN') {
         menuItems.push(<Divider key="feature-divider" />);
@@ -216,6 +241,14 @@ export const TopMenu = function(props: { onClick?: () => void }) {
                 <InfoIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>About</ListItemText>
+        </MenuItem>
+    );
+    menuItems.push(
+        <MenuItem key="changelog" onClick={handleShowChangelog}>
+            <ListItemIcon className={classes.listItemIcon}>
+                <InfoIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Changelog</ListItemText>
         </MenuItem>
     );
     menuItems.push(
@@ -264,6 +297,7 @@ export const TopMenu = function(props: { onClick?: () => void }) {
             handleRenameDisc,
             handleExit,
             handleShowAbout,
+            handleShowChangelog,
             handleVintageMode,
         };
         return <W95TopMenu {...p} />;
