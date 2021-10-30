@@ -233,7 +233,7 @@ export function listContent() {
         dispatch(appStateActions.setLoading(true));
         let disc;
         let status = await serviceRegistry.netmdService?.getDeviceStatus();
-        while (!status?.discPresent || ['readingTOC', 'noDisc', 'loadingDisc'].includes(status?.state)) {
+        while (!status?.discPresent || ['readingTOC', 'noDisc'].includes(status?.state)) {
             alert('No disc present');
             status = await serviceRegistry.netmdService?.getDeviceStatus();
         }
