@@ -333,10 +333,13 @@ export const ConvertDialog = (props: { files: File[] }) => {
             } as Track);
         }
         setAvailableCharacters(getAvailableCharsForTitle(testedDisc));
-        setAvailableSeconds(disc.left / 512 - titles.reduce((a, b) => a + b.duration, 0));
-        setBeforeConversionAvailableSeconds(disc.left / 512);
+        let secondsLeft = (disc.left / 512); 
+        if(format === "LP2") secondsLeft *= 2;
+        else if(format === "LP4") secondsLeft *= 4;
+        setAvailableSeconds(secondsLeft - titles.reduce((a, b) => a + b.duration, 0));
+        setBeforeConversionAvailableSeconds(secondsLeft);
         setBeforeConversionAvailableCharacters(getAvailableCharsForTitle(disc));
-    }, [disc, setAvailableCharacters, titles]);
+    }, [disc, setAvailableCharacters, titles, format]);
 
     // Reload titles when files changed
     useEffect(() => {
