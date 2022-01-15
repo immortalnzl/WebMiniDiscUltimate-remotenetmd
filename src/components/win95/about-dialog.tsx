@@ -11,13 +11,13 @@ export const W95AboutDialog = (props: { visible: boolean; handleClose: () => voi
         <DialogOverlay>
             <DialogWindow>
                 <WindowHeader style={{ display: 'flex', alignItems: 'center' }}>
-                    <span style={{ flex: '1 1 auto' }}>About Web MiniDisc</span>
+                    <span style={{ flex: '1 1 auto' }}>About Web MiniDisc Pro</span>
                     <Button onClick={props.handleClose}>
                         <WindowCloseIcon />
                     </Button>
                 </WindowHeader>
                 <DialogWindowContent>
-                    Web MiniDisc uses
+                    Web MiniDisc Pro uses
                     <ul>
                         <li>
                             <Anchor rel="noopener noreferrer" href="https://www.ffmpeg.org/" target="_blank">

@@ -281,7 +281,7 @@ export const TopMenu = function(props: { onClick?: () => void }) {
             <ListItemText>
                 <Link
                     rel="noopener noreferrer"
-                    href="https://github.com/cybercase/webminidisc"
+                    href="https://github.com/asivery/webminidisc"
                     target="_blank"
                     ref={githubLinkRef}
                     onClick={handleGithubLink}

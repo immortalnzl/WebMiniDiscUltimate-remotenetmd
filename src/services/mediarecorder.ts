@@ -1,6 +1,5 @@
 import { downloadBlob, getPublicPathFor } from '../utils';
 import Recorder from 'recorderjs';
-import { aggressiveSanitizeTitle } from 'netmd-js/dist/utils';
 
 export class MediaRecorderService {
     public recorder: any;

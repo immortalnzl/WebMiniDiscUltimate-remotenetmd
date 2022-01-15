@@ -29,7 +29,7 @@ export const buildInitialState = (): AppState => {
         pairingFailed: false,
         pairingMessage: ``,
         browserSupported: true,
-        darkMode: loadPreference('darkMode', false),
+        darkMode: loadPreference('darkMode', true),
         vintageMode: loadPreference('vintageMode', false),
         changelogDialogVisible: false,
         aboutDialogVisible: false,

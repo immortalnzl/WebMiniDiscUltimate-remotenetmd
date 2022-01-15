@@ -1,8 +1,16 @@
-# Web MiniDisc
+# Web MiniDisc Pro
 
-*Brings NetMD Devices to the Web*
+*Brings NetMD Devices to the Web* - just with more features this time
 
-Live @ [https://stefano.brilli.me/webminidisc/](https://stefano.brilli.me/webminidisc/).</br>
+### Differences between [Web Minidisc](https://github.com/cybercase/webminidisc) and Web Minidisc Pro
+As per the request of the original creator of Web Minidisc, I will implement all my further changes
+in this fork.
+For now the extra features of Web Minidisc Pro are:
+- The ability to connect to NetMD units available on the local network with the help of [Remote NetMD](https://github.com/asivery/remote-netmd-server)
+- Downloading tracks straight from the player via NetMD (only for Sony MZ-RH1 users)
+But there are more features on the way.
+
+Live @ [https://web.minidisc.wiki/](https://web.minidisc.wiki/).</br>
 How it works @ [https://www.youtube.com/watch?v=Frs8qhw0g9Y](https://www.youtube.com/watch?v=Frs8qhw0g9Y).</br>
 Blogpost @ [https://stefano.brilli.me/blog/web-minidisc/](https://stefano.brilli.me/blog/web-minidisc/)
 

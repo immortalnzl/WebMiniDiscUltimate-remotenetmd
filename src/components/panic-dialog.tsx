@@ -49,7 +49,7 @@ export const PanicDialog = (props: {}) => {
                     <ol>
                         <li>Use your browser in incognito mode.</li>
                         <li>Use a blank MiniDisc.</li>
-                        <li>Try to use Web MiniDisc on another computer.</li>
+                        <li>Try to use Web MiniDisc Pro on another computer.</li>
                     </ol>
                     If this does not solve the error, your unit might not be supported yet or you have encountered a bug. The full error is
                     reported in the JS console.
