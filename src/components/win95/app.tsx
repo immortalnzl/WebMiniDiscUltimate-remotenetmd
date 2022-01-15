@@ -14,6 +14,7 @@ import { useDispatch } from 'react-redux';
 
 import CDPlayerIconUrl from '../../images/win95/cdplayer.png';
 import { WindowCloseIcon } from './common';
+import { Capability } from '../../services/netmd';
 
 const GlobalStyles = createGlobalStyle`
 ${styleReset}
@@ -25,7 +26,7 @@ img {
 }
 `;
 
-const useStyles = makeStyles(theme => ({
+const useStyles = (props: { showsList: boolean }) => makeStyles(theme => ({
     desktop: {
         width: '100%',
         height: '100%',
@@ -42,12 +43,12 @@ const useStyles = makeStyles(theme => ({
             width: 600,
             marginLeft: 'auto',
             marginRight: 'auto',
-            height: 600,
+            height: props.showsList ? 600 : 200,
             marginTop: theme.spacing(2),
         },
         [forWideDesktop(theme)]: {
             width: 700,
-            height: 700,
+            height: props.showsList ? 700 : 250,
             marginTop: theme.spacing(2),
         },
     },
@@ -62,9 +63,11 @@ const useStyles = makeStyles(theme => ({
 }));
 
 export const W95App = () => {
-    const classes = useStyles();
-    const dispatch = useDispatch();
     const { mainView, loading } = useShallowEqualSelector(state => state.appState);
+    const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
+    const classes = useStyles({ showsList: mainView === "WELCOME" || deviceCapabilities.includes(Capability.contentList) })();
+
+    const dispatch = useDispatch();
     const [isMenuOpen, setMenuOpen] = useState(false);
 
     const handleExit = useCallback(() => {

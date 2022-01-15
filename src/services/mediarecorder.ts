@@ -1,5 +1,6 @@
-import { sanitizeTitle, getPublicPathFor } from '../utils';
+import { downloadBlob, getPublicPathFor } from '../utils';
 import Recorder from 'recorderjs';
+import { aggressiveSanitizeTitle } from 'netmd-js/dist/utils';
 
 export class MediaRecorderService {
     public recorder: any;
@@ -77,15 +78,7 @@ export class MediaRecorderService {
 
     downloadRecorded(title: string) {
         this.recorder.exportWAV((buffer: Blob) => {
-            let url = URL.createObjectURL(buffer);
-            let a = document.createElement('a');
-            document.body.appendChild(a);
-            a.style.display = 'none';
-            a.href = url;
-            a.download = `${sanitizeTitle(title)}.wav`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            downloadBlob(buffer, `${title}.wav`);
         });
     }
 }

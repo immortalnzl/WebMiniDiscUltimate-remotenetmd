@@ -1,6 +1,7 @@
 import { configureStore, getDefaultMiddleware, Middleware, combineReducers } from '@reduxjs/toolkit';
 import uploadDialog from './upload-dialog-feature';
 import renameDialog from './rename-dialog-feature';
+import otherDeviceDialog from './other-device-feature';
 import errorDialog from './error-dialog-feature';
 import panicDialog, { actions as panicDialogActions } from './panic-dialog-feature';
 import convertDialog from './convert-dialog-feature';
@@ -20,6 +21,7 @@ const errorCatcher: Middleware = store => next => async action => {
 
 let reducer = combineReducers({
     renameDialog,
+    otherDeviceDialog,
     uploadDialog,
     errorDialog,
     panicDialog,

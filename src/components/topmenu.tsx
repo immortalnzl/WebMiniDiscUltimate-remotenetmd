@@ -31,6 +31,7 @@ import Win95Icon from '../images/win95/win95.png';
 import HelpIcon from '@material-ui/icons/Help';
 
 import { W95TopMenu } from './win95/topmenu';
+import { Capability } from '../services/netmd';
 
 const useStyles = makeStyles(theme => ({
     listItemIcon: {
@@ -47,6 +48,7 @@ export const TopMenu = function(props: { onClick?: () => void }) {
     const dispatch = useDispatch();
 
     let { mainView, darkMode, vintageMode, fullWidthSupport } = useShallowEqualSelector(state => state.appState);
+    const deviceCapabilities = useShallowEqualSelector(state => state.main.deviceCapabilities);
     let discTitle = useShallowEqualSelector(state => state.main.disc?.title ?? ``);
     let fullWidthDiscTitle = useShallowEqualSelector(state => state.main.disc?.fullWidthTitle ?? ``);
 
@@ -55,6 +57,8 @@ export const TopMenu = function(props: { onClick?: () => void }) {
     const [menuAnchorEl, setMenuAnchorEl] = React.useState<null | HTMLElement>(null);
     const [showSelfTest, setShowSelfTest] = React.useState(false);
     const menuOpen = Boolean(menuAnchorEl);
+
+    const isCapable = (capability: Capability) => deviceCapabilities.includes(capability);
 
     const handleMenuOpen = useCallback(
         (event: React.MouseEvent<HTMLElement>) => {
@@ -159,7 +163,7 @@ export const TopMenu = function(props: { onClick?: () => void }) {
             </MenuItem>
         );
         menuItems.push(
-            <MenuItem key="title" onClick={handleRenameDisc}>
+            <MenuItem key="title" onClick={handleRenameDisc} disabled={!isCapable(Capability.metadataEdit)}>
                 <ListItemIcon className={classes.listItemIcon}>
                     <EditIcon fontSize="small" />
                 </ListItemIcon>
@@ -167,7 +171,7 @@ export const TopMenu = function(props: { onClick?: () => void }) {
             </MenuItem>
         );
         menuItems.push(
-            <MenuItem key="wipe" onClick={handleWipeDisc}>
+            <MenuItem key="wipe" onClick={handleWipeDisc} disabled={!isCapable(Capability.metadataEdit)}>
                 <ListItemIcon className={classes.listItemIcon}>
                     <DeleteForeverIcon fontSize="small" />
                 </ListItemIcon>
@@ -299,6 +303,7 @@ export const TopMenu = function(props: { onClick?: () => void }) {
             handleShowAbout,
             handleShowChangelog,
             handleVintageMode,
+            isCapable,
         };
         return <W95TopMenu {...p} />;
     }

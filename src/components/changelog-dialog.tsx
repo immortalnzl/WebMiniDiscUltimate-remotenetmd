@@ -36,6 +36,13 @@ const useStyles = makeStyles(theme => ({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'stretch',
+        height: 300,
+    },
+    header: {
+        margin: 0,
+    },
+    list: {
+        marginTop: 0,
     },
 }));
 
@@ -52,25 +59,39 @@ export const ChangelogDialog = (props: {}) => {
     }, [dispatch]);
 
     const content = (
-        <ul>
-            <li>Added the changelog dialog</li>
-            <li>Added a basic self-test</li>
-            <li>
-                Added full support for Sony LAM-Series devices (Issue <a href="https://github.com/cybercase/webminidisc/issues/29">#29</a>,{' '}
-                <a href="https://github.com/cybercase/webminidisc/issues/60">#60</a>)
-            </li>
-            <li>
-                Overhauled the convert dialog
-                <ul>
-                    <li>Added the ability to rename tracks before sending them to the recorder</li>
-                    <li>Added a live preview of how the tracks are going to be titled when selecting different formats</li>
-                    <li>
-                        Added a warning about using too many characters (Issue{' '}
-                        <a href="https://github.com/cybercase/webminidisc/issues/66">#66</a>)
-                    </li>
-                </ul>
-            </li>
-        </ul>
+        <React.Fragment>
+            <h2 className={classes.header}>Version 0.3.0</h2>
+            <ul className={classes.list}>
+                <li>
+                    Added support for <a href="https://github.com/asivery/remote-netmd-server">Remote NetMD</a>
+                </li>
+                <li>Fixed numerous bugs regarding NetMD upload and Sony LAMs</li>
+                <li>Added support for downloading tracks via NetMD from the Sony MZ-RH1 recorder</li>
+                <li>Numerous programming changes</li>
+            </ul>
+
+            <h2 className={classes.header}>Version 0.2.4</h2>
+            <ul className={classes.list}>
+                <li>Added the changelog dialog</li>
+                <li>Added a basic self-test</li>
+                <li>
+                    Added full support for Sony LAM-Series devices (Issue{' '}
+                    <a href="https://github.com/cybercase/webminidisc/issues/29">#29</a>,{' '}
+                    <a href="https://github.com/cybercase/webminidisc/issues/60">#60</a>)
+                </li>
+                <li>
+                    Overhauled the convert dialog
+                    <ul>
+                        <li>Added the ability to rename tracks before sending them to the recorder</li>
+                        <li>Added a live preview of how the tracks are going to be titled when selecting different formats</li>
+                        <li>
+                            Added a warning about using too many characters (Issue{' '}
+                            <a href="https://github.com/cybercase/webminidisc/issues/66">#66</a>)
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </React.Fragment>
     );
 
     if (vintageMode) {
@@ -91,7 +112,7 @@ export const ChangelogDialog = (props: {}) => {
             aria-labelledby="changelog-dialog-slide-title"
             aria-describedby="changelog-dialog-slide-description"
         >
-            <DialogTitle id="changelog-dialog-slide-title">Changelog for version {(window as any).wmdVersion}</DialogTitle>
+            <DialogTitle id="changelog-dialog-slide-title">Changelog</DialogTitle>
             <DialogContent className={classes.dialogContent}>{content}</DialogContent>
             <DialogActions>
                 <Button onClick={handleClose}>Close</Button>

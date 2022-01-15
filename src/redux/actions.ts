@@ -8,22 +8,23 @@ import { actions as appStateActions } from './app-feature';
 import { actions as mainActions } from './main-feature';
 import { actions as convertDialogAction } from './convert-dialog-feature';
 import serviceRegistry from '../services/registry';
-import { Wireformat, getTracks, Disc } from 'netmd-js';
+import { Wireformat, getTracks, Disc, DiscFormat, getRemainingCharactersForTitles } from 'netmd-js';
 import { AnyAction } from '@reduxjs/toolkit';
 import {
-    getAvailableCharsForTitle,
     framesToSec,
     sleepWithProgressCallback,
     sleep,
     askNotificationPermission,
     getGroupedTracks,
-    getHalfWidthTitleLength,
     timeToSeekArgs,
     TitledFile,
+    downloadBlob,
 } from '../utils';
 import { UploadFormat } from './convert-dialog-feature';
 import NotificationCompleteIconUrl from '../images/record-complete-notification-icon.png';
-import { assertNumber } from 'netmd-js/dist/utils';
+import { assertNumber, getHalfWidthTitleLength } from 'netmd-js/dist/utils';
+import { NetMDService } from '../services/netmd';
+import { getSimpleServices, ServiceConstructionInfo } from '../services/service-manager';
 
 export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pause' | 'seek', params?: unknown) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
@@ -194,12 +195,31 @@ export function dragDropTrack(sourceList: number, sourceIndex: number, targetLis
     };
 }
 
-export function pair() {
+export function addService(info: ServiceConstructionInfo) {
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        const { availableServices } = getState().appState;
+        dispatch(appStateActions.setAvailableServices([...availableServices, info]));
+    };
+}
+
+export function deleteService(index: number) {
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        if (index < getSimpleServices().length) return;
+        let availableServices = [...getState().appState.availableServices];
+        availableServices.splice(index, 1);
+        dispatch(appStateActions.setLastSelectedService(0));
+        dispatch(appStateActions.setAvailableServices(availableServices));
+    };
+}
+
+export function pair(serviceInstance: NetMDService) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         dispatch(appStateActions.setPairingFailed(false));
 
         serviceRegistry.mediaSessionService?.init(); // no need to await
         await serviceRegistry.audioExportService!.init();
+
+        serviceRegistry.netmdService = serviceInstance;
 
         try {
             let connected = await serviceRegistry.netmdService!.connect();
@@ -252,11 +272,13 @@ export function listContent() {
         } catch (e) {
             console.log('listContent: Cannot get device status');
         }
+        let deviceCapabilities = await serviceRegistry.netmdService!.getServiceCapabilities();
         dispatch(
             batchActions([
                 mainActions.setDisc(disc),
                 mainActions.setDeviceName(deviceName),
                 mainActions.setDeviceStatus(deviceStatus),
+                mainActions.setDeviceCapabilities(deviceCapabilities),
                 appStateActions.setLoading(false),
             ])
         );
@@ -325,6 +347,69 @@ export function moveTrack(srcIndex: number, destIndex: number) {
     };
 }
 
+export function downloadTracks(indexes: number[]) {
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        dispatch(
+            batchActions([
+                recordDialogAction.setVisible(true),
+                recordDialogAction.setProgress({ trackTotal: indexes.length, trackDone: 0, trackCurrent: 0, titleCurrent: '' }),
+            ])
+        );
+
+        let disc = getState().main.disc;
+        let tracks = getTracks(disc!).filter(t => indexes.indexOf(t.index) >= 0);
+
+        const { netmdService } = serviceRegistry;
+
+        for (let [i, track] of tracks.entries()) {
+            dispatch(
+                recordDialogAction.setProgress({
+                    trackTotal: tracks.length,
+                    trackDone: i,
+                    trackCurrent: -1,
+                    titleCurrent: track.title ?? '',
+                })
+            );
+            try {
+                const { format, data } = (await netmdService!.download(track.index, ({ read, total }) => {
+                    dispatch(
+                        recordDialogAction.setProgress({
+                            trackTotal: tracks.length,
+                            trackDone: i,
+                            trackCurrent: (100 * read) / total,
+                            titleCurrent: track.title ?? '',
+                        })
+                    );
+                })) as { format: DiscFormat; data: Uint8Array };
+                let title;
+                if (track.title) {
+                    title = `${track.index + 1}. ${track.title}`;
+                    if (track.fullWidthTitle) {
+                        title += ` (${track.fullWidthTitle})`;
+                    }
+                } else if (track.fullWidthTitle) {
+                    title = `${track.index + 1}. ${track.fullWidthTitle}`;
+                } else {
+                    title = `Track ${track.index + 1}`;
+                }
+                const fileName = title + ([DiscFormat.lp2, DiscFormat.lp4].includes(format) ? '.wav' : '.aea');
+                downloadBlob(new Blob([data], { type: 'application/octet-stream' }), fileName);
+            } catch (err) {
+                console.error(err);
+                dispatch(
+                    batchActions([
+                        recordDialogAction.setVisible(false),
+                        errorDialogAction.setVisible(true),
+                        errorDialogAction.setErrorMessage(`Download failed. Are you using a disc recorded by SonicStage?`),
+                    ])
+                );
+            }
+        }
+
+        dispatch(recordDialogAction.setVisible(false));
+    };
+}
+
 export function recordTracks(indexes: number[], deviceId: string) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         dispatch(
@@ -385,8 +470,18 @@ export function recordTracks(indexes: number[], deviceId: string) {
 
             // Stop recording and download the wav
             await mediaRecorderService?.stopRecording();
-            const fileName = track.title || `Track ${track.index + 1}`;
-            mediaRecorderService?.downloadRecorded(`${fileName}`);
+            let title;
+            if (track.title) {
+                title = `${track.index + 1}. ${track.title}`;
+                if (track.fullWidthTitle) {
+                    title += ` (${track.fullWidthTitle})`;
+                }
+            } else if (track.fullWidthTitle) {
+                title = `${track.index + 1}. ${track.fullWidthTitle}`;
+            } else {
+                title = `Track ${track.index + 1}`;
+            }
+            mediaRecorderService?.downloadRecorded(`${title}`);
 
             await mediaRecorderService?.closeStream();
         }
@@ -694,7 +789,7 @@ export function convertAndUpload(files: TitledFile[], format: UploadFormat) {
 
         let disc = getState().main.disc;
         let useFullWidth = getState().appState.fullWidthSupport;
-        let availableCharacters = getAvailableCharsForTitle(disc!);
+        let availableCharacters = getRemainingCharactersForTitles(disc!);
 
         let error: any;
         let errorMessage = ``;
@@ -709,7 +804,7 @@ export function convertAndUpload(files: TitledFile[], format: UploadFormat) {
             let title = file.title;
 
             const fixLength = (l: number) => Math.max(Math.ceil(l / 7) * 7, 7);
-            let halfWidthTitle = title.substr(0, Math.min(getHalfWidthTitleLength(title), availableCharacters));
+            let halfWidthTitle = title.substring(0, Math.min(getHalfWidthTitleLength(title), availableCharacters));
             availableCharacters -= fixLength(getHalfWidthTitleLength(halfWidthTitle));
 
             let fullWidthTitle = file.fullWidthTitle;

@@ -39,6 +39,7 @@ import { RecordDialog } from '../record-dialog';
 import { DumpDialog } from '../dump-dialog';
 import { PanicDialog } from '../panic-dialog';
 import { ChangelogDialog } from '../changelog-dialog';
+import { Capability } from '../../services/netmd';
 
 const useStyles = makeStyles((theme: any) => ({
     container: {
@@ -110,6 +111,7 @@ export const W95Main = (props: {
     handleRenameTrack: (event: React.MouseEvent, item: number) => void;
     handleSelectAllClick: (event: React.ChangeEvent<HTMLInputElement>) => void;
     handleSelectTrackClick: (event: React.MouseEvent, item: number) => void;
+    isCapable: (capability: Capability) => boolean;
 }) => {
     const classes = useStyles();
     const themeContext = useContext(ThemeContext);
@@ -148,7 +150,7 @@ export const W95Main = (props: {
                     </>
                 ) : null}
 
-                {props.selectedCount > 0 ? (
+                {props.selectedCount > 0 && props.isCapable(Capability.metadataEdit) ? (
                     <>
                         <Button variant="menu" disabled={props.selectedCount !== 1} onClick={props.handleShowMoveMenu}>
                             <img alt="move" src={MoveIconUrl} className={classes.toolbarIcon} />
@@ -185,51 +187,53 @@ export const W95Main = (props: {
             </Toolbar>
             <Divider />
             <WindowContent className={classes.windowContent}>
-                <div className={classes.container} {...props.getRootProps()} style={{ outline: 'none' }}>
-                    <input {...props.getInputProps()} />
-                    <Table className={classes.table}>
-                        <TableHead>
-                            <TableRow head style={{ display: 'flex' }}>
-                                <TableHeadCell style={{ width: '2ch' }}>#</TableHeadCell>
-                                <TableHeadCell style={{ textAlign: 'left', flex: '1 1 auto' }}>Title</TableHeadCell>
-                                <TableHeadCell style={{ textAlign: 'right', width: '20%' }}>Duration</TableHeadCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {props.tracks.map(track => (
-                                <CustomTableRow
-                                    style={props.selected.includes(track.index) ? themeContext.selectedTableRow : {}}
-                                    key={track.index}
-                                    onDoubleClick={(event: React.MouseEvent) => props.handleRenameTrack(event, track.index)}
-                                    onClick={(event: React.MouseEvent) => props.handleSelectTrackClick(event, track.index)}
-                                >
-                                    <TableDataCell style={{ textAlign: 'center', width: '2ch' }}>{track.index + 1}</TableDataCell>
-                                    <TableDataCell style={{ width: '80%' }}>
-                                        <div>
-                                            {track.fullWidthTitle && `${track.fullWidthTitle} / `}
-                                            {track.title || `No Title`}
-                                        </div>
-                                    </TableDataCell>
-                                    <TableDataCell style={{ textAlign: 'right', width: '20%' }}>
-                                        <span>{track.encoding}</span>
-                                        &nbsp;
-                                        <span>{track.duration}</span>
-                                    </TableDataCell>
-                                </CustomTableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
+                {props.isCapable(Capability.contentList) && (
+                    <div className={classes.container} {...props.getRootProps()} style={{ outline: 'none' }}>
+                        <input {...props.getInputProps()} />
+                        <Table className={classes.table}>
+                            <TableHead>
+                                <TableRow head style={{ display: 'flex' }}>
+                                    <TableHeadCell style={{ width: '2ch' }}>#</TableHeadCell>
+                                    <TableHeadCell style={{ textAlign: 'left', flex: '1 1 auto' }}>Title</TableHeadCell>
+                                    <TableHeadCell style={{ textAlign: 'right', width: '20%' }}>Duration</TableHeadCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {props.tracks.map(track => (
+                                    <CustomTableRow
+                                        style={props.selected.includes(track.index) ? themeContext.selectedTableRow : {}}
+                                        key={track.index}
+                                        onDoubleClick={(event: React.MouseEvent) => props.isCapable(Capability.metadataEdit) && props.handleRenameTrack(event, track.index)}
+                                        onClick={(event: React.MouseEvent) => props.isCapable(Capability.metadataEdit) && props.handleSelectTrackClick(event, track.index)}
+                                    >
+                                        <TableDataCell style={{ textAlign: 'center', width: '2ch' }}>{track.index + 1}</TableDataCell>
+                                        <TableDataCell style={{ width: '80%' }}>
+                                            <div>
+                                                {track.fullWidthTitle && `${track.fullWidthTitle} / `}
+                                                {track.title || `No Title`}
+                                            </div>
+                                        </TableDataCell>
+                                        <TableDataCell style={{ textAlign: 'right', width: '20%' }}>
+                                            <span>{track.encoding}</span>
+                                            &nbsp;
+                                            <span>{track.duration}</span>
+                                        </TableDataCell>
+                                    </CustomTableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                )}
                 <div className={classes.controlsContainer}>{mainView === 'MAIN' ? <Controls /> : null}</div>
             </WindowContent>
-            <FloatingButton onClick={props.open} />
+            {props.isCapable(Capability.trackUpload) && <FloatingButton onClick={props.open} />}
 
             <UploadDialog />
             <ErrorDialog />
             <ConvertDialog files={props.uploadedFiles} />
             <RenameDialog />
             <RecordDialog />
-            <DumpDialog trackIndexes={props.selected} />
+            <DumpDialog trackIndexes={props.selected} isCapableOfDownload={props.isCapable(Capability.trackDownload)}/>
             <AboutDialog />
             <ChangelogDialog />
             <PanicDialog />

@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { enableBatching } from 'redux-batched-actions';
+import { filterOutCorrupted, getSimpleServices, ServiceConstructionInfo } from '../services/service-manager';
 import { savePreference, loadPreference } from '../utils';
 
 export type Views = 'WELCOME' | 'MAIN';
@@ -17,6 +18,8 @@ export interface AppState {
     notifyWhenFinished: boolean;
     hasNotificationSupport: boolean;
     fullWidthSupport: boolean;
+    availableServices: ServiceConstructionInfo[];
+    lastSelectedService: number;
 }
 
 export const buildInitialState = (): AppState => {
@@ -33,6 +36,8 @@ export const buildInitialState = (): AppState => {
         notifyWhenFinished: loadPreference('notifyWhenFinished', false),
         hasNotificationSupport: true,
         fullWidthSupport: loadPreference('fullWidthSupport', false),
+        availableServices: getSimpleServices().concat(filterOutCorrupted(loadPreference('customServices', []))),
+        lastSelectedService: loadPreference('lastSelectedService', 0),
     };
 };
 
@@ -82,6 +87,18 @@ export const slice = createSlice({
         setFullWidthSupport: (state, action: PayloadAction<boolean>) => {
             state.fullWidthSupport = action.payload;
             savePreference('fullWidthSupport', state.fullWidthSupport);
+        },
+        setAvailableServices: (state, action: PayloadAction<ServiceConstructionInfo[]>) => {
+            state.availableServices = action.payload;
+            const simpleServices = getSimpleServices().map(n => n.name);
+            savePreference(
+                'customServices',
+                action.payload.filter(n => !simpleServices.includes(n.name))
+            ); // Only write the custom services
+        },
+        setLastSelectedService: (state, action: PayloadAction<number>) => {
+            state.lastSelectedService = action.payload;
+            savePreference('lastSelectedService', state.lastSelectedService);
         },
     },
 });

@@ -3,8 +3,6 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
 import * as serviceWorker from './serviceWorker';
-import { NetMDUSBService } from './services/netmd';
-import { NetMDMockService } from './services/netmd-mock';
 import serviceRegistry from './services/registry';
 
 import { store } from './redux/store';
@@ -20,8 +18,9 @@ import { FFMpegAudioExportService } from './services/audio-export';
 import { MediaRecorderService } from './services/mediarecorder';
 import { BrowserMediaSessionService } from './services/media-session';
 
-serviceRegistry.netmdService = (window as any).native?.interface || new NetMDUSBService({ debug: true });
+// serviceRegistry.netmdService = (window as any).native?.interface || new NetMDUSBService({ debug: true });
 // serviceRegistry.netmdService = new NetMDMockService(); // Uncomment to work without a device attached
+serviceRegistry.netmdService = undefined;
 serviceRegistry.audioExportService = new FFMpegAudioExportService();
 serviceRegistry.mediaRecorderService = new MediaRecorderService();
 serviceRegistry.mediaSessionService = new BrowserMediaSessionService(store);

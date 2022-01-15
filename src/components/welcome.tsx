@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { pair } from '../redux/actions';
+import { deleteService, pair } from '../redux/actions';
 
 import { useShallowEqualSelector } from '../utils';
 
 import { makeStyles } from '@material-ui/core/styles';
-import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
 import FormControl from '@material-ui/core/FormControl';
 import FormHelperText from '@material-ui/core/FormHelperText';
@@ -18,6 +17,18 @@ import ChromeIconPath from '../images/chrome-icon.svg';
 import { W95Welcome } from './win95/welcome';
 import OpenInNewIcon from '@material-ui/icons/OpenInNew';
 
+import SplitButton, { OptionType } from './split-button';
+import { createService, getConnectButtonName, getSimpleServices, initializeParameters, Services } from '../services/service-manager';
+import { OtherDeviceDialog } from './other-device-dialog';
+
+import { actions as otherDialogActions } from '../redux/other-device-feature';
+import { actions as appActions } from '../redux/app-feature';
+import { batchActions } from 'redux-batched-actions';
+import DeleteIcon from '@material-ui/icons/Delete';
+import AddIcon from '@material-ui/icons/Add';
+import { IconButton } from '@material-ui/core';
+import { ChangelogDialog } from './changelog-dialog';
+
 const useStyles = makeStyles(theme => ({
     main: {
         position: 'relative',
@@ -27,9 +38,19 @@ const useStyles = makeStyles(theme => ({
         flexDirection: 'column',
         alignItems: 'center',
     },
-    button: {
+    buttonBox: {
         marginTop: theme.spacing(3),
-        minWidth: 150,
+        minWidth: 200,
+    },
+    deleteButton: {
+        width: theme.spacing(2),
+        height: theme.spacing(2),
+        verticalAlign: 'middle',
+        marginLeft: theme.spacing(-0.5),
+        marginRight: theme.spacing(1.5),
+    },
+    standardOption: {
+        marginLeft: theme.spacing(3),
     },
     spacing: {
         marginTop: theme.spacing(1),
@@ -66,11 +87,27 @@ const useStyles = makeStyles(theme => ({
 export const Welcome = (props: {}) => {
     const classes = useStyles();
     const dispatch = useDispatch();
-    const { browserSupported, pairingFailed, pairingMessage, vintageMode } = useShallowEqualSelector(state => state.appState);
+    const {
+        browserSupported,
+        availableServices,
+        pairingFailed,
+        pairingMessage,
+        vintageMode,
+        lastSelectedService,
+    } = useShallowEqualSelector(state => state.appState);
+    const simpleServicesLength = getSimpleServices().length;
     if (pairingMessage.toLowerCase().match(/denied/)) {
         // show linux instructions
     }
     // Access denied.
+
+    const deleteCustom = useCallback(
+        (event, index) => {
+            event.stopPropagation();
+            dispatch(deleteService(index));
+        },
+        [dispatch]
+    );
 
     const [showWhyUnsupported, setWhyUnsupported] = useState(false);
     const handleLearnWhy = (event: React.SyntheticEvent) => {
@@ -83,9 +120,58 @@ export const Welcome = (props: {}) => {
             dispatch,
             pairingFailed,
             pairingMessage,
+            createService: () => createService(availableServices[lastSelectedService])!,
+            connectName: getConnectButtonName(availableServices[lastSelectedService]),
         };
         return <W95Welcome {...p}></W95Welcome>;
     }
+
+    const options: OptionType[] = availableServices.map((n, i) => ({
+        name: getConnectButtonName(n),
+        switchTo: true,
+        handler: () => {
+            dispatch(appActions.setLastSelectedService(i));
+            dispatch(pair(createService(availableServices[i])!));
+        },
+        id: i,
+    }));
+
+    const firstService = Services.find(n => n.customParameters);
+    if (firstService) {
+        options.push({
+            name: 'Add Custom Device',
+            switchTo: false,
+            handler: () =>
+                dispatch(
+                    batchActions([
+                        otherDialogActions.setVisible(true),
+                        otherDialogActions.setSelectedServiceIndex(0),
+                        otherDialogActions.setCustomParameters(initializeParameters(firstService)),
+                    ])
+                ),
+            customAddIcon: true,
+        });
+    }
+
+    const mapToEntry = (option: OptionType) => {
+        return option.id >= simpleServicesLength ? (
+            <React.Fragment>
+                <IconButton aria-label="delete" className={classes.deleteButton} size="small" onClick={e => deleteCustom(e, option.id)}>
+                    <DeleteIcon />
+                </IconButton>
+                {option.name}
+            </React.Fragment>
+        ) : option.customAddIcon ? (
+            <React.Fragment>
+                <IconButton aria-label="add custom device" className={classes.deleteButton} size="small">
+                    <AddIcon />
+                </IconButton>
+                {option.name}
+            </React.Fragment>
+        ) : (
+            <span className={classes.standardOption}>{option.name}</span>
+        );
+    };
 
     return (
         <React.Fragment>
@@ -106,9 +192,14 @@ export const Welcome = (props: {}) => {
                                 Press the button to connect to a NetMD device
                             </Typography>
 
-                            <Button variant="contained" color="primary" onClick={() => dispatch(pair())} className={classes.button}>
-                                Connect
-                            </Button>
+                            <SplitButton
+                                options={options}
+                                color="primary"
+                                boxClassName={classes.buttonBox}
+                                width={200}
+                                selectedIndex={lastSelectedService}
+                                dropdownMapping={mapToEntry}
+                            />
 
                             <FormControl
                                 error={true}
@@ -175,6 +266,8 @@ export const Welcome = (props: {}) => {
                 )}
             </Box>
             <AboutDialog />
+            <ChangelogDialog />
+            <OtherDeviceDialog />
         </React.Fragment>
     );
 };

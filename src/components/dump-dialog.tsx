@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { useShallowEqualSelector } from '../utils';
 
-import { recordTracks } from '../redux/actions';
+import { downloadTracks, recordTracks } from '../redux/actions';
 import { actions as dumpDialogActions } from '../redux/dump-dialog-feature';
 
 import Dialog from '@material-ui/core/Dialog';
@@ -53,7 +53,7 @@ const useStyles = makeStyles(theme => ({
     },
 }));
 
-export const DumpDialog = ({ trackIndexes }: { trackIndexes: number[] }) => {
+export const DumpDialog = ({ trackIndexes, isCapableOfDownload }: { trackIndexes: number[]; isCapableOfDownload: boolean }) => {
     const dispatch = useDispatch();
     const classes = useStyles();
 
@@ -70,21 +70,27 @@ export const DumpDialog = ({ trackIndexes }: { trackIndexes: number[] }) => {
 
     const handleChange = useCallback(
         (ev: React.ChangeEvent<{ value: unknown }>) => {
+            if (isCapableOfDownload) return;
             const deviceId = ev.target.value as string;
             setInputDeviceId(deviceId);
             serviceRegistry.mediaRecorderService?.stopTestInput();
             serviceRegistry.mediaRecorderService?.playTestInput(deviceId);
         },
-        [setInputDeviceId]
+        [setInputDeviceId, isCapableOfDownload]
     );
 
     const handleStartTransfer = useCallback(() => {
-        dispatch(recordTracks(trackIndexes, inputDeviceId));
+        if (isCapableOfDownload) {
+            dispatch(downloadTracks(trackIndexes));
+        } else {
+            dispatch(recordTracks(trackIndexes, inputDeviceId));
+        }
         handleClose();
-    }, [trackIndexes, inputDeviceId, dispatch, handleClose]);
+    }, [trackIndexes, inputDeviceId, dispatch, handleClose, isCapableOfDownload]);
 
     useEffect(() => {
         async function updateDeviceList() {
+            if (isCapableOfDownload) return;
             await navigator.mediaDevices.getUserMedia({ audio: true });
             let devices = await navigator.mediaDevices.enumerateDevices();
             let inputDevices = devices
@@ -95,7 +101,7 @@ export const DumpDialog = ({ trackIndexes }: { trackIndexes: number[] }) => {
         if (visible) {
             updateDeviceList();
         }
-    }, [visible, setDevices]);
+    }, [visible, setDevices, isCapableOfDownload]);
 
     const vintageMode = useShallowEqualSelector(state => state.appState.vintageMode);
 
@@ -107,6 +113,7 @@ export const DumpDialog = ({ trackIndexes }: { trackIndexes: number[] }) => {
             visible,
             devices,
             inputDeviceId,
+            isCapableOfDownload,
         };
         return <W95DumpDialog {...p} />;
     }
@@ -120,44 +127,54 @@ export const DumpDialog = ({ trackIndexes }: { trackIndexes: number[] }) => {
             aria-labelledby="dump-dialog-slide-title"
             aria-describedby="dump-dialog-slide-description"
         >
-            <DialogTitle id="dump-dialog-slide-title">Record Selected Tracks</DialogTitle>
+            <DialogTitle id="dump-dialog-slide-title">{isCapableOfDownload ? 'Download' : 'Record'} Selected Tracks</DialogTitle>
             <DialogContent>
                 <Typography component="p" variant="h2" className={classes.head}>
                     {`💻 ⬅ 💽`}
                 </Typography>
-                <Typography component="p" variant="body2">
-                    1. Connect your MD Player line-out to your PC audio line-in.
-                </Typography>
-                <Typography component="p" variant="body2">
-                    2. Use the controls at the bottom right to play some tracks.
-                </Typography>
-                <Typography component="p" variant="body2">
-                    3. Select the input source. You should hear the tracks playing on your PC.
-                </Typography>
-                <Typography component="p" variant="body2">
-                    4. Adjust the input gain and the line-out volume of your device.
-                </Typography>
-                <Box className={classes.container}>
-                    <FormControl className={classes.formControl}>
-                        <Select value={inputDeviceId} onChange={handleChange} displayEmpty className={classes.selectEmpty}>
-                            <MenuItem value="" disabled>
-                                Input Source
-                            </MenuItem>
-                            {devices.map(device => (
-                                <MenuItem key={device.deviceId} value={device.deviceId}>
-                                    {device.label}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                        <FormHelperText>Input Source</FormHelperText>
-                    </FormControl>
-                    <Controls />
-                </Box>
+                {isCapableOfDownload ? (
+                    <React.Fragment>
+                        <Typography component="p" variant="body2">
+                            As you are using a Sony MZ-RH1, it is possible to transfer tracks via NetMD.
+                        </Typography>
+                    </React.Fragment>
+                ) : (
+                    <React.Fragment>
+                        <Typography component="p" variant="body2">
+                            1. Connect your MD Player line-out to your PC audio line-in.
+                        </Typography>
+                        <Typography component="p" variant="body2">
+                            2. Use the controls at the bottom right to play some tracks.
+                        </Typography>
+                        <Typography component="p" variant="body2">
+                            3. Select the input source. You should hear the tracks playing on your PC.
+                        </Typography>
+                        <Typography component="p" variant="body2">
+                            4. Adjust the input gain and the line-out volume of your device.
+                        </Typography>
+                        <Box className={classes.container}>
+                            <FormControl className={classes.formControl}>
+                                <Select value={inputDeviceId} onChange={handleChange} displayEmpty className={classes.selectEmpty}>
+                                    <MenuItem value="" disabled>
+                                        Input Source
+                                    </MenuItem>
+                                    {devices.map(device => (
+                                        <MenuItem key={device.deviceId} value={device.deviceId}>
+                                            {device.label}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                                <FormHelperText>Input Source</FormHelperText>
+                            </FormControl>
+                            <Controls />
+                        </Box>
+                    </React.Fragment>
+                )}
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleClose}>Cancel</Button>
-                <Button onClick={handleStartTransfer} disabled={inputDeviceId === ''}>
-                    Start Record
+                <Button onClick={handleStartTransfer} disabled={inputDeviceId === '' && !isCapableOfDownload}>
+                    Start {isCapableOfDownload ? 'Download' : 'Record'}
                 </Button>
             </DialogActions>
         </Dialog>

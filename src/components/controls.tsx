@@ -20,6 +20,7 @@ import { ReactComponent as MDIcon1 } from '../images/md1.svg';
 import { ReactComponent as MDIcon2 } from '../images/md2.svg';
 import { ReactComponent as MDIcon3 } from '../images/md3.svg';
 import { W95Controls } from './win95/controls';
+import { Capability } from '../services/netmd';
 
 const frames = [MDIcon0, MDIcon1, MDIcon2, MDIcon3];
 
@@ -111,6 +112,9 @@ export const Controls = () => {
     // TODO: The shallow equality won't work for these 2 states
     const deviceStatus = useShallowEqualSelector(state => state.main.deviceStatus);
     const disc = useShallowEqualSelector(state => state.main.disc);
+    const deviceCapabilities = useShallowEqualSelector(state => state.main.deviceCapabilities);
+
+    const isCapable = (capability: Capability) => deviceCapabilities.includes(capability);
 
     const classes = useStyles();
     const handlePrev = useCallback(() => {
@@ -215,27 +219,32 @@ export const Controls = () => {
             lcdScrollDuration,
 
             classes,
+            isCapable,
         };
         return <W95Controls {...p} />;
     }
 
     return (
         <Box className={classes.container}>
-            <IconButton aria-label="prev" onClick={handlePrev} className={classes.button}>
-                <SkipPreviousIcon />
-            </IconButton>
-            <IconButton aria-label="play" onClick={handlePlay} className={classes.button}>
-                <PlayArrowIcon />
-            </IconButton>
-            <IconButton aria-label="pause" onClick={handlePause} className={classes.button}>
-                <PauseIcon />
-            </IconButton>
-            <IconButton aria-label="stop" onClick={handleStop} className={classes.button}>
-                <StopIcon />
-            </IconButton>
-            <IconButton aria-label="next" onClick={handleNext} className={classes.button}>
-                <SkipNextIcon />
-            </IconButton>
+            {isCapable(Capability.playbackControl) ? (
+                <React.Fragment>
+                    <IconButton aria-label="prev" onClick={handlePrev} className={classes.button}>
+                        <SkipPreviousIcon />
+                    </IconButton>
+                    <IconButton aria-label="play" onClick={handlePlay} className={classes.button}>
+                        <PlayArrowIcon />
+                    </IconButton>
+                    <IconButton aria-label="pause" onClick={handlePause} className={classes.button}>
+                        <PauseIcon />
+                    </IconButton>
+                    <IconButton aria-label="stop" onClick={handleStop} className={classes.button}>
+                        <StopIcon />
+                    </IconButton>
+                    <IconButton aria-label="next" onClick={handleNext} className={classes.button}>
+                        <SkipNextIcon />
+                    </IconButton>
+                </React.Fragment>
+            ) : null}
             <div className={classes.lcd}>
                 <div className={classes.lcdText}>
                     <span

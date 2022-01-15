@@ -1,16 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import {
-    belowDesktop,
-    useShallowEqualSelector,
-    getMetadataFromFile,
-    sanitizeFullWidthTitle,
-    sanitizeHalfWidthTitle,
-    removeExtension,
-    getAvailableCharsForTitle,
-    secondsToNormal,
-    getCellsForTitle,
-} from '../utils';
+import { belowDesktop, useShallowEqualSelector, getMetadataFromFile, removeExtension, secondsToNormal } from '../utils';
 
 import { actions as convertDialogActions, TitleFormatType } from '../redux/convert-dialog-feature';
 import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
@@ -50,7 +40,8 @@ import { useDropzone } from 'react-dropzone';
 import Backdrop from '@material-ui/core/Backdrop';
 import { W95ConvertDialog } from './win95/convert-dialog';
 import { batchActions } from 'redux-batched-actions';
-import { Disc, Track } from 'netmd-js';
+import { Disc, getCellsForTitle, getRemainingCharactersForTitles, Track } from 'netmd-js';
+import { sanitizeFullWidthTitle, sanitizeHalfWidthTitle } from 'netmd-js/dist/utils';
 
 const Transition = React.forwardRef(function Transition(
     props: TransitionProps & { children?: React.ReactElement<any, any> },
@@ -332,13 +323,13 @@ export const ConvertDialog = (props: { files: File[] }) => {
                 fullWidthTitle: track.fullWidthTitle,
             } as Track);
         }
-        setAvailableCharacters(getAvailableCharsForTitle(testedDisc));
-        let secondsLeft = (disc.left / 512); 
-        if(format === "LP2") secondsLeft *= 2;
-        else if(format === "LP4") secondsLeft *= 4;
+        setAvailableCharacters(getRemainingCharactersForTitles(testedDisc));
+        let secondsLeft = disc.left / 512;
+        if (format === 'LP2') secondsLeft *= 2;
+        else if (format === 'LP4') secondsLeft *= 4;
         setAvailableSeconds(secondsLeft - titles.reduce((a, b) => a + b.duration, 0));
         setBeforeConversionAvailableSeconds(secondsLeft);
-        setBeforeConversionAvailableCharacters(getAvailableCharsForTitle(disc));
+        setBeforeConversionAvailableCharacters(getRemainingCharactersForTitles(disc));
     }, [disc, setAvailableCharacters, titles, format]);
 
     // Reload titles when files changed

@@ -8,6 +8,7 @@ import SkipNextIcon from '@material-ui/icons/SkipNext';
 import SkipPreviousIcon from '@material-ui/icons/SkipPrevious';
 import PauseIcon from '@material-ui/icons/Pause';
 import { makeStyles } from '@material-ui/core/styles';
+import { Capability } from '../../services/netmd';
 
 const useStyles = makeStyles(theme => ({
     container: {
@@ -35,6 +36,7 @@ export const W95Controls = (props: {
     handleStop: () => void;
     handlePause: () => void;
     handleNext: () => void;
+    isCapable: (c: Capability) => boolean;
     message: string;
     discPresent: boolean;
     classes: any;
@@ -45,21 +47,25 @@ export const W95Controls = (props: {
     const classes = useStyles();
     return (
         <div className={classes.container}>
-            <Button onClick={props.handlePrev}>
-                <SkipPreviousIcon />
-            </Button>
-            <Button onClick={props.handlePlay}>
-                <PlayArrowIcon />
-            </Button>
-            <Button onClick={props.handlePause}>
-                <PauseIcon />
-            </Button>
-            <Button onClick={props.handleStop}>
-                <StopIcon />
-            </Button>
-            <Button onClick={props.handleNext} style={{ marginRight: 16 }}>
-                <SkipNextIcon />
-            </Button>
+            {props.isCapable(Capability.playbackControl) && (
+                <React.Fragment>
+                    <Button onClick={props.handlePrev}>
+                        <SkipPreviousIcon />
+                    </Button>
+                    <Button onClick={props.handlePlay}>
+                        <PlayArrowIcon />
+                    </Button>
+                    <Button onClick={props.handlePause}>
+                        <PauseIcon />
+                    </Button>
+                    <Button onClick={props.handleStop}>
+                        <StopIcon />
+                    </Button>
+                    <Button onClick={props.handleNext} style={{ marginRight: 16 }}>
+                        <SkipNextIcon />
+                    </Button>
+                </React.Fragment>
+            )}
 
             <Panel variant="well" className={classes.lcd}>
                 <div className={props.classes.lcdText} style={{ left: 16, width: 'calc(100% - 16px)' }}>

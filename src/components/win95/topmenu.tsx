@@ -1,6 +1,7 @@
 import React from 'react';
 import { List, ListItem, Checkbox, Divider } from 'react95';
 import { Views } from '../../redux/app-feature';
+import { Capability } from '../../services/netmd';
 
 export const W95TopMenu = (props: {
     mainView: Views;
@@ -12,6 +13,7 @@ export const W95TopMenu = (props: {
     handleShowAbout: () => void;
     handleShowChangelog: () => void;
     handleVintageMode: () => void;
+    isCapable: (c: Capability) => boolean;
 }) => {
     const items = [];
 
@@ -22,12 +24,12 @@ export const W95TopMenu = (props: {
             </ListItem>
         );
         items.push(
-            <ListItem key="title" onClick={props.handleRenameDisc}>
+            <ListItem key="title" onClick={props.handleRenameDisc} disabled={!props.isCapable(Capability.metadataEdit)}>
                 Rename Disc
             </ListItem>
         );
         items.push(
-            <ListItem key="wipe" onClick={props.handleWipeDisc}>
+            <ListItem key="wipe" onClick={props.handleWipeDisc} disabled={!props.isCapable(Capability.metadataEdit)}>
                 Wipe Disc
             </ListItem>
         );

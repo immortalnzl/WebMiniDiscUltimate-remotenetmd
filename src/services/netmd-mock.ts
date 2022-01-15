@@ -1,7 +1,7 @@
 import { Track, Channels, Encoding, Wireformat, TrackFlag, DeviceStatus, Group } from 'netmd-js';
-import { NetMDService } from './netmd';
-import { sleep, sanitizeFullWidthTitle, sanitizeHalfWidthTitle, asyncMutex, recomputeGroupsAfterTrackMove, isSequential } from '../utils';
-import { assert } from 'netmd-js/dist/utils';
+import { Capability, NetMDService } from './netmd';
+import { sleep, asyncMutex, recomputeGroupsAfterTrackMove, isSequential } from '../utils';
+import { assert, sanitizeFullWidthTitle, sanitizeHalfWidthTitle } from 'netmd-js/dist/utils';
 import { Mutex } from 'async-mutex';
 
 class NetMDMockService implements NetMDService {
@@ -124,6 +124,10 @@ class NetMDMockService implements NetMDService {
             trackCount: this._tracks.length,
             groups: this._getGroups(),
         };
+    }
+
+    async getServiceCapabilities() {
+        return [Capability.contentList, Capability.metadataEdit, Capability.playbackControl, Capability.trackUpload];
     }
 
     async pair() {
@@ -322,6 +326,10 @@ class NetMDMockService implements NetMDService {
 
         await sleep(1000);
         progressCallback({ written: 100, encrypted: 100, total: 100 });
+    }
+
+    async download(index: number, progressCallback: (progress: { read: number; total: number }) => void) {
+        return null;
     }
 
     @asyncMutex

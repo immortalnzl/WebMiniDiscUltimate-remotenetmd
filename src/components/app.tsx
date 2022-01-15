@@ -14,64 +14,66 @@ import Typography from '@material-ui/core/Typography';
 import Link from '@material-ui/core/Link';
 import Box from '@material-ui/core/Box';
 import { W95App } from './win95/app';
+import { Capability } from '../services/netmd';
 
-const useStyles = makeStyles(theme => ({
-    layout: {
-        width: 'auto',
-        height: '100%',
-        [forAnyDesktop(theme)]: {
-            width: 600,
-            marginLeft: 'auto',
-            marginRight: 'auto',
+const useStyles = (props: { showsList: boolean }) =>
+    makeStyles(theme => ({
+        layout: {
+            width: 'auto',
+            height: '100%',
+            [forAnyDesktop(theme)]: {
+                width: 600,
+                marginLeft: 'auto',
+                marginRight: 'auto',
+            },
+            [forWideDesktop(theme)]: {
+                width: 700,
+            },
         },
-        [forWideDesktop(theme)]: {
-            width: 700,
-        },
-    },
 
-    paper: {
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: theme.spacing(2),
-        height: 'calc(100% - 20px)',
-        [forAnyDesktop(theme)]: {
-            marginTop: theme.spacing(2),
-            marginBottom: theme.spacing(1),
-            padding: theme.spacing(3),
-            height: 600,
+        paper: {
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: theme.spacing(2),
+            height: 'calc(100% - 20px)',
+            [forAnyDesktop(theme)]: {
+                marginTop: theme.spacing(2),
+                marginBottom: theme.spacing(1),
+                padding: theme.spacing(3),
+                height: props.showsList ? 600 : 200,
+            },
+            [forWideDesktop(theme)]: {
+                height: props.showsList ? 700 : 250,
+            },
         },
-        [forWideDesktop(theme)]: {
-            height: 700,
+        bottomBar: {
+            display: 'flex',
+            alignItems: 'center',
+            [belowDesktop(theme)]: {
+                flexWrap: 'wrap',
+            },
+            marginLeft: -theme.spacing(2),
         },
-    },
-    bottomBar: {
-        display: 'flex',
-        alignItems: 'center',
-        [belowDesktop(theme)]: {
-            flexWrap: 'wrap',
+        copyrightTypography: {
+            textAlign: 'center',
         },
-        marginLeft: -theme.spacing(2),
-    },
-    copyrightTypography: {
-        textAlign: 'center',
-    },
-    backdrop: {
-        zIndex: theme.zIndex.drawer + 1,
-        color: '#fff',
-    },
-    minidiscLogo: {
-        width: 48,
-    },
-    controlsContainer: {
-        flex: '0 0 auto',
-        width: '100%',
-        paddingRight: theme.spacing(8),
-        [belowDesktop(theme)]: {
-            paddingLeft: 0,
+        backdrop: {
+            zIndex: theme.zIndex.drawer + 1,
+            color: '#fff',
         },
-    },
-}));
+        minidiscLogo: {
+            width: 48,
+        },
+        controlsContainer: {
+            flex: '0 0 auto',
+            width: '100%',
+            paddingRight: theme.spacing(8),
+            [belowDesktop(theme)]: {
+                paddingLeft: 0,
+            },
+        },
+    }));
 
 const darkTheme = createTheme({
     palette: {
@@ -92,11 +94,12 @@ const lightTheme = createTheme({
 });
 
 const App = () => {
-    const classes = useStyles();
     const { mainView, loading, darkMode, vintageMode } = useShallowEqualSelector(state => state.appState);
+    const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
+    const classes = useStyles({ showsList: mainView === 'WELCOME' || deviceCapabilities.includes(Capability.contentList) })();
 
     if (vintageMode) {
-        return <W95App></W95App>;
+        return <W95App />;
     }
 
     return (

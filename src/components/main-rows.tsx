@@ -18,6 +18,7 @@ import FolderIcon from '@material-ui/icons/Folder';
 import DeleteIcon from '@material-ui/icons/Delete';
 
 import { DraggableProvided } from 'react-beautiful-dnd';
+import { Capability } from '../services/netmd';
 
 const useStyles = makeStyles(theme => ({
     currentTrackRow: {
@@ -123,6 +124,7 @@ interface TrackRowProps {
     onSelect: (event: React.MouseEvent, trackIdx: number) => void;
     onRename: (event: React.MouseEvent, trackIdx: number) => void;
     onTogglePlayPause: (event: React.MouseEvent, trackIdx: number) => void;
+    isCapable: (capability: Capability) => boolean;
 }
 
 export function TrackRow({
@@ -134,11 +136,20 @@ export function TrackRow({
     onSelect,
     onRename,
     onTogglePlayPause,
+    isCapable,
 }: TrackRowProps) {
     const classes = useStyles();
 
-    const handleRename = useCallback(event => onRename(event, track.index), [track.index, onRename]);
-    const handleSelect = useCallback(event => onSelect(event, track.index), [track.index, onSelect]);
+    const handleRename = useCallback(event => isCapable(Capability.metadataEdit) && onRename(event, track.index), [
+        track.index,
+        onRename,
+        isCapable,
+    ]);
+    const handleSelect = useCallback(event => isCapable(Capability.metadataEdit) && onSelect(event, track.index), [
+        track.index,
+        onSelect,
+        isCapable,
+    ]);
     const handlePlayPause: React.MouseEventHandler = useCallback(
         event => {
             event.stopPropagation();
@@ -158,15 +169,23 @@ export function TrackRow({
             onDoubleClick={handleRename}
             onClick={handleSelect}
             color="inherit"
-            className={clsx(classes.trackRow, { [classes.inGroupTrackRow]: inGroup, [classes.currentTrackRow]: isPlayingOrPaused })}
+            className={clsx({
+                [classes.trackRow]: isCapable(Capability.playbackControl),
+                [classes.inGroupTrackRow]: inGroup,
+                [classes.currentTrackRow]: isPlayingOrPaused,
+            })}
         >
-            <TableCell className={classes.dragHandle} {...draggableProvided.dragHandleProps} onClick={event => event.stopPropagation()}>
+            <TableCell
+                className={classes.dragHandle}
+                {...(isCapable(Capability.metadataEdit) ? draggableProvided.dragHandleProps : {})}
+                onClick={event => event.stopPropagation()}
+            >
                 <DragIndicator fontSize="small" color="disabled" />
             </TableCell>
             <TableCell className={classes.indexCell}>
                 <span className={classes.trackIndex}>{track.index + 1}</span>
                 <IconButton
-                    aria-label="delete"
+                    aria-label="play/pause"
                     className={clsx(classes.controlButtonInTrackCommon, classes.playButtonInTrackList)}
                     size="small"
                     onClick={handlePlayPause}
@@ -195,15 +214,24 @@ interface GroupRowProps {
     group: Group;
     onRename: (event: React.MouseEvent, groupIdx: number) => void;
     onDelete: (event: React.MouseEvent, groupIdx: number) => void;
+    isCapable: (c: Capability) => boolean;
 }
 
-export function GroupRow({ group, onRename, onDelete }: GroupRowProps) {
+export function GroupRow({ group, onRename, onDelete, isCapable }: GroupRowProps) {
     const classes = useStyles();
 
-    const handleDelete = useCallback((event: React.MouseEvent) => onDelete(event, group.index), [onDelete, group]);
-    const handleRename = useCallback((event: React.MouseEvent) => onRename(event, group.index), [onRename, group]);
+    const handleDelete = useCallback((event: React.MouseEvent) => isCapable(Capability.metadataEdit) && onDelete(event, group.index), [
+        onDelete,
+        group,
+        isCapable,
+    ]);
+    const handleRename = useCallback((event: React.MouseEvent) => isCapable(Capability.metadataEdit) && onRename(event, group.index), [
+        onRename,
+        group,
+        isCapable,
+    ]);
     return (
-        <TableRow hover className={classes.groupHeadRow} onDoubleClick={handleRename}>
+        <TableRow hover className={clsx({ [classes.groupHeadRow]: isCapable(Capability.metadataEdit) })} onDoubleClick={handleRename}>
             <TableCell className={classes.dragHandleEmpty}></TableCell>
             <TableCell className={classes.indexCell}>
                 <FolderIcon className={clsx(classes.controlButtonInTrackCommon, classes.groupFolderIcon)} />
