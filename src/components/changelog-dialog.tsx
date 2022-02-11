@@ -60,6 +60,12 @@ export const ChangelogDialog = (props: {}) => {
 
     const content = (
         <React.Fragment>
+            <h2 className={classes.header}>Version 1.1.0</h2>
+            <ul className={classes.list}>
+                <li>Added better support for Kenwood NetMD devices</li>
+                <li>Added the ability to eject and change the disc</li>
+                <li>Fixed some bugs regarding upload stalling</li>
+            </ul>
             <h2 className={classes.header}>Version 0.3.0</h2>
             <ul className={classes.list}>
                 <li>

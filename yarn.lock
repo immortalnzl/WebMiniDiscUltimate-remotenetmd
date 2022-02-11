@@ -7541,10 +7541,10 @@
   "resolved" "https://registry.npmjs.org/neo-async/-/neo-async-2.6.1.tgz"
   "version" "2.6.1"
 
-"netmd-js@^2.0.1":
-  "integrity" "sha512-9rMt+tcpqYM1/IyudyzVeOzZ+E55/+RvHf6NNOzQJbb0knySG5oaLich2NXSsFT45Wrg+c43uLMu3iOKmjW4aA=="
-  "resolved" "https://registry.npmjs.org/netmd-js/-/netmd-js-2.0.1.tgz"
-  "version" "2.0.1"
+"netmd-js@^3.0.0":
+  "integrity" "sha512-RFGsDcEx8u7+BcV6kgTMS804Ar5nsND2YDopk4R9zhZKXJ4fTQOe2qyfKqC+7SfkVRT0I1PPWSzs8PfU/5jQrg=="
+  "resolved" "https://registry.npmjs.org/netmd-js/-/netmd-js-3.2.0.tgz"
+  "version" "3.2.0"
   dependencies:
     "browser-bunyan" "^1.5.3"
     "buffer" "^5.5.0"
@@ -10046,7 +10046,16 @@
     "ajv" "^6.1.0"
     "ajv-keywords" "^3.1.0"
 
-"schema-utils@^1.0.0", "schema-utils@^2.5.0", "schema-utils@^2.6.0", "schema-utils@^2.6.1", "schema-utils@^2.6.4":
+"schema-utils@^1.0.0":
+  "integrity" "sha512-i27Mic4KovM/lnGsy8whRCHhc7VicJajAjTrYg11K9zfZXnYIt4k5F+kZkwjnrhKzLic/HLU4j11mjsz2G/75g=="
+  "resolved" "https://registry.npmjs.org/schema-utils/-/schema-utils-1.0.0.tgz"
+  "version" "1.0.0"
+  dependencies:
+    "ajv" "^6.1.0"
+    "ajv-errors" "^1.0.0"
+    "ajv-keywords" "^3.1.0"
+
+"schema-utils@^2.5.0", "schema-utils@^2.6.0", "schema-utils@^2.6.1", "schema-utils@^2.6.4":
   "integrity" "sha512-VNjcaUxVnEeun6B2fiiUDjXXBtD4ZSH7pdbfIu1pOFwgptDPLMo/z9jr4sUfsjFVPqDCEin/F7IYlq7/E6yDbQ=="
   "resolved" "https://registry.npmjs.org/schema-utils/-/schema-utils-2.6.4.tgz"
   "version" "2.6.4"

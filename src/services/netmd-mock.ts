@@ -78,12 +78,25 @@ class NetMDMockService implements NetMDService {
         },
     ];
 
+    private capabilities: Capability[] = [];
+
     public _status: DeviceStatus = {
         discPresent: true,
         track: 0,
         time: { minute: 0, second: 0, frame: 4 },
         state: 'ready',
     };
+
+    constructor({ overrideTitle, overrideFWTitle, capabilityContentList, capabilityPlaybackControl, capabilityMetadataEdit, capabilityTrackUpload, capabilityTrackDownload, capabilityDiscEject } : any){
+        if(overrideTitle) this._discTitle = overrideTitle;
+        if(overrideFWTitle) this._fullWidthDiscTitle = overrideFWTitle;
+        if(capabilityDiscEject) this.capabilities.push(Capability.discEject);
+        if(capabilityContentList) this.capabilities.push(Capability.contentList);
+        if(capabilityPlaybackControl) this.capabilities.push(Capability.playbackControl);
+        if(capabilityMetadataEdit) this.capabilities.push(Capability.metadataEdit);
+        if(capabilityTrackUpload) this.capabilities.push(Capability.trackUpload);
+        if(capabilityTrackDownload) this.capabilities.push(Capability.trackDownload);
+    }
 
     public _getGroups(): Group[] {
         return this._groupsDef.map(g => ({
@@ -127,7 +140,7 @@ class NetMDMockService implements NetMDService {
     }
 
     async getServiceCapabilities() {
-        return [Capability.contentList, Capability.metadataEdit, Capability.playbackControl, Capability.trackUpload];
+        return this.capabilities;
     }
 
     async pair() {
@@ -274,6 +287,10 @@ class NetMDMockService implements NetMDService {
     async wipeDisc() {
         this._tracks = [];
         await this.wipeDiscTitleInfo();
+    }
+
+    async ejectDisc() {
+        console.log("Disc ejected!");
     }
 
     async wipeDiscTitleInfo() {

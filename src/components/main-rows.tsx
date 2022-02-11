@@ -145,10 +145,9 @@ export function TrackRow({
         onRename,
         isCapable,
     ]);
-    const handleSelect = useCallback(event => isCapable(Capability.metadataEdit) && onSelect(event, track.index), [
+    const handleSelect = useCallback(event => onSelect(event, track.index), [
         track.index,
         onSelect,
-        isCapable,
     ]);
     const handlePlayPause: React.MouseEventHandler = useCallback(
         event => {
@@ -177,7 +176,7 @@ export function TrackRow({
         >
             <TableCell
                 className={classes.dragHandle}
-                {...(isCapable(Capability.metadataEdit) ? draggableProvided.dragHandleProps : {})}
+                {...draggableProvided.dragHandleProps}
                 onClick={event => event.stopPropagation()}
             >
                 <DragIndicator fontSize="small" color="disabled" />

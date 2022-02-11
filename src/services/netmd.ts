@@ -14,6 +14,7 @@ import {
     DiscFormat,
     upload,
     rewriteDiscGroups,
+    DiscFlag,
 } from 'netmd-js';
 import { makeGetAsyncPacketIteratorOnWorkerThread } from 'netmd-js/dist/web-encrypt-worker';
 import { Logger } from 'netmd-js/dist/logger';
@@ -29,6 +30,7 @@ export enum Capability {
     metadataEdit,
     trackUpload,
     trackDownload,
+    discEject,
 }
 
 export interface NetMDService {
@@ -49,6 +51,7 @@ export interface NetMDService {
     deleteTracks(indexes: number[]): Promise<void>;
     moveTrack(src: number, dst: number, updateGroups?: boolean): Promise<void>;
     wipeDisc(): Promise<void>;
+    ejectDisc(): Promise<void>;
     wipeDiscTitleInfo(): Promise<void>;
     upload(
         title: string,
@@ -96,16 +99,22 @@ export class NetMDUSBService implements NetMDService {
         }
     }
 
+    @asyncMutex
     async getServiceCapabilities() {
         const basic = [Capability.contentList, Capability.playbackControl];
         if (this.netmdInterface?.netMd.getVendor() === 0x54c && this.netmdInterface.netMd.getProduct() === 0x0286) {
             // MZ-RH1
             basic.push(Capability.trackDownload);
         }
-        const disc = await this.listContentUsingCache();
-        if (!disc.writeProtected) {
-            return [...basic, Capability.trackUpload, Capability.metadataEdit];
+        if (await this.netmdInterface?.canEjectDisc()){
+            basic.push(Capability.discEject);
         }
+        try{
+            const flags = await this.netmdInterface?.getDiscFlags() ?? 0;
+            if (!(flags & DiscFlag.writeProtected)) {
+                return [...basic, Capability.trackUpload, Capability.metadataEdit];
+            }
+        }catch(err){}
         return basic;
     }
 
@@ -264,6 +273,12 @@ export class NetMDUSBService implements NetMDService {
     @asyncMutex
     async wipeDisc() {
         await this.netmdInterface!.eraseDisc();
+        this.dropCachedContentList();
+    }
+
+    @asyncMutex
+    async ejectDisc() {
+        await this.netmdInterface!.ejectDisc();
         this.dropCachedContentList();
     }
 

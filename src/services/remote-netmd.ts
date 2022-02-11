@@ -152,6 +152,11 @@ export class NetMDRemoteService implements NetMDService {
     }
 
     @asyncMutex
+    async ejectDisc() {
+        await this.getFromServer('eject');
+    }
+
+    @asyncMutex
     async wipeDiscTitleInfo() {
         window.alert('Not complete yet');
     }

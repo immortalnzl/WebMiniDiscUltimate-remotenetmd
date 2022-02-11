@@ -28,6 +28,7 @@ import { getSimpleServices, ServiceConstructionInfo } from '../services/service-
 
 export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pause' | 'seek', params?: unknown) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
+        const state = getState();
         switch (action) {
             case 'play':
                 await serviceRegistry.netmdService!.play();
@@ -36,10 +37,24 @@ export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pa
                 await serviceRegistry.netmdService!.stop();
                 break;
             case 'next':
-                await serviceRegistry.netmdService!.next();
+                try{
+                    await serviceRegistry.netmdService!.next();
+                }catch(e){ // Some devices don't support next() and prev()
+                    if(state.main.deviceStatus?.track === (state.main.disc?.trackCount! - 1) || !state.main.deviceStatus) return;
+                    await serviceRegistry.netmdService!.stop();
+                    await serviceRegistry.netmdService!.gotoTrack(state.main.deviceStatus?.track! + 1);
+                    await serviceRegistry.netmdService!.play();
+                }
                 break;
             case 'prev':
-                await serviceRegistry.netmdService!.prev();
+                try{
+                    await serviceRegistry.netmdService!.prev();
+                }catch(e){ // Some devices don't support next() and prev()
+                    if(state.main.deviceStatus?.track === 0 || !state.main.deviceStatus) return;
+                    await serviceRegistry.netmdService!.stop();
+                    await serviceRegistry.netmdService!.gotoTrack(state.main.deviceStatus?.track! - 1);
+                    await serviceRegistry.netmdService!.play();
+                }
                 break;
             case 'pause':
                 await serviceRegistry.netmdService!.pause();
@@ -251,28 +266,29 @@ export function listContent() {
     return async function(dispatch: AppDispatch) {
         // Issue loading
         dispatch(appStateActions.setLoading(true));
-        let disc;
-        let status = await serviceRegistry.netmdService?.getDeviceStatus();
-        while (!status?.discPresent || ['readingTOC', 'noDisc'].includes(status?.state)) {
-            alert('No disc present');
-            status = await serviceRegistry.netmdService?.getDeviceStatus();
-        }
-        try {
-            disc = await serviceRegistry.netmdService!.listContent();
-        } catch (err) {
-            if (window.confirm("This disc's title seems to be corrupted, do you wish to erase it?\nNone of the tracks will be deleted.")) {
-                await serviceRegistry.netmdService!.wipeDiscTitleInfo();
-                disc = await serviceRegistry.netmdService!.listContent();
-            } else throw err;
-        }
-        let deviceName = await serviceRegistry.netmdService!.getDeviceName();
+        let disc = null;
         let deviceStatus = null;
         try {
             deviceStatus = await serviceRegistry.netmdService!.getDeviceStatus();
         } catch (e) {
             console.log('listContent: Cannot get device status');
         }
+        let deviceName = await serviceRegistry.netmdService!.getDeviceName();
         let deviceCapabilities = await serviceRegistry.netmdService!.getServiceCapabilities();
+
+        if (deviceStatus?.discPresent) {
+            try {
+                disc = await serviceRegistry.netmdService!.listContent();
+            } catch (err) {
+                console.log(err);
+                if ((err as any).message !== "Rejected") {
+                    if(window.confirm("This disc's title seems to be corrupted, do you wish to erase it?\nNone of the tracks will be deleted.")){
+                        await serviceRegistry.netmdService!.wipeDiscTitleInfo();
+                        disc = await serviceRegistry.netmdService!.listContent();
+                    } else throw err;   
+                }
+            }
+        }
         dispatch(
             batchActions([
                 mainActions.setDisc(disc),
@@ -337,6 +353,14 @@ export function wipeDisc() {
         await netmdService!.wipeDisc();
         listContent()(dispatch);
     };
+}
+
+export function ejectDisc() {
+    return async function(dispatch: AppDispatch) {
+        const { netmdService } = serviceRegistry;
+        netmdService!.ejectDisc();
+        dispatch(mainActions.setDisc(null));
+    }
 }
 
 export function moveTrack(srcIndex: number, destIndex: number) {

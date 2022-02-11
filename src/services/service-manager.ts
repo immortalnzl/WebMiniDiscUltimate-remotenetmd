@@ -41,7 +41,7 @@ export const Services: ServicePrototype[] = [
             'Connect to a remote NetMD device with the help of ',
             React.createElement('a', { href: 'https://github.com/asivery/remote-netmd-server' }, 'Remote NetMD')
         ),
-        create: parameters => new NetMDRemoteService({ debug: true, ...parameters } as any),
+        create: parameters => (window as any).native?.interface ?? new NetMDRemoteService({ debug: true, ...parameters } as any),
         customParameters: [
             {
                 userFriendlyName: 'Server Address',
@@ -69,24 +69,55 @@ export const Services: ServicePrototype[] = [
         description: React.createElement("p", null, "Test NetMD interface. It does nothing"),
         create: (parameters) => {
             console.log(`Given parameters: ${JSON.stringify(parameters)}`);
-            return new NetMDMockService();
+            return new NetMDMockService(parameters);
         },
         customParameters: [
-            {
-                userFriendlyName: 'Test Boolean',
-                type: 'boolean',
-                varName: 'boolean',
-            },
             {
                 userFriendlyName: 'Test Number',
                 type: 'number',
                 varName: 'number',
             },
             {
-                userFriendlyName: 'Test String',
+                userFriendlyName: 'Override disc title',
                 type: 'string',
-                varName: 'string',
+                varName: 'overrideTitle',
+            },
+            {
+                userFriendlyName: 'Override full-width disc title',
+                type: 'string',
+                varName: 'overrideFWTitle',
+            },
+            {
+                userFriendlyName: 'capabilityContentList',
+                type: 'boolean',
+                varName: 'capabilityContentList',
+            },
+            {
+                userFriendlyName: 'capabilityPlaybackControl',
+                type: 'boolean',
+                varName: 'capabilityPlaybackControl',
+            },
+            {
+                userFriendlyName: 'capabilityMetadataEdit',
+                type: 'boolean',
+                varName: 'capabilityMetadataEdit',
+            },
+            {
+                userFriendlyName: 'capabilityTrackUpload',
+                type: 'boolean',
+                varName: 'capabilityTrackUpload',
+            },
+            {
+                userFriendlyName: 'capabilityTrackDownload',
+                type: 'boolean',
+                varName: 'capabilityTrackDownload',
+            },
+            {
+                userFriendlyName: 'capabilityDiscEject',
+                type: 'boolean',
+                varName: 'capabilityDiscEject',
             }
+            
         ]
     },*/
 ];

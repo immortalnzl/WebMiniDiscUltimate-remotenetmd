@@ -17,7 +17,7 @@ import FormControl from '@material-ui/core/FormControl';
 import ToggleButton from '@material-ui/lab/ToggleButton';
 import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
 import { TransitionProps } from '@material-ui/core/transitions';
-import { Typography } from '@material-ui/core';
+import { Checkbox, FormControlLabel, Typography } from '@material-ui/core';
 import Select from '@material-ui/core/Select';
 import Input from '@material-ui/core/Input';
 import MenuItem from '@material-ui/core/MenuItem';
@@ -102,13 +102,13 @@ const useStyles = makeStyles(theme => ({
     toolbarHighlight:
         theme.palette.type === 'light'
             ? {
-                  color: theme.palette.secondary.main,
-                  backgroundColor: lighten(theme.palette.secondary.light, 0.85),
-              }
+                color: theme.palette.secondary.main,
+                backgroundColor: lighten(theme.palette.secondary.light, 0.85),
+            }
             : {
-                  color: theme.palette.text.primary,
-                  backgroundColor: theme.palette.secondary.dark,
-              },
+                color: theme.palette.text.primary,
+                backgroundColor: theme.palette.secondary.dark,
+            },
     trackList: {
         flex: '1 1 auto',
     },
@@ -193,9 +193,13 @@ export const ConvertDialog = (props: { files: File[] }) => {
                                 break;
                             }
                         }
+                        const halfWidth = sanitizeHalfWidthTitle(rawTitle);
+                        const fullWidth = sanitizeFullWidthTitle(rawTitle);
+                        const halfAsFull = sanitizeFullWidthTitle(halfWidth);
+                        debugger;
                         return {
-                            title: sanitizeHalfWidthTitle(rawTitle),
-                            fullWidthTitle: fullWidthSupport ? sanitizeFullWidthTitle(rawTitle) : '',
+                            title: halfWidth,
+                            fullWidthTitle: (fullWidthSupport && fullWidth !== halfAsFull) ? fullWidth : '', // If there are no differences between half and full width, skip the full width
                             duration: file.duration,
                         };
                     })
@@ -576,6 +580,6 @@ export const ConvertDialog = (props: { files: File[] }) => {
                     Ok
                 </Button>
             </DialogActions>
-        </Dialog>
+        </Dialog >
     );
 };

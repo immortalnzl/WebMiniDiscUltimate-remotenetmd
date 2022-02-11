@@ -12,7 +12,7 @@ import {
     DroppableProvided,
     DroppableStateSnapshot,
 } from 'react-beautiful-dnd';
-import { listContent, deleteTracks, moveTrack, groupTracks, deleteGroup, dragDropTrack } from '../redux/actions';
+import { listContent, deleteTracks, moveTrack, groupTracks, deleteGroup, dragDropTrack, ejectDisc } from '../redux/actions';
 import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
 import { actions as convertDialogActions } from '../redux/convert-dialog-feature';
 import { actions as dumpDialogActions } from '../redux/dump-dialog-feature';
@@ -32,6 +32,7 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import EditIcon from '@material-ui/icons/Edit';
 import Backdrop from '@material-ui/core/Backdrop';
 import CreateNewFolderIcon from '@material-ui/icons/CreateNewFolder';
+import EjectIcon from '@material-ui/icons/Eject';
 
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -60,6 +61,7 @@ import { W95Main } from './win95/main';
 import { useMemo } from 'react';
 import { ChangelogDialog } from './changelog-dialog';
 import { Capability } from '../services/netmd';
+import { LinearProgress } from '@material-ui/core';
 
 const useStyles = makeStyles(theme => ({
     add: {
@@ -83,7 +85,7 @@ const useStyles = makeStyles(theme => ({
         },
     },
     toolbar: {
-        marginTop: theme.spacing(3),
+        marginTop: theme.spacing(2),
         marginLeft: theme.spacing(-2),
         marginRight: theme.spacing(-2),
         [theme.breakpoints.up(600 + theme.spacing(2) * 2)]: {
@@ -326,6 +328,13 @@ export const Main = (props: {}) => {
         [dispatch]
     );
 
+    const handleEject = useCallback(
+        (event: React.MouseEvent) => {
+            dispatch(ejectDisc());
+        },
+        [dispatch]
+    );
+
     const handleTogglePlayPauseTrack = useCallback(
         (event: React.MouseEvent, track: number) => {
             if (!deviceStatus) {
@@ -396,7 +405,15 @@ export const Main = (props: {}) => {
                 <Typography component="h1" variant="h4">
                     {deviceName || `Loading...`}
                 </Typography>
-                <TopMenu />
+                <span>
+                    {isCapable(Capability.discEject) ? 
+                        <IconButton aria-label="actions" aria-controls="actions-menu" aria-haspopup="true" onClick={handleEject} disabled={!disc}>
+                            <EjectIcon />
+                        </IconButton>
+                        : null
+                    }
+                    <TopMenu />
+                </span>
             </Box>
             <Typography component="h2" variant="body2">
                 {disc !== null ? (
@@ -414,9 +431,11 @@ export const Main = (props: {}) => {
                         >
                             <span className={classes.remainingTimeTooltip}>SP Mode</span>
                         </Tooltip>
+                        <div className={classes.spacing}/>
+                        <LinearProgress variant="determinate" color={(((disc.total - disc.left) * 100) / disc.total) >= 90 ? "secondary" : "primary"} value={( (disc.total - disc.left) * 100) / disc.total}/>
                     </React.Fragment>
                 ) : (
-                    `Loading...`
+                    `No disc loaded`
                 )}
             </Typography>
             <Toolbar
@@ -439,7 +458,7 @@ export const Main = (props: {}) => {
                 ) : (
                     <Typography component="h3" variant="h6" className={classes.toolbarLabel}>
                         {disc?.fullWidthTitle && `${disc.fullWidthTitle} / `}
-                        {disc?.title || `Untitled Disc`}
+                        {disc ? (disc?.title || `Untitled Disc`) : ''}
                     </Typography>
                 )}
                 {selectedCount > 0 ? (
@@ -454,7 +473,7 @@ export const Main = (props: {}) => {
 
                 {selectedCount > 0 ? (
                     <Tooltip title="Delete">
-                        <IconButton aria-label="delete" onClick={handleDeleteSelected}>
+                        <IconButton aria-label="delete" disabled={!isCapable(Capability.metadataEdit)} onClick={handleDeleteSelected}>
                             <DeleteIcon />
                         </IconButton>
                     </Tooltip>
@@ -462,7 +481,7 @@ export const Main = (props: {}) => {
 
                 {selectedCount > 0 ? (
                     <Tooltip title={canGroup ? 'Group' : ''}>
-                        <IconButton aria-label="group" disabled={!canGroup} onClick={handleGroupTracks}>
+                        <IconButton aria-label="group" disabled={!canGroup || !isCapable(Capability.metadataEdit)} onClick={handleGroupTracks}>
                             <CreateNewFolderIcon />
                         </IconButton>
                     </Tooltip>
@@ -470,7 +489,7 @@ export const Main = (props: {}) => {
 
                 {selectedCount > 0 ? (
                     <Tooltip title="Rename">
-                        <IconButton aria-label="rename" disabled={selectedCount !== 1} onClick={handleRenameActionClick}>
+                        <IconButton aria-label="rename" disabled={selectedCount !== 1 || !isCapable(Capability.metadataEdit)} onClick={handleRenameActionClick}>
                             <EditIcon />
                         </IconButton>
                     </Tooltip>
@@ -517,6 +536,7 @@ export const Main = (props: {}) => {
                                                                     draggableId={`${group.index}-${t.index}`}
                                                                     key={`t-${t.index}`}
                                                                     index={tidx}
+                                                                    isDragDisabled={!isCapable(Capability.metadataEdit)}
                                                                 >
                                                                     {(provided: DraggableProvided) => (
                                                                         <TrackRow
