@@ -725,6 +725,15 @@ export function convertAndUpload(files: TitledFile[], format: UploadFormat) {
         const { audioExportService, netmdService } = serviceRegistry;
         const wireformat = WireformatDict[format];
 
+        let screenWakeLock: any = null;
+        if('wakeLock' in navigator){
+            try{
+                screenWakeLock = await (navigator as any).wakeLock.request('screen');
+            }catch(ex){
+                console.log(ex);
+            }
+        }
+
         await netmdService?.stop();
         dispatch(batchActions([uploadDialogActions.setVisible(true), uploadDialogActions.setCancelUpload(false)]));
 
@@ -735,6 +744,12 @@ export function convertAndUpload(files: TitledFile[], format: UploadFormat) {
         const hasUploadBeenCancelled = () => {
             return getState().uploadDialog.cancelled;
         };
+
+        const releaseScreenLockIfPresent = () => {
+            if(screenWakeLock){
+                screenWakeLock.release();
+            }
+        }
 
         function showFinishedNotificationIfNeeded() {
             const { notifyWhenFinished, hasNotificationSupport } = getState().appState;
@@ -848,7 +863,7 @@ export function convertAndUpload(files: TitledFile[], format: UploadFormat) {
                 await netmdService?.upload(halfWidthTitle, fullWidthTitle, data, wireformat, updateProgressCallback);
             } catch (err) {
                 error = err;
-                errorMessage = `${file.file.name}: Error uploading to device. There might not be enough space left.`;
+                errorMessage = `${file.file.name}: Error uploading to device. There might not be enough space left, or an unknown error occurred.`;
                 break;
             }
         }
@@ -865,6 +880,7 @@ export function convertAndUpload(files: TitledFile[], format: UploadFormat) {
 
         dispatch(batchActions(actionToDispatch));
         showFinishedNotificationIfNeeded();
+        releaseScreenLockIfPresent();
         listContent()(dispatch);
     };
 }

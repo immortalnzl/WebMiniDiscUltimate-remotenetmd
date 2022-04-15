@@ -7541,10 +7541,10 @@
   "resolved" "https://registry.npmjs.org/neo-async/-/neo-async-2.6.1.tgz"
   "version" "2.6.1"
 
-"netmd-js@^3.0.0":
-  "integrity" "sha512-RFGsDcEx8u7+BcV6kgTMS804Ar5nsND2YDopk4R9zhZKXJ4fTQOe2qyfKqC+7SfkVRT0I1PPWSzs8PfU/5jQrg=="
-  "resolved" "https://registry.npmjs.org/netmd-js/-/netmd-js-3.2.0.tgz"
-  "version" "3.2.0"
+"netmd-js@^3.2.3":
+  "integrity" "sha512-o0CNrPI4Q+GlIVZxnc/m4m5MoUqrgWAVwJnh8XcBBpP+60mBuF4QHthoisQBdAup+UKnji/lBkidqrnZOKcdhw=="
+  "resolved" "https://registry.npmjs.org/netmd-js/-/netmd-js-3.2.3.tgz"
+  "version" "3.2.3"
   dependencies:
     "browser-bunyan" "^1.5.3"
     "buffer" "^5.5.0"

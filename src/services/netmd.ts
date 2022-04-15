@@ -258,6 +258,9 @@ export class NetMDUSBService implements NetMDService {
 
     @asyncMutex
     async deleteTracks(indexes: number[]) {
+        try{
+            this.netmdInterface!.stop();
+        }catch(ex){}
         indexes = indexes.sort();
         indexes.reverse();
         let content = await this.listContentUsingCache();
@@ -272,6 +275,9 @@ export class NetMDUSBService implements NetMDService {
 
     @asyncMutex
     async wipeDisc() {
+        try{
+            this.netmdInterface!.stop();
+        }catch(ex){}
         await this.netmdInterface!.eraseDisc();
         this.dropCachedContentList();
     }

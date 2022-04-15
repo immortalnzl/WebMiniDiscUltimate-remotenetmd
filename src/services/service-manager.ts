@@ -30,7 +30,7 @@ export const Services: ServicePrototype[] = [
     {
         name: 'USB NetMD',
         getConnectName: () => 'Connect',
-        create: () => new NetMDUSBService({ debug: true }),
+        create: () => (window as any).native?.interface ?? new NetMDUSBService({ debug: true }),
     },
     {
         name: 'Remote NetMD',
@@ -41,7 +41,7 @@ export const Services: ServicePrototype[] = [
             'Connect to a remote NetMD device with the help of ',
             React.createElement('a', { href: 'https://github.com/asivery/remote-netmd-server' }, 'Remote NetMD')
         ),
-        create: parameters => (window as any).native?.interface ?? new NetMDRemoteService({ debug: true, ...parameters } as any),
+        create: parameters => new NetMDRemoteService({ debug: true, ...parameters } as any),
         customParameters: [
             {
                 userFriendlyName: 'Server Address',
@@ -117,7 +117,6 @@ export const Services: ServicePrototype[] = [
                 type: 'boolean',
                 varName: 'capabilityDiscEject',
             }
-            
         ]
     },*/
 ];

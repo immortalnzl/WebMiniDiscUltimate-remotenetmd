@@ -60,6 +60,11 @@ export const ChangelogDialog = (props: {}) => {
 
     const content = (
         <React.Fragment>
+            <h2 className={classes.header}>Version 1.1.1</h2>
+            <ul className={classes.list}>
+                <li>Prevented entering sleep mode when uploading tracks</li>
+                <li>Fixed some small bugs</li>
+            </ul>
             <h2 className={classes.header}>Version 1.1.0</h2>
             <ul className={classes.list}>
                 <li>Added better support for Kenwood NetMD devices</li>
