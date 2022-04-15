@@ -42,7 +42,7 @@ jobs:
       uses: azure/CLI@v1
       with:
         inlineScript: |
-            az storage blob upload-batch --account-name wmdpro --auth-mode key --account-key ${{ secrets.AZURE_STORAGEKEY_WMDFILES }} -d '$web' -s 'build/'
+            az storage blob upload-batch --overwrite --account-name wmdpro --auth-mode key --account-key ${{ secrets.AZURE_STORAGEKEY_WMDFILES }} -d '$web' -s 'build/'
 
   # clears everything on CDN profile 'wmd' endpoint 'web' which is inside resource group 'WMDpro'
     - name: Purge CDN endpoint    
