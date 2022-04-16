@@ -196,7 +196,6 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         const halfWidth = sanitizeHalfWidthTitle(rawTitle);
                         const fullWidth = sanitizeFullWidthTitle(rawTitle);
                         const halfAsFull = sanitizeFullWidthTitle(halfWidth);
-                        debugger;
                         return {
                             title: halfWidth,
                             fullWidthTitle: (fullWidthSupport && fullWidth !== halfAsFull) ? fullWidth : '', // If there are no differences between half and full width, skip the full width
