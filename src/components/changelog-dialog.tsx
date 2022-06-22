@@ -60,17 +60,37 @@ export const ChangelogDialog = (props: {}) => {
 
     const content = (
         <React.Fragment>
+            <h2 className={classes.header}>Version 1.2.0</h2>
+            <ul className={classes.list}>
+                <li>
+                    Added factory mode support for Sony portables
+                    <ul>
+                        <li>Added the ability to transfer music from NetMD to PC via USB</li>
+                        <li>Added the ability to edit the ToC byte-by-byte</li>
+                        <li>Added the ability to download and upload the ToC</li>
+                        <li>Added the ability to dump the devices' RAM and ROM</li>
+                        <li>Added the ability to load and play Tetris (thanks Sir68k!)</li>
+                    </ul>
+                </li>
+                <li>Added ATRAC3 autodetection (for both WAVs and OMAs)</li>
+                <li>Added better support for bookshelf systems</li>
+                <li>Fixed incorrect title limits</li>
+                <li>Fixed the title corruption bug</li>
+            </ul>
+
             <h2 className={classes.header}>Version 1.1.1</h2>
             <ul className={classes.list}>
                 <li>Prevented entering sleep mode when uploading tracks</li>
                 <li>Fixed some small bugs</li>
             </ul>
+
             <h2 className={classes.header}>Version 1.1.0</h2>
             <ul className={classes.list}>
                 <li>Added better support for Kenwood NetMD devices</li>
                 <li>Added the ability to eject and change the disc</li>
                 <li>Fixed some bugs regarding upload stalling</li>
             </ul>
+
             <h2 className={classes.header}>Version 0.3.0</h2>
             <ul className={classes.list}>
                 <li>

@@ -1,6 +1,6 @@
 import React, { ReactHTMLElement } from 'react';
 import { NetMDService, NetMDUSBService } from './netmd';
-import { NetMDMockService } from './netmd-mock';
+// import { NetMDMockService } from './netmd-mock';
 import { NetMDRemoteService } from './remote-netmd';
 
 export type CustomParameters = { [key: string]: string | number | boolean };
@@ -116,6 +116,11 @@ export const Services: ServicePrototype[] = [
                 userFriendlyName: 'capabilityDiscEject',
                 type: 'boolean',
                 varName: 'capabilityDiscEject',
+            },
+            {
+                userFriendlyName: 'capabilityFactoryMode',
+                type: 'boolean',
+                varName: 'capabilityFactoryMode',
             }
         ]
     },*/

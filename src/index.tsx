@@ -74,7 +74,7 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
         return (
             !exceptionOccurred &&
             // App ready
-            (state.appState.mainView === 'MAIN' &&
+            state.appState.mainView === 'MAIN' &&
             state.appState.loading === false &&
             // Disc playing
             // (state.main.deviceStatus?.state === 'playing' || state.main.disc === null) &&
@@ -84,18 +84,18 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
             state.recordDialog.visible === false &&
             state.panicDialog.visible === false &&
             state.errorDialog.visible === false &&
-            state.dumpDialog.visible === false)
+            state.dumpDialog.visible === false
         );
     }
 
     async function monitor() {
         const state = store.getState();
-        if(shouldMonitorBeRunning(state)){
+        if (shouldMonitorBeRunning(state)) {
             try {
                 let deviceStatus;
-                try{
+                try {
                     deviceStatus = await serviceRegistry.netmdService!.getDeviceStatus();
-                }catch(ex){
+                } catch (ex) {
                     // In invalid state - wait it out.
                     setTimeout(monitor, 5000);
                     return;

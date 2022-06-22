@@ -12,7 +12,7 @@ import {
     DroppableProvided,
     DroppableStateSnapshot,
 } from 'react-beautiful-dnd';
-import { listContent, deleteTracks, moveTrack, groupTracks, deleteGroup, dragDropTrack, ejectDisc } from '../redux/actions';
+import { listContent, deleteTracks, moveTrack, groupTracks, deleteGroups, dragDropTrack, ejectDisc } from '../redux/actions';
 import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
 import { actions as convertDialogActions } from '../redux/convert-dialog-feature';
 import { actions as dumpDialogActions } from '../redux/dump-dialog-feature';
@@ -62,6 +62,7 @@ import { useMemo } from 'react';
 import { ChangelogDialog } from './changelog-dialog';
 import { Capability } from '../services/netmd';
 import { LinearProgress } from '@material-ui/core';
+import { FactoryModeNoticeDialog } from './factory-notice-dialog';
 
 const useStyles = makeStyles(theme => ({
     add: {
@@ -158,6 +159,7 @@ export const Main = (props: {}) => {
     const { vintageMode } = useShallowEqualSelector(state => state.appState);
 
     const [selected, setSelected] = React.useState<number[]>([]);
+    const [selectedGroups, setSelectedGroups] = React.useState<number[]>([]);
     const [uploadedFiles, setUploadedFiles] = React.useState<File[]>([]);
     const [lastClicked, setLastClicked] = useState(-1);
     const [moveMenuAnchorEl, setMoveMenuAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -214,7 +216,7 @@ export const Main = (props: {}) => {
 
     const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
         onDrop,
-        accept: [`audio/*`, `video/mp4`],
+        accept: [`audio/*`, `video/mp4`, `.oma`],
         noClick: true,
     });
 
@@ -225,6 +227,7 @@ export const Main = (props: {}) => {
     // Action Handlers
     const handleSelectTrackClick = useCallback(
         (event: React.MouseEvent, item: number) => {
+            setSelectedGroups([]);
             if (event.shiftKey && selected.length && lastClicked !== -1) {
                 let rangeBegin = Math.min(lastClicked + 1, item),
                     rangeEnd = Math.max(lastClicked - 1, item);
@@ -246,15 +249,28 @@ export const Main = (props: {}) => {
         [selected, setSelected, lastClicked, setLastClicked]
     );
 
+    const handleSelectGroupClick = useCallback(
+        (event: React.MouseEvent, item: number) => {
+            setSelected([]);
+            if (selectedGroups.includes(item)) {
+                setSelectedGroups(selectedGroups.filter(i => i !== item));
+            } else {
+                setSelectedGroups([...selectedGroups, item]);
+            }
+        },
+        [selectedGroups, setSelected, setSelectedGroups]
+    );
+
     const handleSelectAllClick = useCallback(
         (event: React.ChangeEvent<HTMLInputElement>) => {
+            setSelectedGroups([]);
             if (selected.length < tracks.length) {
                 setSelected(tracks.map(t => t.index));
             } else {
                 setSelected([]);
             }
         },
-        [selected, tracks]
+        [selected, tracks, setSelected, setSelectedGroups]
     );
 
     const handleRenameTrack = useCallback(
@@ -323,9 +339,17 @@ export const Main = (props: {}) => {
 
     const handleDeleteGroup = useCallback(
         (event: React.MouseEvent, index: number) => {
-            dispatch(deleteGroup(index));
+            dispatch(deleteGroups([index]));
         },
         [dispatch]
+    );
+
+    const handleDeleteSelectedGroups = useCallback(
+        (event: React.MouseEvent) => {
+            dispatch(deleteGroups(selectedGroups));
+            setSelectedGroups([]);
+        },
+        [dispatch, selectedGroups, setSelectedGroups]
     );
 
     const handleEject = useCallback(
@@ -333,6 +357,22 @@ export const Main = (props: {}) => {
             dispatch(ejectDisc());
         },
         [dispatch]
+    );
+
+    const handleRenameDisc = useCallback(
+        (event: React.MouseEvent) => {
+            dispatch(
+                batchActions([
+                    renameDialogActions.setVisible(true),
+                    renameDialogActions.setCurrentName(disc!.title),
+                    renameDialogActions.setGroupIndex(null),
+                    renameDialogActions.setCurrentFullWidthName(disc!.fullWidthTitle),
+                    renameDialogActions.setIndex(-1),
+                    renameDialogActions.setOfConvert(false),
+                ])
+            );
+        },
+        [dispatch, disc]
     );
 
     const handleTogglePlayPauseTrack = useCallback(
@@ -359,6 +399,7 @@ export const Main = (props: {}) => {
         );
     }, [tracks, selected]);
     const selectedCount = selected.length;
+    const selectedGroupsCount = selectedGroups.length;
 
     const isCapable = (capability: Capability) => deviceCapabilities.includes(capability);
 
@@ -406,12 +447,17 @@ export const Main = (props: {}) => {
                     {deviceName || `Loading...`}
                 </Typography>
                 <span>
-                    {isCapable(Capability.discEject) ? 
-                        <IconButton aria-label="actions" aria-controls="actions-menu" aria-haspopup="true" onClick={handleEject} disabled={!disc}>
+                    {isCapable(Capability.discEject) ? (
+                        <IconButton
+                            aria-label="actions"
+                            aria-controls="actions-menu"
+                            aria-haspopup="true"
+                            onClick={handleEject}
+                            disabled={!disc}
+                        >
                             <EjectIcon />
                         </IconButton>
-                        : null
-                    }
+                    ) : null}
                     <TopMenu />
                 </span>
             </Box>
@@ -431,8 +477,12 @@ export const Main = (props: {}) => {
                         >
                             <span className={classes.remainingTimeTooltip}>SP Mode</span>
                         </Tooltip>
-                        <div className={classes.spacing}/>
-                        <LinearProgress variant="determinate" color={(((disc.total - disc.left) * 100) / disc.total) >= 90 ? "secondary" : "primary"} value={( (disc.total - disc.left) * 100) / disc.total}/>
+                        <div className={classes.spacing} />
+                        <LinearProgress
+                            variant="determinate"
+                            color={((disc.total - disc.left) * 100) / disc.total >= 90 ? 'secondary' : 'primary'}
+                            value={((disc.total - disc.left) * 100) / disc.total}
+                        />
                     </React.Fragment>
                 ) : (
                     `No disc loaded`
@@ -440,25 +490,26 @@ export const Main = (props: {}) => {
             </Typography>
             <Toolbar
                 className={clsx(classes.toolbar, {
-                    [classes.toolbarHighlight]: selectedCount > 0,
+                    [classes.toolbarHighlight]: selectedCount > 0 || selectedGroupsCount > 0,
                 })}
             >
-                {selectedCount > 0 ? (
+                {selectedCount > 0 || selectedGroupsCount > 0 ? (
                     <Checkbox
                         indeterminate={selectedCount > 0 && selectedCount < tracks.length}
                         checked={selectedCount > 0}
+                        disabled={selectedGroupsCount > 0}
                         onChange={handleSelectAllClick}
                         inputProps={{ 'aria-label': 'select all tracks' }}
                     />
                 ) : null}
-                {selectedCount > 0 ? (
+                {selectedCount > 0 || selectedGroupsCount > 0 ? (
                     <Typography className={classes.toolbarLabel} color="inherit" variant="subtitle1">
-                        {selectedCount} selected
+                        {selectedCount || selectedGroupsCount} selected
                     </Typography>
                 ) : (
-                    <Typography component="h3" variant="h6" className={classes.toolbarLabel}>
+                    <Typography onDoubleClick={handleRenameDisc} component="h3" variant="h6" className={classes.toolbarLabel}>
                         {disc?.fullWidthTitle && `${disc.fullWidthTitle} / `}
-                        {disc ? (disc?.title || `Untitled Disc`) : ''}
+                        {disc ? disc?.title || `Untitled Disc` : ''}
                     </Typography>
                 )}
                 {selectedCount > 0 ? (
@@ -481,7 +532,11 @@ export const Main = (props: {}) => {
 
                 {selectedCount > 0 ? (
                     <Tooltip title={canGroup ? 'Group' : ''}>
-                        <IconButton aria-label="group" disabled={!canGroup || !isCapable(Capability.metadataEdit)} onClick={handleGroupTracks}>
+                        <IconButton
+                            aria-label="group"
+                            disabled={!canGroup || !isCapable(Capability.metadataEdit)}
+                            onClick={handleGroupTracks}
+                        >
                             <CreateNewFolderIcon />
                         </IconButton>
                     </Tooltip>
@@ -489,7 +544,35 @@ export const Main = (props: {}) => {
 
                 {selectedCount > 0 ? (
                     <Tooltip title="Rename">
-                        <IconButton aria-label="rename" disabled={selectedCount !== 1 || !isCapable(Capability.metadataEdit)} onClick={handleRenameActionClick}>
+                        <IconButton
+                            aria-label="rename"
+                            disabled={selectedCount !== 1 || !isCapable(Capability.metadataEdit)}
+                            onClick={handleRenameActionClick}
+                        >
+                            <EditIcon />
+                        </IconButton>
+                    </Tooltip>
+                ) : null}
+
+                {selectedGroupsCount > 0 ? (
+                    <Tooltip title="Ungroup">
+                        <IconButton
+                            aria-label="ungroup"
+                            disabled={!isCapable(Capability.metadataEdit)}
+                            onClick={handleDeleteSelectedGroups}
+                        >
+                            <DeleteIcon />
+                        </IconButton>
+                    </Tooltip>
+                ) : null}
+
+                {selectedGroupsCount > 0 ? (
+                    <Tooltip title="Rename Group">
+                        <IconButton
+                            aria-label="rename group"
+                            disabled={!isCapable(Capability.metadataEdit) || selectedGroupsCount !== 1}
+                            onClick={e => handleRenameGroup(e, selectedGroups[0])}
+                        >
                             <EditIcon />
                         </IconButton>
                     </Tooltip>
@@ -525,7 +608,9 @@ export const Main = (props: {}) => {
                                                                     group={group}
                                                                     onRename={handleRenameGroup}
                                                                     onDelete={handleDeleteGroup}
+                                                                    isSelected={selectedGroups.includes(group.index)}
                                                                     isCapable={isCapable}
+                                                                    onSelect={handleSelectGroupClick}
                                                                 />
                                                             )}
                                                             {group.title === null && group.tracks.length === 0 && (
@@ -583,6 +668,7 @@ export const Main = (props: {}) => {
             <ConvertDialog files={uploadedFiles} />
             <RecordDialog />
             <DumpDialog trackIndexes={selected} isCapableOfDownload={isCapable(Capability.trackDownload)} />
+            <FactoryModeNoticeDialog />
             <AboutDialog />
             <ChangelogDialog />
             <PanicDialog />

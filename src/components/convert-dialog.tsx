@@ -1,8 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { belowDesktop, useShallowEqualSelector, getMetadataFromFile, removeExtension, secondsToNormal } from '../utils';
+import {
+    belowDesktop,
+    useShallowEqualSelector,
+    getMetadataFromFile,
+    removeExtension,
+    secondsToNormal,
+    getATRACWAVEncoding,
+    getATRACOMAEncoding,
+} from '../utils';
 
-import { actions as convertDialogActions, TitleFormatType } from '../redux/convert-dialog-feature';
+import { actions as convertDialogActions, TitleFormatType, UploadFormat } from '../redux/convert-dialog-feature';
 import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
 import { convertAndUpload } from '../redux/actions';
 
@@ -17,7 +25,7 @@ import FormControl from '@material-ui/core/FormControl';
 import ToggleButton from '@material-ui/lab/ToggleButton';
 import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
 import { TransitionProps } from '@material-ui/core/transitions';
-import { Checkbox, FormControlLabel, Typography } from '@material-ui/core';
+import Typography from '@material-ui/core/Typography';
 import Select from '@material-ui/core/Select';
 import Input from '@material-ui/core/Input';
 import MenuItem from '@material-ui/core/MenuItem';
@@ -102,13 +110,13 @@ const useStyles = makeStyles(theme => ({
     toolbarHighlight:
         theme.palette.type === 'light'
             ? {
-                color: theme.palette.secondary.main,
-                backgroundColor: lighten(theme.palette.secondary.light, 0.85),
-            }
+                  color: theme.palette.secondary.main,
+                  backgroundColor: lighten(theme.palette.secondary.light, 0.85),
+              }
             : {
-                color: theme.palette.text.primary,
-                backgroundColor: theme.palette.secondary.dark,
-            },
+                  color: theme.palette.text.primary,
+                  backgroundColor: theme.palette.secondary.dark,
+              },
     trackList: {
         flex: '1 1 auto',
     },
@@ -138,11 +146,19 @@ export const ConvertDialog = (props: { files: File[] }) => {
         album: string;
         artist: string;
         duration: number;
+        forcedEncoding: UploadFormat | null;
+        bytesToSkip: number;
     };
     const [files, setFiles] = useState<FileWithMetadata[]>([]);
     const [selectedTrackIndex, setSelectedTrack] = useState(-1);
-    const [availableCharacters, setAvailableCharacters] = useState(0);
-    const [beforeConversionAvailableCharacters, setBeforeConversionAvailableCharacters] = useState(0);
+    const [availableCharacters, setAvailableCharacters] = useState<{ halfWidth: number; fullWidth: number }>({
+        fullWidth: 0,
+        halfWidth: 0,
+    });
+    const [beforeConversionAvailableCharacters, setBeforeConversionAvailableCharacters] = useState<{
+        halfWidth: number;
+        fullWidth: number;
+    }>({ fullWidth: 0, halfWidth: 0 });
     const [beforeConversionAvailableSeconds, setBeforeConversionAvailableSeconds] = useState(0);
     const [availableSeconds, setAvailableSeconds] = useState(0);
     const [loadingMetadata, setLoadingMetadata] = useState(true);
@@ -152,10 +168,21 @@ export const ConvertDialog = (props: { files: File[] }) => {
         let titledFiles = [];
         for (let file of files) {
             let metadata = await getMetadataFromFile(file);
-            titledFiles.push({
-                file,
-                ...metadata,
-            });
+            let forcedEncoding: null | 'ILLEGAL' | { format: 'LP2' | 'LP4'; headerLength: number } = await getATRACWAVEncoding(file);
+            if (forcedEncoding === null) {
+                forcedEncoding = await getATRACOMAEncoding(file);
+            }
+
+            if (forcedEncoding === 'ILLEGAL') {
+                window.alert(`Cannot transfer file ${file.name}.`);
+            } else {
+                titledFiles.push({
+                    file,
+                    ...metadata,
+                    forcedEncoding: forcedEncoding?.format ?? null,
+                    bytesToSkip: forcedEncoding?.headerLength ?? 0,
+                });
+            }
         }
         setLoadingMetadata(false);
         return titledFiles;
@@ -167,7 +194,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                 convertDialogActions.setTitles(
                     files.map(file => {
                         let rawTitle = '';
-                        switch (titleFormat) {
+                        switch (format) {
                             case 'title': {
                                 rawTitle = file.title;
                                 break;
@@ -198,14 +225,16 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         const halfAsFull = sanitizeFullWidthTitle(halfWidth);
                         return {
                             title: halfWidth,
-                            fullWidthTitle: (fullWidthSupport && fullWidth !== halfAsFull) ? fullWidth : '', // If there are no differences between half and full width, skip the full width
+                            fullWidthTitle: fullWidthSupport && fullWidth !== halfAsFull ? fullWidth : '', // If there are no differences between half and full width, skip the full width
                             duration: file.duration,
+                            forcedEncoding: file.forcedEncoding as 'LP2' | 'LP4' | null,
+                            bytesToSkip: file.bytesToSkip,
                         };
                     })
                 )
             );
         },
-        [fullWidthSupport, titleFormat, dispatch]
+        [fullWidthSupport, dispatch]
     );
 
     const renameTrackManually = useCallback(
@@ -293,7 +322,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
     // Dialog init on new files
     useEffect(() => {
         const newFiles = Array.from(props.files);
-        setFiles(newFiles.map(n => ({ file: n, artist: '', album: '', title: '', duration: 0 }))); // If this line isn't present, the dialog doesn't show up
+        setFiles(newFiles.map(n => ({ file: n, artist: '', album: '', title: '', duration: 0, forcedEncoding: null, bytesToSkip: 0 }))); // If this line isn't present, the dialog doesn't show up
         loadMetadataFromFiles(newFiles)
             .then(withMetadata => {
                 setFiles(withMetadata);
@@ -301,9 +330,9 @@ export const ConvertDialog = (props: { files: File[] }) => {
             .catch(console.error);
         setSelectedTrack(-1);
         setTracksOrderVisible(false);
-        setAvailableCharacters(255);
+        setAvailableCharacters({ halfWidth: 1785, fullWidth: 1785 });
         setAvailableSeconds(1);
-        setBeforeConversionAvailableCharacters(1);
+        setBeforeConversionAvailableCharacters({ halfWidth: 1, fullWidth: 1 });
         setBeforeConversionAvailableSeconds(1);
     }, [props.files]);
 
@@ -352,12 +381,14 @@ export const ConvertDialog = (props: { files: File[] }) => {
 
     const renderTracks = useCallback(() => {
         let currentSeconds = beforeConversionAvailableSeconds;
-        let currentTextLeft = beforeConversionAvailableCharacters;
+        let { halfWidth: currentHalfWidthTextLeft, fullWidth: currentFullWidthTextLeft } = beforeConversionAvailableCharacters;
         return titles.map((file, i) => {
             const isSelected = selectedTrackIndex === i;
             const ref = isSelected ? selectedTrackRef : null;
             currentSeconds -= file.duration;
-            currentTextLeft -= getCellsForTitle(file as Track) * 7;
+            const { halfWidth, fullWidth } = getCellsForTitle(file as any);
+            currentHalfWidthTextLeft -= halfWidth * 7;
+            currentFullWidthTextLeft -= fullWidth * 7;
             return (
                 <ListItem
                     key={`${i}`}
@@ -371,9 +402,15 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         <Radio checked={isSelected} value={`track-${i}`} size="small" />
                     </ListItemIcon>
                     <ListItemText
-                        className={currentSeconds <= 0 ? classes.durationNotFit : currentTextLeft < 0 ? classes.nameNotFit : undefined}
+                        className={
+                            currentSeconds <= 0
+                                ? classes.durationNotFit
+                                : currentHalfWidthTextLeft < 0 || currentFullWidthTextLeft < 0
+                                ? classes.nameNotFit
+                                : undefined
+                        }
                         primary={`${file.fullWidthTitle && file.fullWidthTitle + ' / '}${file.title}`}
-                        secondary={secondsToNormal(file.duration)}
+                        secondary={`${secondsToNormal(file.duration)} ${file.forcedEncoding ? `(${file.forcedEncoding})` : ''}`}
                     />
                 </ListItem>
             );
@@ -395,16 +432,15 @@ export const ConvertDialog = (props: { files: File[] }) => {
         (acceptedFiles: File[], rejectedFiles: File[]) => {
             loadMetadataFromFiles(acceptedFiles)
                 .then(acceptedTitledFiles => {
-                    const newFileArray = files.slice().concat(acceptedTitledFiles);
-                    setFiles(newFileArray);
+                    setFiles(files => files.slice().concat(acceptedTitledFiles));
                 })
                 .catch(console.error);
         },
-        [files, setFiles]
+        [setFiles]
     );
     const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
         onDrop,
-        accept: [`audio/*`, `video/mp4`],
+        accept: [`audio/*`, `video/mp4`, `.oma`],
         noClick: true,
     });
     const disableRemove = selectedTrackIndex < 0 || selectedTrackIndex >= files.length;
@@ -516,11 +552,15 @@ export const ConvertDialog = (props: { files: File[] }) => {
                 <Typography
                     component="h3"
                     className={classes.nameNotFit}
-                    hidden={availableCharacters > 0}
+                    hidden={availableCharacters.halfWidth > 0 && availableCharacters.fullWidth > 0}
                     style={{ marginTop: '1em' }}
                     align="center"
                 >
-                    Warning: You have used up all the available characters. Some titles might get cut off.
+                    Warning: You have used up all the available{' '}
+                    {[availableCharacters.halfWidth > 0 ? 'half' : null, availableCharacters.fullWidth > 0 ? 'full' : null]
+                        .filter(n => n !== null)
+                        .join(' and ')}{' '}
+                    width characters. Some titles might get cut off.
                 </Typography>
                 <Typography
                     component="h3"
@@ -579,6 +619,6 @@ export const ConvertDialog = (props: { files: File[] }) => {
                     Ok
                 </Button>
             </DialogActions>
-        </Dialog >
+        </Dialog>
     );
 };

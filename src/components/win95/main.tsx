@@ -127,7 +127,7 @@ export const W95Main = (props: {
                         <div className={classes.toolbarItem}>
                             {`${props.deviceName}: (` || `Loading...`}
                             {props.disc?.fullWidthTitle && `${props.disc?.fullWidthTitle} / `}
-                            {props.disc ? (props.disc.title || `Untitled Disc`) : ''}
+                            {props.disc ? props.disc.title || `Untitled Disc` : ''}
                             {`)`}
                         </div>
                         <Bar size={35} />
@@ -152,7 +152,11 @@ export const W95Main = (props: {
 
                 {props.selectedCount > 0 ? (
                     <>
-                        <Button variant="menu" disabled={props.selectedCount !== 1 || !props.isCapable(Capability.metadataEdit)} onClick={props.handleShowMoveMenu}>
+                        <Button
+                            variant="menu"
+                            disabled={props.selectedCount !== 1 || !props.isCapable(Capability.metadataEdit)}
+                            onClick={props.handleShowMoveMenu}
+                        >
                             <img alt="move" src={MoveIconUrl} className={classes.toolbarIcon} />
                             Move
                         </Button>
@@ -164,7 +168,11 @@ export const W95Main = (props: {
                             <img alt="delete" src={DeleteIconUrl} className={classes.toolbarIcon} />
                             Delete
                         </Button>
-                        <Button variant="menu" onClick={props.handleRenameActionClick} disabled={props.selectedCount > 1 || !props.isCapable(Capability.metadataEdit)}>
+                        <Button
+                            variant="menu"
+                            onClick={props.handleRenameActionClick}
+                            disabled={props.selectedCount > 1 || !props.isCapable(Capability.metadataEdit)}
+                        >
                             <img alt="rename" src={RenameIconUrl} className={classes.toolbarIcon} />
                             Rename
                         </Button>
@@ -203,7 +211,9 @@ export const W95Main = (props: {
                                     <CustomTableRow
                                         style={props.selected.includes(track.index) ? themeContext.selectedTableRow : {}}
                                         key={track.index}
-                                        onDoubleClick={(event: React.MouseEvent) => props.isCapable(Capability.metadataEdit) && props.handleRenameTrack(event, track.index)}
+                                        onDoubleClick={(event: React.MouseEvent) =>
+                                            props.isCapable(Capability.metadataEdit) && props.handleRenameTrack(event, track.index)
+                                        }
                                         onClick={(event: React.MouseEvent) => props.handleSelectTrackClick(event, track.index)}
                                     >
                                         <TableDataCell style={{ textAlign: 'center', width: '2ch' }}>{track.index + 1}</TableDataCell>
@@ -233,7 +243,7 @@ export const W95Main = (props: {
             <ConvertDialog files={props.uploadedFiles} />
             <RenameDialog />
             <RecordDialog />
-            <DumpDialog trackIndexes={props.selected} isCapableOfDownload={props.isCapable(Capability.trackDownload)}/>
+            <DumpDialog trackIndexes={props.selected} isCapableOfDownload={props.isCapable(Capability.trackDownload)} />
             <AboutDialog />
             <ChangelogDialog />
             <PanicDialog />

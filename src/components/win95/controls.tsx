@@ -83,7 +83,7 @@ export const W95Controls = (props: {
                                 : { top: 12 }
                         }
                     >
-                        {props.discPresent ? props.message : (props.loading ? "LOADING..." : "NO DISC")}
+                        {props.discPresent ? props.message : props.loading ? 'LOADING...' : 'NO DISC'}
                     </span>
                 </div>
             </Panel>

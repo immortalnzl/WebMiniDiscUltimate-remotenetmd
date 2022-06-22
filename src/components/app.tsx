@@ -15,6 +15,7 @@ import Link from '@material-ui/core/Link';
 import Box from '@material-ui/core/Box';
 import { W95App } from './win95/app';
 import { Capability } from '../services/netmd';
+import Toc from './factory';
 
 const useStyles = (props: { showsList: boolean }) =>
     makeStyles(theme => ({
@@ -111,6 +112,7 @@ const App = () => {
                     <Paper className={classes.paper}>
                         {mainView === 'WELCOME' ? <Welcome /> : null}
                         {mainView === 'MAIN' ? <Main /> : null}
+                        {mainView === 'FACTORY' ? <Toc /> : null}
 
                         <Box className={classes.controlsContainer}>{mainView === 'MAIN' ? <Controls /> : null}</Box>
                     </Paper>
@@ -118,7 +120,8 @@ const App = () => {
                         {'© '}
                         <Link rel="noopener noreferrer" color="inherit" target="_blank" href="https://stefano.brilli.me/">
                             Stefano Brilli
-                        </Link>{', '}
+                        </Link>
+                        {', '}
                         <Link rel="noopener noreferrer" color="inherit" target="_blank" href="https://github.com/asivery/">
                             Asivery
                         </Link>{' '}

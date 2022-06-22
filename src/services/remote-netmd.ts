@@ -166,6 +166,10 @@ export class NetMDRemoteService implements NetMDService {
         return await this.getFromServer('moveTrack', { src, dst });
     }
 
+    async prepareUpload() {}
+    async finalizeUpload() {}
+
+    @asyncMutex
     upload(
         title: string,
         fullWidthTitle: string,
@@ -198,6 +202,7 @@ export class NetMDRemoteService implements NetMDService {
         });
     }
 
+    @asyncMutex
     async download(index: number, progressCallback: (progress: { read: number; total: number }) => void) {
         return null;
     }
@@ -236,5 +241,9 @@ export class NetMDRemoteService implements NetMDService {
     @asyncMutex
     async getPosition() {
         return await this.getFromServer('getPosition');
+    }
+
+    async factory() {
+        return null;
     }
 }

@@ -250,7 +250,9 @@ export const Controls = () => {
             <div className={classes.lcd}>
                 <div className={classes.lcdText}>
                     <span
-                        className={clsx(lcdScroll ? classes.scrollingStatusMessage : classes.statusMessage, {[classes.lcdBlink]: disc === null})}
+                        className={clsx(lcdScroll ? classes.scrollingStatusMessage : classes.statusMessage, {
+                            [classes.lcdBlink]: disc === null,
+                        })}
                         ref={lcdRef}
                         style={
                             message && lcdScroll > 0
@@ -258,7 +260,7 @@ export const Controls = () => {
                                 : {}
                         }
                     >
-                        {disc === null ? (loading ? "LOADING..." : "NO DISC") : message}
+                        {disc === null ? (loading ? 'LOADING...' : 'NO DISC') : message}
                     </span>
                 </div>
                 <div className={classes.lcdDisc}>

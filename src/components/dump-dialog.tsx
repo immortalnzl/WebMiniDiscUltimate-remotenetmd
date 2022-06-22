@@ -22,6 +22,7 @@ import Box from '@material-ui/core/Box';
 import serviceRegistry from '../services/registry';
 import { TransitionProps } from '@material-ui/core/transitions';
 import { W95DumpDialog } from './win95/dump-dialog';
+import { Capability } from '../services/netmd';
 
 const Transition = React.forwardRef(function Transition(
     props: TransitionProps & { children?: React.ReactElement<any, any> },
@@ -51,6 +52,10 @@ const useStyles = makeStyles(theme => ({
         textAlign: 'center',
         marginBottom: theme.spacing(2),
     },
+    factoryModeNotice: {
+        marginBottom: theme.spacing(2),
+        fontWeight: 'bold',
+    },
 }));
 
 export const DumpDialog = ({ trackIndexes, isCapableOfDownload }: { trackIndexes: number[]; isCapableOfDownload: boolean }) => {
@@ -61,6 +66,7 @@ export const DumpDialog = ({ trackIndexes, isCapableOfDownload }: { trackIndexes
     const [inputDeviceId, setInputDeviceId] = useState<string>('');
 
     let { visible } = useShallowEqualSelector(state => state.dumpDialog);
+    let { deviceCapabilities } = useShallowEqualSelector(state => state.main);
 
     const handleClose = useCallback(() => {
         setInputDeviceId('');
@@ -111,6 +117,7 @@ export const DumpDialog = ({ trackIndexes, isCapableOfDownload }: { trackIndexes
             handleChange,
             handleStartTransfer,
             visible,
+            deviceCapabilities,
             devices,
             inputDeviceId,
             isCapableOfDownload,
@@ -140,6 +147,13 @@ export const DumpDialog = ({ trackIndexes, isCapableOfDownload }: { trackIndexes
                     </React.Fragment>
                 ) : (
                     <React.Fragment>
+                        {deviceCapabilities.includes(Capability.factoryMode) && (
+                            <Typography component="h4" variant="body2" className={classes.factoryModeNotice}>
+                                It looks like this player supports the factory mode - it might be capable of RH1-style digital transfer.
+                                Please check the factory mode for more information.
+                            </Typography>
+                        )}
+
                         <Typography component="p" variant="body2">
                             1. Connect your MD Player line-out to your PC audio line-in.
                         </Typography>

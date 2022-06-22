@@ -3,7 +3,7 @@ import { enableBatching } from 'redux-batched-actions';
 import { filterOutCorrupted, getSimpleServices, ServiceConstructionInfo } from '../services/service-manager';
 import { savePreference, loadPreference } from '../utils';
 
-export type Views = 'WELCOME' | 'MAIN';
+export type Views = 'WELCOME' | 'MAIN' | 'FACTORY';
 
 export interface AppState {
     mainView: Views;
