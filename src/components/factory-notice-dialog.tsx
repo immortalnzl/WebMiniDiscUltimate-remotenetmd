@@ -75,8 +75,14 @@ export const FactoryModeNoticeDialog = (props: {}) => {
                     valid and can be played on the unit, please report it as a bug.
                     {`\n`}- This mode is still very unstable. If you find any bugs, please report them by creating an issue on
                     <Link href="https://github.com/asivery/webminidisc"> this project's github page</Link> or by messaging the developers on
-                    the <Link href="https://minidisc.wiki/discord">Minidisc.wiki Discord server</Link>.{`\n\n`}
-                    Enter the factory mode?
+                    the <Link href="https://minidisc.wiki/discord">Minidisc.wiki Discord server</Link>.
+                    {`\n\n`}
+                    To download a track via USB:
+                    {`\n`}- Select the 'Position Sector' tab.
+                    {`\n`}- With 'Shift' pressed down, the ToC tiles show their numbers instead of descriptions
+                    {`\n`}- Select the ToC tile with the number of the track you want to download on the Track Junction Map
+                    {`\n`}- If your device supports it, there should be a download button below the tables
+                    {`\n\n`}Enter the factory mode?
                 </DialogContentText>
             </DialogContent>
             <DialogActions>

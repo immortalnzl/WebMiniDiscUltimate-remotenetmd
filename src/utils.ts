@@ -124,7 +124,7 @@ export async function getATRACWAVEncoding(file: File): Promise<{ format: 'LP2' |
         case 192:
             return { format: 'LP2', headerLength };
         case 96:
-            return { format: 'LP2', headerLength };
+            return { format: 'LP4', headerLength };
         default:
             return null;
     }

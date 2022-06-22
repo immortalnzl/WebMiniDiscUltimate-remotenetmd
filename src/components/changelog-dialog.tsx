@@ -60,10 +60,16 @@ export const ChangelogDialog = (props: {}) => {
 
     const content = (
         <React.Fragment>
+            <h2 className={classes.header}>Version 1.2.1</h2>
+            <ul className={classes.list}>
+                <li>Labelled the factory mode better</li>
+                <li>Fixed a bug in ATRAC autodetection</li>
+            </ul>
+
             <h2 className={classes.header}>Version 1.2.0</h2>
             <ul className={classes.list}>
                 <li>
-                    Added factory mode support for Sony portables
+                    Added factory mode support for Sony portables. It's available from the ellipsis menu
                     <ul>
                         <li>Added the ability to transfer music from NetMD to PC via USB</li>
                         <li>Added the ability to edit the ToC byte-by-byte</li>

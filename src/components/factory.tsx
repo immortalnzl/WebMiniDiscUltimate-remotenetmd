@@ -408,6 +408,7 @@ const Toc = () => {
                     selectedIndex={selectedTile}
                     data={mapTable}
                     contentCounter={0}
+                    name="Track Junction Map"
                 />
                 <TocTable
                     showingIndices={showingIndices}
@@ -416,6 +417,7 @@ const Toc = () => {
                     selectedIndex={selectedTile - 256}
                     data={contentsTable}
                     contentCounter={contentCounter}
+                    name={["Track Fragment Map", "Title Cells Map", "Timestamps Map"][selectedTab]}
                 />
             </Box>
             {toc && (

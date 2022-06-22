@@ -61,6 +61,13 @@ const useStyles = makeStyles(theme => ({
         display: 'flex',
         alignItems: 'space-between',
     },
+    tableHeader: {
+        textAlign: 'center',
+    },
+    tableWrapper: {
+        display: 'flex',
+        flexDirection: 'column',
+    },
 }));
 
 export interface DisplayableBlock {
@@ -77,7 +84,9 @@ export const TocTable = ({
     selectedIndex,
     highlitedIndices,
     contentCounter,
+    name
 }: {
+    name: string,
     data: DisplayableBlock[];
     onSelectionChanged: (index: number) => void;
     showingIndices: boolean;
@@ -90,35 +99,38 @@ export const TocTable = ({
     while (data.length < 256) data.push({ contents: [{ text: '?', color: 'red' }] });
     const classes = useStyles();
     return (
-        <Table className={classes.tocTable}>
-            <TableBody>
-                {Array(16)
-                    .fill(0)
-                    .map((_, i) => (
-                        <TableRow key={`r${i}`}>
-                            {Array(16)
-                                .fill(0)
-                                .map((_, j) => (
-                                    <TableCell
-                                        onClick={() => onSelectionChanged(i * 16 + j)}
-                                        className={classes.tocCell}
-                                        key={`r${i}-c${j}`}
-                                        style={{
-                                            backgroundColor:
-                                                data[i * 16 + j].contents[contentCounter % data[i * 16 + j].contents.length].color,
-                                            opacity: selectedIndex === i * 16 + j || highlitedIndices.includes(i * 16 + j) ? 1 : undefined,
-                                            fontWeight: selectedIndex === i * 16 + j ? 'bold' : undefined,
-                                        }}
-                                    >
-                                        {showingIndices
-                                            ? i * 16 + j
-                                            : data[i * 16 + j].contents[contentCounter % data[i * 16 + j].contents.length].text}
-                                    </TableCell>
-                                ))}
-                        </TableRow>
-                    ))}
-            </TableBody>
-        </Table>
+        <div className={classes.tableWrapper}>
+            <Typography component="h3" variant="h6" className={classes.tableHeader}>{name}</Typography>
+            <Table className={classes.tocTable}>
+                <TableBody>
+                    {Array(16)
+                        .fill(0)
+                        .map((_, i) => (
+                            <TableRow key={`r${i}`}>
+                                {Array(16)
+                                    .fill(0)
+                                    .map((_, j) => (
+                                        <TableCell
+                                            onClick={() => onSelectionChanged(i * 16 + j)}
+                                            className={classes.tocCell}
+                                            key={`r${i}-c${j}`}
+                                            style={{
+                                                backgroundColor:
+                                                    data[i * 16 + j].contents[contentCounter % data[i * 16 + j].contents.length].color,
+                                                opacity: selectedIndex === i * 16 + j || highlitedIndices.includes(i * 16 + j) ? 1 : undefined,
+                                                fontWeight: selectedIndex === i * 16 + j ? 'bold' : undefined,
+                                            }}
+                                        >
+                                            {showingIndices
+                                                ? i * 16 + j
+                                                : data[i * 16 + j].contents[contentCounter % data[i * 16 + j].contents.length].text}
+                                        </TableCell>
+                                    ))}
+                            </TableRow>
+                        ))}
+                </TableBody>
+            </Table>
+        </div>
     );
 };
 
