@@ -168,7 +168,7 @@ export const RenameDialog = (props: {}) => {
                                 (n >= 0x3040 && n <= 0x309f) || // Hiragana
                                 (n >= 0x4e00 && n <= 0x9faf) || // Kanji
                                 (n >= 0x3400 && n <= 0x4dbf) // Rare kanji
-                        ).length && (
+                        ).length ? (
                         <Typography color="error" component="p">
                             You seem to be trying to enter full-width text into the half-width slot.{' '}
                             <Link onClick={handleSwitchToFullWidth} color="error" underline="always" style={{ cursor: 'pointer' }}>
@@ -176,7 +176,7 @@ export const RenameDialog = (props: {}) => {
                             </Link>
                             ?
                         </Typography>
-                    )}
+                    ) : null}
                 <TextField
                     autoFocus
                     id="name"
