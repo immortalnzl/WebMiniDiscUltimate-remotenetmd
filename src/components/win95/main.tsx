@@ -82,6 +82,7 @@ const useStyles = makeStyles((theme: any) => ({
 export const W95Main = (props: {
     disc: Disc | null;
     deviceName: string;
+    factoryModeRippingInMainUi: boolean;
     selected: number[];
     setSelected: React.Dispatch<React.SetStateAction<number[]>>;
     selectedCount: number;
@@ -243,7 +244,11 @@ export const W95Main = (props: {
             <ConvertDialog files={props.uploadedFiles} />
             <RenameDialog />
             <RecordDialog />
-            <DumpDialog trackIndexes={props.selected} isCapableOfDownload={props.isCapable(Capability.trackDownload)} />
+            <DumpDialog
+                trackIndexes={props.selected}
+                isCapableOfDownload={props.isCapable(Capability.trackDownload) || props.factoryModeRippingInMainUi}
+                isExploitDownload={props.factoryModeRippingInMainUi}
+            />
             <AboutDialog />
             <ChangelogDialog />
             <PanicDialog />

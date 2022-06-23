@@ -25,7 +25,7 @@ import {
 import { UploadFormat } from './convert-dialog-feature';
 import NotificationCompleteIconUrl from '../images/record-complete-notification-icon.png';
 import { assertNumber, concatUint8Arrays, getHalfWidthTitleLength } from 'netmd-js/dist/utils';
-import { NetMDService, NetMDFactoryService } from '../services/netmd';
+import { NetMDService, NetMDFactoryService, ExploitCapability } from '../services/netmd';
 import { getSimpleServices, ServiceConstructionInfo } from '../services/service-manager';
 import { parseTOC, getTitleByTrackNumber, reconstructTOC } from 'netmd-tocmanip';
 
@@ -238,7 +238,7 @@ export function deleteService(index: number) {
 
 export function pair(serviceInstance: NetMDService) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        dispatch(appStateActions.setPairingFailed(false));
+        dispatch(batchActions([appStateActions.setPairingFailed(false), appStateActions.setFactoryModeRippingInMainUi(false)]));
 
         serviceRegistry.mediaSessionService?.init(); // no need to await
         await serviceRegistry.audioExportService!.init();
@@ -953,7 +953,7 @@ export function readToc() {
 export function editFragmentMode(index: number, mode: number) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         const toc = JSON.parse(JSON.stringify(getState().factory.toc));
-        if(toc.trackFragmentList[index].mode !== mode){
+        if (toc.trackFragmentList[index].mode !== mode) {
             dispatch(factoryActions.setModified(true));
         }
         toc.trackFragmentList[index].mode = mode;
@@ -1089,54 +1089,84 @@ export function uploadToc(file: File) {
     };
 }
 
-export function exploitDownloadTrack(trackIndex: number) {
+export function exploitDownloadTracks(trackIndexes: number[]) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         // Verify if there even exists a track of that number
         const disc = getState().main.disc!;
-        if (trackIndex >= disc.trackCount) {
-            window.alert("This track does not exist. Make sure you've read the instructions on how to use the factory mode.");
+        try {
+            await serviceRegistry.netmdService!.stop();
+        } catch (ex) {
+            /* Ignore */
+        }
+
+        dispatch(factoryProgressDialogActions.setVisible(true));
+        for (let trackIndex of trackIndexes) {
+            if (trackIndex >= disc.trackCount) {
+                window.alert("This track does not exist. Make sure you've read the instructions on how to use the factory mode.");
+                return;
+            }
+            const track = getTracks(disc)[trackIndex];
+            dispatch(
+                batchActions([
+                    factoryProgressDialogActions.setDetails({
+                        name: `Transferring track ${trackIndex + 1}`,
+                        units: 'sectors',
+                    }),
+                    factoryProgressDialogActions.setProgress({
+                        current: -1,
+                        total: 0,
+                        additionalInfo: 'Rewriting firmware...',
+                    }),
+                ])
+            );
+
+            const trackData = await serviceRegistry.netmdFactoryService!.exploitDownloadTrack(
+                trackIndex,
+                ({
+                    totalSectors,
+                    sectorsRead,
+                    action,
+                    sector,
+                }: {
+                    sectorsRead: number;
+                    totalSectors: number;
+                    action: 'READ' | 'SEEK';
+                    sector?: string;
+                }) => {
+                    dispatch(
+                        factoryProgressDialogActions.setProgress({
+                            current: action === 'SEEK' ? -1 : sectorsRead,
+                            total: totalSectors,
+                            additionalInfo: action === 'SEEK' ? 'Seeking...' : `Reading sector ${sector!}...`,
+                        })
+                    );
+                }
+            );
+            const filename = createDownloadTrackName(track);
+            downloadBlob(new Blob([trackData]), filename);
+        }
+        dispatch(factoryProgressDialogActions.setVisible(false));
+    };
+}
+
+export function enableFactoryRippingModeInMainUi() {
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        dispatch(appStateActions.setLoading(true));
+        await serviceRegistry.netmdService!.stop();
+        await loadFactoryMode();
+
+        const capabilities = await serviceRegistry.netmdFactoryService!.getExploitCapabilities();
+        if (!capabilities.includes(ExploitCapability.downloadAtrac)) {
+            dispatch(appStateActions.setLoading(false));
+            window.alert(
+                'Cannot enable factory mode ripping in main UI.\nThis device is not supported yet.\nStay tuned for future updates.'
+            );
             return;
         }
-        const track = getTracks(disc)[trackIndex];
-        dispatch(
-            batchActions([
-                factoryProgressDialogActions.setDetails({
-                    name: `Transferring track ${trackIndex + 1}`,
-                    units: 'sectors',
-                }),
-                factoryProgressDialogActions.setProgress({
-                    current: -1,
-                    total: 0,
-                    additionalInfo: 'Rewriting firmware...',
-                }),
-                factoryProgressDialogActions.setVisible(true),
-            ])
-        );
 
-        const trackData = await serviceRegistry.netmdFactoryService!.exploitDownloadTrack(
-            trackIndex,
-            ({
-                totalSectors,
-                sectorsRead,
-                action,
-                sector,
-            }: {
-                sectorsRead: number;
-                totalSectors: number;
-                action: 'READ' | 'SEEK';
-                sector?: string;
-            }) => {
-                dispatch(
-                    factoryProgressDialogActions.setProgress({
-                        current: action === 'SEEK' ? -1 : sectorsRead,
-                        total: totalSectors,
-                        additionalInfo: action === 'SEEK' ? 'Seeking...' : `Reading sector ${sector!}...`,
-                    })
-                );
-            }
-        );
-        dispatch(factoryProgressDialogActions.setVisible(false));
-        const filename = createDownloadTrackName(track);
-        downloadBlob(new Blob([trackData]), filename);
+        // At this point we're in the factory mode, and CSAR is allowed.
+        // It's safe to enable this functionality.
+
+        dispatch(batchActions([appStateActions.setFactoryModeRippingInMainUi(true), appStateActions.setLoading(false)]));
     };
 }

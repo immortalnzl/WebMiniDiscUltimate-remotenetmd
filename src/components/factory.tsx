@@ -3,7 +3,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import { ModeFlag, isValidFragment, TitleCell, Fragment, getTitleByTrackNumber } from 'netmd-tocmanip';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { exploitDownloadTrack, readToc, writeModifiedTOC } from '../redux/actions';
+import { exploitDownloadTracks, readToc, writeModifiedTOC } from '../redux/actions';
 import { useShallowEqualSelector } from '../utils';
 import { TopMenu } from './topmenu';
 import { actions as factoryActions } from '../redux/factory-feature';
@@ -229,7 +229,7 @@ const Toc = () => {
 
     const handleDownloadTrack = useCallback(
         (track: number) => {
-            dispatch(exploitDownloadTrack(track));
+            dispatch(exploitDownloadTracks([track]));
         },
         [dispatch]
     );
@@ -393,7 +393,7 @@ const Toc = () => {
                 </span>
             </Box>
             <Typography component="h2" variant="body2">
-                Firmware version {firmwareVersion || "??"}
+                Firmware version {firmwareVersion || '??'}
             </Typography>
             <Tabs value={selectedTab} onChange={handleTabChange}>
                 <Tab label="Position Sector" />
@@ -417,7 +417,7 @@ const Toc = () => {
                     selectedIndex={selectedTile - 256}
                     data={contentsTable}
                     contentCounter={contentCounter}
-                    name={["Track Fragment Map", "Title Cells Map", "Timestamps Map"][selectedTab]}
+                    name={['Track Fragment Map', 'Title Cells Map', 'Timestamps Map'][selectedTab]}
                 />
             </Box>
             {toc && (

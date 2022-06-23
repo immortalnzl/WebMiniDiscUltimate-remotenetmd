@@ -63,6 +63,7 @@ import { ChangelogDialog } from './changelog-dialog';
 import { Capability } from '../services/netmd';
 import { LinearProgress } from '@material-ui/core';
 import { FactoryModeNoticeDialog } from './factory-notice-dialog';
+import { FactoryModeProgressDialog } from './factory-progress-dialog';
 
 const useStyles = makeStyles(theme => ({
     add: {
@@ -156,6 +157,7 @@ export const Main = (props: {}) => {
     const deviceName = useShallowEqualSelector(state => state.main.deviceName);
     const deviceStatus = useShallowEqualSelector(state => state.main.deviceStatus);
     const deviceCapabilities = useShallowEqualSelector(state => state.main.deviceCapabilities);
+    const factoryModeRippingInMainUi = useShallowEqualSelector(state => state.appState.factoryModeRippingInMainUi);
     const { vintageMode } = useShallowEqualSelector(state => state.appState);
 
     const [selected, setSelected] = React.useState<number[]>([]);
@@ -408,6 +410,8 @@ export const Main = (props: {}) => {
             disc,
             deviceName,
 
+            factoryModeRippingInMainUi,
+
             selected,
             setSelected,
             selectedCount,
@@ -515,8 +519,11 @@ export const Main = (props: {}) => {
                 {selectedCount > 0 ? (
                     <React.Fragment>
                         <Tooltip title="Record from MD">
-                            <Button aria-label={isCapable(Capability.trackDownload) ? 'Download' : 'Record'} onClick={handleShowDumpDialog}>
-                                {isCapable(Capability.trackDownload) ? 'Download' : 'Record'}
+                            <Button
+                                aria-label={isCapable(Capability.trackDownload) || factoryModeRippingInMainUi ? 'Download' : 'Record'}
+                                onClick={handleShowDumpDialog}
+                            >
+                                {isCapable(Capability.trackDownload) || factoryModeRippingInMainUi ? 'Download' : 'Record'}
                             </Button>
                         </Tooltip>
                     </React.Fragment>
@@ -667,7 +674,12 @@ export const Main = (props: {}) => {
             <ErrorDialog />
             <ConvertDialog files={uploadedFiles} />
             <RecordDialog />
-            <DumpDialog trackIndexes={selected} isCapableOfDownload={isCapable(Capability.trackDownload)} />
+            <FactoryModeProgressDialog />
+            <DumpDialog
+                trackIndexes={selected}
+                isCapableOfDownload={isCapable(Capability.trackDownload) || factoryModeRippingInMainUi}
+                isExploitDownload={factoryModeRippingInMainUi}
+            />
             <FactoryModeNoticeDialog />
             <AboutDialog />
             <ChangelogDialog />

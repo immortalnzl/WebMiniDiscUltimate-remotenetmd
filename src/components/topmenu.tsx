@@ -8,7 +8,18 @@ import MenuItem from '@material-ui/core/MenuItem';
 import Divider from '@material-ui/core/Divider';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 
-import { wipeDisc, listContent, selfTest, downloadRam, downloadRom, downloadToc, uploadToc, readToc, runTetris } from '../redux/actions';
+import {
+    wipeDisc,
+    listContent,
+    selfTest,
+    downloadRam,
+    downloadRom,
+    downloadToc,
+    uploadToc,
+    readToc,
+    runTetris,
+    enableFactoryRippingModeInMainUi,
+} from '../redux/actions';
 import { actions as appActions } from '../redux/app-feature';
 import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
 import { actions as factoryNoticeDialogActions } from '../redux/factory-notice-dialog-feature';
@@ -55,7 +66,9 @@ export const TopMenu = function(props: { onClick?: () => void }) {
     const classes = useStyles();
     const dispatch = useDispatch();
 
-    let { mainView, darkMode, vintageMode, fullWidthSupport } = useShallowEqualSelector(state => state.appState);
+    let { mainView, darkMode, vintageMode, fullWidthSupport, factoryModeRippingInMainUi } = useShallowEqualSelector(
+        state => state.appState
+    );
     const deviceCapabilities = useShallowEqualSelector(state => state.main.deviceCapabilities);
     const exploitCapabilities = useShallowEqualSelector(state => state.factory.exploitCapabilities ?? []);
     let discTitle = useShallowEqualSelector(state => state.main.disc?.title ?? ``);
@@ -211,6 +224,15 @@ export const TopMenu = function(props: { onClick?: () => void }) {
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
+    const handleToggleFactoryModeRippingInMainUi = useCallback(() => {
+        if (factoryModeRippingInMainUi) {
+            dispatch(appActions.setFactoryModeRippingInMainUi(false));
+        } else {
+            dispatch(enableFactoryRippingModeInMainUi());
+        }
+        handleMenuClose();
+    }, [dispatch, factoryModeRippingInMainUi, handleMenuClose]);
+
     const menuItems = [];
     if (mainView === 'MAIN') {
         menuItems.push(
@@ -228,6 +250,22 @@ export const TopMenu = function(props: { onClick?: () => void }) {
                         <SettingsIcon fontSize="small" />
                     </ListItemIcon>
                     <ListItemText>Enter Factory Mode</ListItemText>
+                </MenuItem>
+            );
+            menuItems.push(
+                <MenuItem key="factoryUnify" onClick={handleToggleFactoryModeRippingInMainUi}>
+                    <ListItemIcon className={classes.listItemIcon}>
+                        {factoryModeRippingInMainUi ? <ToggleOnIcon fontSize="small" /> : <ToggleOffIcon fontSize="small" />}
+                    </ListItemIcon>
+                    <ListItemText>
+                        {factoryModeRippingInMainUi ? `Disable ` : `Enable `}
+                        <Tooltip
+                            title="This advanced feature enables RH1-style ripping from the main ui. The factory mode's notice still applies."
+                            arrow
+                        >
+                            <span className={classes.toolTippedText}>Factory Mode Ripping In Main UI</span>
+                        </Tooltip>
+                    </ListItemText>
                 </MenuItem>
             );
         }

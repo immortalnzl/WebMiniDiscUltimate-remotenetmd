@@ -84,9 +84,9 @@ export const TocTable = ({
     selectedIndex,
     highlitedIndices,
     contentCounter,
-    name
+    name,
 }: {
-    name: string,
+    name: string;
     data: DisplayableBlock[];
     onSelectionChanged: (index: number) => void;
     showingIndices: boolean;
@@ -100,7 +100,9 @@ export const TocTable = ({
     const classes = useStyles();
     return (
         <div className={classes.tableWrapper}>
-            <Typography component="h3" variant="h6" className={classes.tableHeader}>{name}</Typography>
+            <Typography component="h3" variant="h6" className={classes.tableHeader}>
+                {name}
+            </Typography>
             <Table className={classes.tocTable}>
                 <TableBody>
                     {Array(16)
@@ -117,7 +119,8 @@ export const TocTable = ({
                                             style={{
                                                 backgroundColor:
                                                     data[i * 16 + j].contents[contentCounter % data[i * 16 + j].contents.length].color,
-                                                opacity: selectedIndex === i * 16 + j || highlitedIndices.includes(i * 16 + j) ? 1 : undefined,
+                                                opacity:
+                                                    selectedIndex === i * 16 + j || highlitedIndices.includes(i * 16 + j) ? 1 : undefined,
                                                 fontWeight: selectedIndex === i * 16 + j ? 'bold' : undefined,
                                             }}
                                         >

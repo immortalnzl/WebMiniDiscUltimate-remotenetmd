@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { useShallowEqualSelector } from '../utils';
 
-import { downloadTracks, recordTracks } from '../redux/actions';
+import { downloadTracks, exploitDownloadTracks, recordTracks } from '../redux/actions';
 import { actions as dumpDialogActions } from '../redux/dump-dialog-feature';
 
 import Dialog from '@material-ui/core/Dialog';
@@ -58,7 +58,15 @@ const useStyles = makeStyles(theme => ({
     },
 }));
 
-export const DumpDialog = ({ trackIndexes, isCapableOfDownload }: { trackIndexes: number[]; isCapableOfDownload: boolean }) => {
+export const DumpDialog = ({
+    trackIndexes,
+    isCapableOfDownload,
+    isExploitDownload,
+}: {
+    trackIndexes: number[];
+    isCapableOfDownload: boolean;
+    isExploitDownload: boolean;
+}) => {
     const dispatch = useDispatch();
     const classes = useStyles();
 
@@ -87,12 +95,16 @@ export const DumpDialog = ({ trackIndexes, isCapableOfDownload }: { trackIndexes
 
     const handleStartTransfer = useCallback(() => {
         if (isCapableOfDownload) {
-            dispatch(downloadTracks(trackIndexes));
+            if (isExploitDownload) {
+                dispatch(exploitDownloadTracks(trackIndexes));
+            } else {
+                dispatch(downloadTracks(trackIndexes));
+            }
         } else {
             dispatch(recordTracks(trackIndexes, inputDeviceId));
         }
         handleClose();
-    }, [trackIndexes, inputDeviceId, dispatch, handleClose, isCapableOfDownload]);
+    }, [trackIndexes, inputDeviceId, dispatch, handleClose, isCapableOfDownload, isExploitDownload]);
 
     useEffect(() => {
         async function updateDeviceList() {
@@ -141,9 +153,20 @@ export const DumpDialog = ({ trackIndexes, isCapableOfDownload }: { trackIndexes
                 </Typography>
                 {isCapableOfDownload ? (
                     <React.Fragment>
-                        <Typography component="p" variant="body2">
-                            As you are using a Sony MZ-RH1, it is possible to transfer tracks via NetMD.
-                        </Typography>
+                        {isExploitDownload ? (
+                            <React.Fragment>
+                                <Typography component="p" variant="body2">
+                                    As you have enabled factory mode ripping in main ui, you can download tracks via USB.
+                                </Typography>
+                                <Typography component="p" variant="body2">
+                                    Please keep in mind that this functionality is not stable.
+                                </Typography>
+                            </React.Fragment>
+                        ) : (
+                            <Typography component="p" variant="body2">
+                                As you are using a Sony MZ-RH1, it is possible to transfer tracks via NetMD.
+                            </Typography>
+                        )}
                     </React.Fragment>
                 ) : (
                     <React.Fragment>
