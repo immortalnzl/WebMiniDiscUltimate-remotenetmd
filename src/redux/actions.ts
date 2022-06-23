@@ -1093,6 +1093,7 @@ export function exploitDownloadTracks(trackIndexes: number[]) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         // Verify if there even exists a track of that number
         const disc = getState().main.disc!;
+        const tracks = getTracks(disc);
         try {
             await serviceRegistry.netmdService!.stop();
         } catch (ex) {
@@ -1105,7 +1106,7 @@ export function exploitDownloadTracks(trackIndexes: number[]) {
                 window.alert("This track does not exist. Make sure you've read the instructions on how to use the factory mode.");
                 return;
             }
-            const track = getTracks(disc)[trackIndex];
+            const track = tracks.find(n => n.index === trackIndex)!;
             dispatch(
                 batchActions([
                     factoryProgressDialogActions.setDetails({
