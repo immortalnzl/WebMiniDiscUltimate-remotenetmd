@@ -252,22 +252,6 @@ export const TopMenu = function(props: { onClick?: () => void }) {
                     <ListItemText>Enter Factory Mode</ListItemText>
                 </MenuItem>
             );
-            menuItems.push(
-                <MenuItem key="factoryUnify" onClick={handleToggleFactoryModeRippingInMainUi}>
-                    <ListItemIcon className={classes.listItemIcon}>
-                        {factoryModeRippingInMainUi ? <ToggleOnIcon fontSize="small" /> : <ToggleOffIcon fontSize="small" />}
-                    </ListItemIcon>
-                    <ListItemText>
-                        {factoryModeRippingInMainUi ? `Disable ` : `Enable `}
-                        <Tooltip
-                            title="This advanced feature enables RH1-style ripping from the main ui. The factory mode's notice still applies."
-                            arrow
-                        >
-                            <span className={classes.toolTippedText}>Factory Mode Ripping In Main UI</span>
-                        </Tooltip>
-                    </ListItemText>
-                </MenuItem>
-            );
         }
         menuItems.push(
             <MenuItem key="title" onClick={handleRenameDisc} disabled={!isCapable(Capability.metadataEdit)}>
@@ -380,6 +364,24 @@ export const TopMenu = function(props: { onClick?: () => void }) {
                 </ListItemText>
             </MenuItem>
         );
+        if(isCapable(Capability.factoryMode)) {
+            menuItems.push(
+                <MenuItem key="factoryUnify" onClick={handleToggleFactoryModeRippingInMainUi}>
+                    <ListItemIcon className={classes.listItemIcon}>
+                        {factoryModeRippingInMainUi ? <ToggleOnIcon fontSize="small" /> : <ToggleOffIcon fontSize="small" />}
+                    </ListItemIcon>
+                    <ListItemText>
+                        {factoryModeRippingInMainUi ? `Disable ` : `Enable `}
+                        <Tooltip
+                            title="This advanced feature enables RH1-style ripping from the main ui. The factory mode's notice still applies."
+                            arrow
+                        >
+                            <span className={classes.toolTippedText}>Factory Mode Ripping In Main UI</span>
+                        </Tooltip>
+                    </ListItemText>
+                </MenuItem>
+            );
+        }
     }
     menuItems.push(
         <MenuItem key="darkMode" onClick={handleDarkMode}>

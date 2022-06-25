@@ -60,6 +60,12 @@ export const ChangelogDialog = (props: {}) => {
 
     const content = (
         <React.Fragment>
+            <h2 className={classes.header}>Version 1.2.2</h2>
+            <ul className={classes.list}>
+                <li>Added a button to enable ATRAC ripping in the main ui.</li>
+                <li>ATRAC ripping bugfixes and better compatibility.</li>
+            </ul>
+
             <h2 className={classes.header}>Version 1.2.1</h2>
             <ul className={classes.list}>
                 <li>Labelled the factory mode better</li>
