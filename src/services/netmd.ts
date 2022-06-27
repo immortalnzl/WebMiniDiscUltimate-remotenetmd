@@ -415,7 +415,7 @@ export class NetMDUSBService implements NetMDService {
 
         let halfWidthTitle = sanitizeHalfWidthTitle(title);
         fullWidthTitle = sanitizeFullWidthTitle(fullWidthTitle);
-        let mdTrack = new MDTrack(halfWidthTitle, format, data, 0x80000, fullWidthTitle, webWorkerAsyncPacketIterator);
+        let mdTrack = new MDTrack(halfWidthTitle, format, data, 0x400, fullWidthTitle, webWorkerAsyncPacketIterator);
 
         await this.currentSession.downloadTrack(mdTrack, ({ writtenBytes }) => {
             written = writtenBytes;
