@@ -7426,10 +7426,10 @@
     "netmd-js" "^4.0.0"
     "netmd-tocmanip" "^0.1.0"
 
-"netmd-js@^4.0.0", "netmd-js@^4.0.3":
-  "integrity" "sha512-DRsPih7Dqb4X6EkWLQxNUQ0z9p98XYzQKrCLP/BSLlP4yUBzMYhw67PXkTEkyv2Ya3pdQPLu81pJoGQ6IWU8Ig=="
-  "resolved" "https://registry.npmjs.org/netmd-js/-/netmd-js-4.0.3.tgz"
-  "version" "4.0.3"
+"netmd-js@^4.0.0", "netmd-js@^4.0.4":
+  "integrity" "sha512-YUBBqikiamO0jkK3kaJzxdDq8kbTCe3XgxzM1wsu+wwrbr0nOIOpQPzXmGpCb+GmCe7jXFor9nVxkOjLqtu/oA=="
+  "resolved" "https://registry.npmjs.org/netmd-js/-/netmd-js-4.0.4.tgz"
+  "version" "4.0.4"
   dependencies:
     "browser-bunyan" "^1.5.3"
     "buffer" "^5.5.0"
