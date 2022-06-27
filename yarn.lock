@@ -7417,19 +7417,19 @@
   "resolved" "https://registry.npmjs.org/neo-async/-/neo-async-2.6.1.tgz"
   "version" "2.6.1"
 
-"netmd-exploits@^0.1.3":
-  "integrity" "sha512-iHe+vsJQHYqp29kMawDCXrRnK+cM2M2WwaBrB/Fkv8zW+J/nW6U/yPzXlRDVsajfRzUDZgBxlLjdjhclFniyxw=="
-  "resolved" "https://registry.npmjs.org/netmd-exploits/-/netmd-exploits-0.1.3.tgz"
-  "version" "0.1.3"
+"netmd-exploits@^0.1.5":
+  "integrity" "sha512-KGEFIez3a177Hq+j6h9YnTYNHojR7AVuZJTolygaR5tZbEYfjPh6KO01hM4igc2GTP2QjOUlvPpeu1cKFcjvyA=="
+  "resolved" "https://registry.npmjs.org/netmd-exploits/-/netmd-exploits-0.1.5.tgz"
+  "version" "0.1.5"
   dependencies:
     "jsbi" "^4.3.0"
     "netmd-js" "^4.0.0"
     "netmd-tocmanip" "^0.1.0"
 
-"netmd-js@^4.0.0", "netmd-js@^4.0.2":
-  "integrity" "sha512-2fjzvXdKp5csBFeomoLWFgoXAzt8zAqQQv3bVN/WlrP2cMrjHFr+OyvS+NgHI9/4RGnVPGD+5cTcZKm6pq3Lzw=="
-  "resolved" "https://registry.npmjs.org/netmd-js/-/netmd-js-4.0.2.tgz"
-  "version" "4.0.2"
+"netmd-js@^4.0.0", "netmd-js@^4.0.3":
+  "integrity" "sha512-DRsPih7Dqb4X6EkWLQxNUQ0z9p98XYzQKrCLP/BSLlP4yUBzMYhw67PXkTEkyv2Ya3pdQPLu81pJoGQ6IWU8Ig=="
+  "resolved" "https://registry.npmjs.org/netmd-js/-/netmd-js-4.0.3.tgz"
+  "version" "4.0.3"
   dependencies:
     "browser-bunyan" "^1.5.3"
     "buffer" "^5.5.0"

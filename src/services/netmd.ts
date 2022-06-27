@@ -170,7 +170,7 @@ export class NetMDUSBService implements NetMDService {
         // TODO: Add a flag for this instead of relying just on the name.
         const deviceName = this.netmdInterface?.netMd.getDeviceName();
         if (
-            (deviceName?.includes('Sony') && deviceName?.includes('MZ-N') && !deviceName.includes('MZ-NH')) ||
+            (deviceName?.includes('Sony') && (deviceName?.includes('MZ-N') || deviceName?.includes("MZ-S1")) && !deviceName.includes('MZ-NH')) ||
             (deviceName?.includes('Aiwa') && deviceName?.includes('AM-NX'))
         ) {
             // Only non-HiMD Sony (and Aiwa since it's the same thing) portables have the factory mode.
