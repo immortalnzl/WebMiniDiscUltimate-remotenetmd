@@ -522,7 +522,7 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
     @asyncMutex
     async readRAM(callback: (progress?: { readBytes: number; totalBytes: number }) => void): Promise<Uint8Array> {
         const firmwareVersion = await getDescriptiveDeviceCode(this.factoryInterface);
-        const ramSize = firmwareVersion.startsWith('A') ? 0x4800 : 0x9000;
+        const ramSize = firmwareVersion.startsWith('R') ? 0x4800 : 0x9000;
         let readSlices: Uint8Array[] = [];
         for (let i = 0; i < ramSize; i += 0x10) {
             readSlices.push(await cleanRead(this.factoryInterface, i + 0x02000000, 0x10, MemoryType.MAPPED));
