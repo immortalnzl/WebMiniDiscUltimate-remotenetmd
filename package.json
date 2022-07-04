@@ -42,12 +42,13 @@
   },
   "homepage": "https://web.minidisc.wiki/",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build && cat public/extra-service-worker.js build/service-worker.js > build/final-service-worker.js",
+    "start": "npm run update-version && react-scripts start",
+    "build": "npm run update-version && react-scripts build && bash -c 'cat public/extra-service-worker.js build/service-worker.js > build/final-service-worker.js'",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "update-version": "bash -c \"printf \\\"// This file has been auto-generated. Please do not modify.\\nexport const GIT_HASH = '$(git rev-parse --short --verify master)';\\nexport const GIT_DIFF = '$(git diff | wc -l)';\\nexport const EXPLOITS_VERSION = '$(cat node_modules/netmd-exploits/package.json | grep 'version' | awk '{print gensub(/[^0-9]*([0-9.]*).*/, \"\\\\1\", \"g\", $2);}')';\\n\\\" > src/version-info.ts\""
   },
   "eslintConfig": {
     "extends": [
