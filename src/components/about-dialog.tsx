@@ -14,7 +14,7 @@ import Button from '@material-ui/core/Button';
 import Link from '@material-ui/core/Link';
 import { TransitionProps } from '@material-ui/core/transitions';
 import { W95AboutDialog } from './win95/about-dialog';
-import { EXPLOITS_VERSION, GIT_DIFF, GIT_HASH } from '../version-info';
+import { GIT_DIFF, GIT_HASH } from '../version-info';
 
 const Transition = React.forwardRef(function Transition(
     props: TransitionProps & { children?: React.ReactElement<any, any> },
@@ -131,7 +131,7 @@ export const AboutDialog = (props: {}) => {
                         </Link>
                     </li>
                 </ul>
-                <DialogContentText style={{textAlign: 'center', fontSize: 13}}>Version #{GIT_HASH} {(GIT_DIFF as any) === "0" ? "" : `(${GIT_DIFF} diff-lines ahead), netmd-exploits ${EXPLOITS_VERSION}`}</DialogContentText>
+                <DialogContentText style={{textAlign: 'center', fontSize: 13}}>Version #{GIT_HASH} {(GIT_DIFF as any) === "0" ? "" : `(${GIT_DIFF} diff-lines ahead)`}</DialogContentText>
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleClose}>Close</Button>

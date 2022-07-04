@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, WindowHeader, Anchor } from 'react95';
 import { FooterButton, DialogOverlay, DialogWindow, DialogFooter, DialogWindowContent, WindowCloseIcon } from './common';
-import { EXPLOITS_VERSION, GIT_DIFF, GIT_HASH } from '../../version-info';
+import { GIT_DIFF, GIT_HASH } from '../../version-info';
 
 export const W95AboutDialog = (props: { visible: boolean; handleClose: () => void }) => {
     if (!props.visible) {
@@ -79,7 +79,7 @@ export const W95AboutDialog = (props: { visible: boolean; handleClose: () => voi
                             , to build the user interface.
                         </li>
                     </ul>
-                    <p style={{textAlign: 'center', fontSize: 13}}>Version #{GIT_HASH} {(GIT_DIFF as any) === "0" ? "" : `(${GIT_DIFF} diff-lines ahead), netmd-exploits ${EXPLOITS_VERSION}`}</p>
+                    <p style={{textAlign: 'center', fontSize: 13}}>Version #{GIT_HASH} {(GIT_DIFF as any) === "0" ? "" : `(${GIT_DIFF} diff-lines ahead)`}</p>
                     <DialogFooter>
                         <FooterButton onClick={props.handleClose}>OK</FooterButton>
                     </DialogFooter>
