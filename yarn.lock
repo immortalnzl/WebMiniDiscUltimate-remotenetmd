@@ -7417,10 +7417,10 @@
   "resolved" "https://registry.npmjs.org/neo-async/-/neo-async-2.6.1.tgz"
   "version" "2.6.1"
 
-"netmd-exploits@^0.1.11":
-  "integrity" "sha512-y+TomGX4GkWj1AYULIwaMFtuUTVBY/QrAZO7SEbRGQKpt5T++qdUR1f6x0ddXCZunM1qm7S0/NWdjz2Qc0P0Yg=="
-  "resolved" "https://registry.npmjs.org/netmd-exploits/-/netmd-exploits-0.1.11.tgz"
-  "version" "0.1.11"
+"netmd-exploits@^0.1.12":
+  "integrity" "sha512-oC+WaNEEmoYidXC2n7kn7KwyIyDG3NeXOExh27lULsCuoG91MSolgGrtxqRBHsjaBuuor+3x3LFKAk9mc7JaOQ=="
+  "resolved" "https://registry.npmjs.org/netmd-exploits/-/netmd-exploits-0.1.12.tgz"
+  "version" "0.1.12"
   dependencies:
     "jsbi" "^4.3.0"
     "netmd-js" "^4.0.0"
