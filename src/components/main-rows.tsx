@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import clsx from 'clsx';
 
-import { EncodingName } from '../utils';
+import { EncodingName, ChannelNames } from '../utils';
 
 import { formatTimeFromFrames, Track, Group } from 'netmd-js';
 
@@ -64,6 +64,15 @@ const useStyles = makeStyles(theme => ({
         verticalAlign: 'middle',
         width: theme.spacing(4.5),
         marginRight: theme.spacing(0.5),
+    },
+    channelBadge: {
+        position: 'static',
+        display: 'inline-flex',
+        padding: '0 4px',
+        verticalAlign: 'middle',
+        //width: theme.spacing(6),
+        marginRight: theme.spacing(0.5),
+        color: theme.palette.text.secondary,
     },
     durationCell: {
         whiteSpace: 'nowrap',
@@ -195,6 +204,7 @@ export function TrackRow({
                 {track.title || `No Title`}
             </TableCell>
             <TableCell align="right" className={classes.durationCell}>
+                <span className={classes.channelBadge}>{EncodingName[track.encoding] === 'SP' ? ChannelNames[track.channel] : ''}</span>
                 <span className={classes.formatBadge}>{EncodingName[track.encoding]}</span>
                 <span className={classes.durationCellTime}>{formatTimeFromFrames(track.duration, false)}</span>
             </TableCell>
