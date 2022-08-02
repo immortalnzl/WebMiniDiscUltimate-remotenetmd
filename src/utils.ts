@@ -113,9 +113,17 @@ export async function getATRACWAVEncoding(file: File): Promise<{ format: 'LP2' |
     const channels = Buffer.from(fileData.slice(22, 24)).readUInt16LE(0);
     if (wavType !== 0x270 || channels !== 0x02) return null; // Not ATRAC3
 
-    const formatSectionSize = Buffer.from(fileData.slice(16, 20)).readUInt32LE(0);
-
-    const headerLength = 20 + formatSectionSize + 8;
+    let headerLength = 12;
+    while (headerLength < fileData.byteLength) {
+        const chunkType = Buffer.from(fileData.slice(headerLength, headerLength + 4)).toString();
+        const chunkSize = Buffer.from(fileData.slice(headerLength + 4, headerLength + 8)).readUInt32LE(0);
+        if (chunkType === 'data') {
+            headerLength = headerLength + 8;
+            break;
+        } else {
+            headerLength = headerLength + chunkSize + 8;
+        }
+    }
 
     const bytesSampleRate = Buffer.from(fileData.slice(24, 28)).readUInt32LE(0);
     const bytesPerFrame = Buffer.from(fileData.slice(32, 34)).readUInt16LE(0) / 2;

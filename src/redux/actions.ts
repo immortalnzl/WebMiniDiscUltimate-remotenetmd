@@ -839,7 +839,6 @@ export function convertAndUpload(files: TitledFile[], format: UploadFormat) {
                     );
                 } else {
                     // This is already an ATRAC file - don't reencode.
-                    debugger;
                     converted.push(
                         new Promise(async resolve => {
                             // Remove the WAV header.
