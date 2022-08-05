@@ -1,4 +1,4 @@
-import { Disc, formatTimeFromFrames, Encoding, Channels, Group } from 'netmd-js';
+import { Disc, formatTimeFromFrames, Encoding, Group } from 'netmd-js';
 import { useSelector, shallowEqual } from 'react-redux';
 import { RootState } from './redux/store';
 import { Mutex } from 'async-mutex';
@@ -198,11 +198,6 @@ export const EncodingName: { [k: number]: string } = {
     [Encoding.lp4]: 'LP4',
 };
 
-export const ChannelNames: { [k: number]: string } = {
-    [Channels.mono]: 'MONO',
-    [Channels.stereo]: 'STEREO',
-};
-
 export type DisplayTrack = {
     index: number;
     title: string;
@@ -210,7 +205,6 @@ export type DisplayTrack = {
     group: string | null;
     duration: string;
     encoding: string;
-    channels: string;
     durationInSecs: number;
 };
 
@@ -225,7 +219,6 @@ export function getSortedTracks(disc: Disc | null) {
                     fullWidthTitle: track.fullWidthTitle ?? ``,
                     group: group.title ?? null,
                     encoding: EncodingName[track.encoding],
-                    channels: ChannelNames[track.channel],
                     duration: formatTimeFromFrames(track.duration, false),
                     durationInSecs: track.duration / 512, // CAVEAT: 1s = 512 frames
                 });

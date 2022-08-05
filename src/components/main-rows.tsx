@@ -1,9 +1,9 @@
 import React, { useCallback } from 'react';
 import clsx from 'clsx';
 
-import { EncodingName, ChannelNames } from '../utils';
+import { EncodingName } from '../utils';
 
-import { formatTimeFromFrames, Track, Group } from 'netmd-js';
+import { formatTimeFromFrames, Track, Group, Channels } from 'netmd-js';
 
 import { makeStyles } from '@material-ui/core/styles';
 import TableCell from '@material-ui/core/TableCell';
@@ -70,7 +70,7 @@ const useStyles = makeStyles(theme => ({
         display: 'inline-flex',
         padding: '0 4px',
         verticalAlign: 'middle',
-        //width: theme.spacing(6),
+        userSelect: 'none',
         marginRight: theme.spacing(0.5),
         color: theme.palette.text.secondary,
     },
@@ -204,7 +204,9 @@ export function TrackRow({
                 {track.title || `No Title`}
             </TableCell>
             <TableCell align="right" className={classes.durationCell}>
-                <span className={classes.channelBadge}>{EncodingName[track.encoding] === 'SP' ? ChannelNames[track.channel] : ''}</span>
+                {EncodingName[track.encoding] === 'SP' && track.channel === Channels.mono && (
+                    <span className={classes.channelBadge}>MONO</span>
+                )}
                 <span className={classes.formatBadge}>{EncodingName[track.encoding]}</span>
                 <span className={classes.durationCellTime}>{formatTimeFromFrames(track.duration, false)}</span>
             </TableCell>

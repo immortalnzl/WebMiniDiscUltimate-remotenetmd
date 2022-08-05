@@ -25,9 +25,9 @@ class NetMDMockService implements NetMDService {
             duration: 5 * 60 * 512,
             encoding: Encoding.sp,
             index: 1,
-            channel: Channels.stereo,
+            channel: Channels.mono,
             protected: TrackFlag.unprotected,
-            title: 'Mock Track 2',
+            title: 'Mock Track 2 (mono)',
             fullWidthTitle: '',
         },
         {
