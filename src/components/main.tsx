@@ -218,7 +218,7 @@ export const Main = (props: {}) => {
 
     const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
         onDrop,
-        accept: [`audio/*`, `video/mp4`, `.oma`],
+        accept: [`audio/*`, `video/mp4`, `.oma`, `.at3`],
         noClick: true,
     });
 
