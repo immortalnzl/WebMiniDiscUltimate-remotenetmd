@@ -32,7 +32,7 @@ jobs:
   # 'do not treat warnings as errors' per 'deploy-to-gh-pages.yml'
     - name: install and build
       run: |
-        npm install
+        npm ci
         npm run build
       env:
         CI: false
