@@ -62,8 +62,8 @@ import { useMemo } from 'react';
 import { ChangelogDialog } from './changelog-dialog';
 import { Capability } from '../services/netmd';
 import { LinearProgress } from '@material-ui/core';
-import { FactoryModeNoticeDialog } from './factory-notice-dialog';
-import { FactoryModeProgressDialog } from './factory-progress-dialog';
+import { FactoryModeNoticeDialog } from './factory/factory-notice-dialog';
+import { FactoryModeProgressDialog } from './factory/factory-progress-dialog';
 
 const useStyles = makeStyles(theme => ({
     add: {

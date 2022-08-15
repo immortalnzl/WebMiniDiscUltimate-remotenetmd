@@ -3,13 +3,12 @@ import { makeStyles } from '@material-ui/core/styles';
 import { ModeFlag, isValidFragment, TitleCell, Fragment, getTitleByTrackNumber } from 'netmd-tocmanip';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { exploitDownloadTracks, readToc, writeModifiedTOC } from '../redux/actions';
-import { useShallowEqualSelector } from '../utils';
-import { TopMenu } from './topmenu';
-import { actions as factoryActions } from '../redux/factory-feature';
+import { exploitDownloadTracks, readToc, writeModifiedTOC } from '../../redux/factory/factory-actions';
+import { useShallowEqualSelector } from '../../utils';
+import { actions as factoryActions } from '../../redux/factory/factory-feature';
 import { FactoryModeEditDialog } from './factory-fragment-mode-edit-dialog';
 import { batchActions } from 'redux-batched-actions';
-import { ExploitCapability } from '../services/netmd';
+import { ExploitCapability } from '../../services/netmd';
 import DoneIcon from '@material-ui/icons/Done';
 import CloseIcon from '@material-ui/icons/Close';
 import GetAppIcon from '@material-ui/icons/GetApp';
@@ -25,6 +24,7 @@ import {
 } from './factory-components';
 import { FactoryModeProgressDialog } from './factory-progress-dialog';
 import { FactoryModeEditOtherValuesDialog } from './factory-edit-other-values-dialog';
+import { FactoryTopMenu } from './factory-topmenu';
 
 const useStyles = makeStyles(theme => ({
     tocTable: {
@@ -389,7 +389,7 @@ const Toc = () => {
                             </ComponentOrDisabled>
                         </React.Fragment>
                     )}
-                    <TopMenu />
+                    <FactoryTopMenu />
                 </span>
             </Box>
             <Typography component="h2" variant="body2">

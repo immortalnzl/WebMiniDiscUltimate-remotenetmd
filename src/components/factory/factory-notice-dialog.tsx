@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { useShallowEqualSelector } from '../utils';
+import { useShallowEqualSelector } from '../../utils';
 
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
@@ -11,9 +11,9 @@ import Button from '@material-ui/core/Button';
 import { makeStyles } from '@material-ui/core/styles';
 import { TransitionProps } from '@material-ui/core/transitions';
 import { useDispatch } from 'react-redux';
-import { actions as factoryNoticeDialogActions } from '../redux/factory-notice-dialog-feature';
-import { actions as appStateActions } from '../redux/app-feature';
-import { readToc } from '../redux/actions';
+import { actions as factoryNoticeDialogActions } from '../../redux/factory/factory-notice-dialog-feature';
+import { actions as appStateActions } from '../../redux/app-feature';
+import { readToc } from '../../redux/factory/factory-actions';
 import { Link } from '@material-ui/core';
 
 const useStyles = makeStyles(theme => ({

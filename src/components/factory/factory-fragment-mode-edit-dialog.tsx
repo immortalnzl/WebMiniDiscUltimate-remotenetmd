@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useShallowEqualSelector } from '../utils';
+import { useShallowEqualSelector } from '../../utils';
 
 import { makeStyles } from '@material-ui/core/styles';
 import Dialog from '@material-ui/core/Dialog';
@@ -10,10 +10,10 @@ import DialogTitle from '@material-ui/core/DialogTitle';
 import Slide from '@material-ui/core/Slide';
 import Button from '@material-ui/core/Button';
 import { TransitionProps } from '@material-ui/core/transitions';
-import { actions as fragmentModeEditActions } from '../redux/factory-fragment-mode-edit-dialog-feature';
+import { actions as fragmentModeEditActions } from '../../redux/factory/factory-fragment-mode-edit-dialog-feature';
 import { Checkbox, FormControl, FormControlLabel, InputLabel, MenuItem, Select } from '@material-ui/core';
 import { ModeFlag } from 'netmd-tocmanip';
-import { editFragmentMode } from '../redux/actions';
+import { editFragmentMode } from '../../redux/factory/factory-actions';
 
 const Transition = React.forwardRef(function Transition(
     props: TransitionProps & { children?: React.ReactElement<any, any> },

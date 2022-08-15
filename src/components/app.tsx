@@ -15,7 +15,7 @@ import Link from '@material-ui/core/Link';
 import Box from '@material-ui/core/Box';
 import { W95App } from './win95/app';
 import { Capability } from '../services/netmd';
-import Toc from './factory';
+import Toc from './factory/factory';
 
 const useStyles = (props: { showsList: boolean }) =>
     makeStyles(theme => ({

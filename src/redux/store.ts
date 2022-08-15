@@ -8,11 +8,11 @@ import convertDialog from './convert-dialog-feature';
 import dumpDialog from './dump-dialog-feature';
 import recordDialog from './record-dialog-feature';
 import appState, { actions as appActions, buildInitialState as buildInitialAppState } from './app-feature';
-import factory from './factory-feature';
-import factoryFragmentModeEditDialog from './factory-fragment-mode-edit-dialog-feature';
-import factoryProgressDialog from './factory-progress-dialog-feature';
-import factoryNoticeDialog from './factory-notice-dialog-feature';
-import factoryEditOtherValuesDialog from './factory-edit-other-values-dialog-feature';
+import factory from './factory/factory-feature';
+import factoryFragmentModeEditDialog from './factory/factory-fragment-mode-edit-dialog-feature';
+import factoryProgressDialog from './factory/factory-progress-dialog-feature';
+import factoryNoticeDialog from './factory/factory-notice-dialog-feature';
+import factoryEditOtherValuesDialog from './factory/factory-edit-other-values-dialog-feature';
 
 import main from './main-feature';
 

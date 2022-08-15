@@ -12,18 +12,10 @@ import {
     wipeDisc,
     listContent,
     selfTest,
-    downloadRam,
-    downloadRom,
-    downloadToc,
-    uploadToc,
-    readToc,
-    runTetris,
-    enableFactoryRippingModeInMainUi,
 } from '../redux/actions';
 import { actions as appActions } from '../redux/app-feature';
 import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
-import { actions as factoryNoticeDialogActions } from '../redux/factory-notice-dialog-feature';
-import { actions as factoryEditOtherValuesDialogActions } from '../redux/factory-edit-other-values-dialog-feature';
+import { actions as factoryNoticeDialogActions } from '../redux/factory/factory-notice-dialog-feature';
 import { useShallowEqualSelector } from '../utils';
 import Link from '@material-ui/core/Link';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
@@ -43,14 +35,10 @@ import ToggleOnIcon from '@material-ui/icons/ToggleOn';
 import Win95Icon from '../images/win95/win95.png';
 import HelpIcon from '@material-ui/icons/Help';
 import SettingsIcon from '@material-ui/icons/Settings';
-import MemoryIcon from '@material-ui/icons/Memory';
-import CodeIcon from '@material-ui/icons/Code';
-import GetAppIcon from '@material-ui/icons/GetApp';
-import PublishIcon from '@material-ui/icons/Publish';
-import GamesIcon from '@material-ui/icons/Games';
 
 import { W95TopMenu } from './win95/topmenu';
-import { Capability, ExploitCapability } from '../services/netmd';
+import { Capability } from '../services/netmd';
+import { enableFactoryRippingModeInMainUi } from '../redux/factory/factory-actions';
 
 const useStyles = makeStyles(theme => ({
     listItemIcon: {
@@ -70,13 +58,11 @@ export const TopMenu = function(props: { onClick?: () => void }) {
         state => state.appState
     );
     const deviceCapabilities = useShallowEqualSelector(state => state.main.deviceCapabilities);
-    const exploitCapabilities = useShallowEqualSelector(state => state.factory.exploitCapabilities ?? []);
     let discTitle = useShallowEqualSelector(state => state.main.disc?.title ?? ``);
     let fullWidthDiscTitle = useShallowEqualSelector(state => state.main.disc?.fullWidthTitle ?? ``);
 
     const githubLinkRef = React.useRef<null | HTMLAnchorElement>(null);
     const helpLinkRef = React.useRef<null | HTMLAnchorElement>(null);
-    const hiddenFileInputRef = React.useRef<null | HTMLInputElement>(null);
     const [menuAnchorEl, setMenuAnchorEl] = React.useState<null | HTMLElement>(null);
     const [isShiftDown, setIsShiftDown] = React.useState(false);
     const menuOpen = Boolean(menuAnchorEl);
@@ -151,14 +137,6 @@ export const TopMenu = function(props: { onClick?: () => void }) {
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
-    const handleTOCUpload = useCallback(
-        (event: any) => {
-            const file = event.target.files[0];
-            dispatch(uploadToc(file));
-        },
-        [dispatch]
-    );
-
     const handleGithubLink = useCallback(
         (event: React.MouseEvent<HTMLElement>) => {
             event.stopPropagation();
@@ -185,42 +163,6 @@ export const TopMenu = function(props: { onClick?: () => void }) {
 
     const handleEnterFactoryMode = useCallback(() => {
         dispatch(factoryNoticeDialogActions.setVisible(true));
-        handleMenuClose();
-    }, [dispatch, handleMenuClose]);
-
-    const handleFactoryRefresh = useCallback(() => {
-        dispatch(readToc());
-        handleMenuClose();
-    }, [dispatch, handleMenuClose]);
-
-    const handleEditOtherToCValues = useCallback(() => {
-        dispatch(factoryEditOtherValuesDialogActions.setVisible(true));
-        handleMenuClose();
-    }, [dispatch, handleMenuClose]);
-
-    const handleReadRAM = useCallback(() => {
-        dispatch(downloadRam());
-        handleMenuClose();
-    }, [dispatch, handleMenuClose]);
-
-    const handleReadFirmware = useCallback(() => {
-        dispatch(downloadRom());
-        handleMenuClose();
-    }, [dispatch, handleMenuClose]);
-
-    const handleDownloadTOC = useCallback(() => {
-        dispatch(downloadToc());
-        handleMenuClose();
-    }, [dispatch, handleMenuClose]);
-
-    const handleUploadTOC = useCallback(() => {
-        hiddenFileInputRef.current?.click();
-        handleMenuClose();
-    }, [hiddenFileInputRef, handleMenuClose]);
-
-    const handlePlayTetris = useCallback(() => {
-        dispatch(runTetris());
-        dispatch(appActions.setMainView('WELCOME'));
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
@@ -277,74 +219,6 @@ export const TopMenu = function(props: { onClick?: () => void }) {
                 <ListItemText>Exit</ListItemText>
             </MenuItem>
         );
-    } else if (mainView === 'FACTORY') {
-        menuItems.push(
-            <MenuItem key="update" onClick={handleFactoryRefresh}>
-                <ListItemIcon className={classes.listItemIcon}>
-                    <RefreshIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Reload TOC</ListItemText>
-            </MenuItem>
-        );
-        menuItems.push(
-            <MenuItem key="editOtherTOC" onClick={handleEditOtherToCValues}>
-                <ListItemIcon className={classes.listItemIcon}>
-                    <MemoryIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Edit Other ToC values</ListItemText>
-            </MenuItem>
-        );
-        menuItems.push(
-            <MenuItem key="readRAM" onClick={handleReadRAM}>
-                <ListItemIcon className={classes.listItemIcon}>
-                    <MemoryIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Read RAM</ListItemText>
-            </MenuItem>
-        );
-        menuItems.push(
-            <MenuItem key="readROM" onClick={handleReadFirmware}>
-                <ListItemIcon className={classes.listItemIcon}>
-                    <CodeIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Read Firmware</ListItemText>
-            </MenuItem>
-        );
-        menuItems.push(
-            <MenuItem key="downloadTOC" onClick={handleDownloadTOC}>
-                <ListItemIcon className={classes.listItemIcon}>
-                    <GetAppIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Download TOC</ListItemText>
-            </MenuItem>
-        );
-        menuItems.push(
-            <MenuItem key="uploadTOC" onClick={handleUploadTOC} disabled={!exploitCapabilities.includes(ExploitCapability.flushUTOC)}>
-                <ListItemIcon className={classes.listItemIcon}>
-                    <PublishIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Upload TOC</ListItemText>
-            </MenuItem>
-        );
-
-        menuItems.push(
-            <MenuItem key="playTetris" onClick={handlePlayTetris} disabled={!exploitCapabilities.includes(ExploitCapability.runTetris)}>
-                <ListItemIcon className={classes.listItemIcon}>
-                    <GamesIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Play TETRIS!</ListItemText>
-            </MenuItem>
-        );
-
-        menuItems.push(
-            <MenuItem key="exit" onClick={handleExit}>
-                <ListItemIcon className={classes.listItemIcon}>
-                    <ExitToAppIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Exit</ListItemText>
-            </MenuItem>
-        );
-        menuItems.push(<Divider key="action-divider" />);
     }
     if (mainView === 'MAIN') {
         menuItems.push(<Divider key="action-divider" />);
@@ -492,7 +366,6 @@ export const TopMenu = function(props: { onClick?: () => void }) {
             <Menu id="actions-menu" anchorEl={menuAnchorEl} keepMounted open={menuOpen} onClose={handleMenuClose}>
                 {menuItems}
             </Menu>
-            <input type="file" ref={hiddenFileInputRef} style={{ display: 'none' }} onChange={handleTOCUpload} />
         </React.Fragment>
     );
 };

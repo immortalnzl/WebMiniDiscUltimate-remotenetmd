@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useShallowEqualSelector } from '../utils';
+import { useShallowEqualSelector } from '../../utils';
 
 import { makeStyles } from '@material-ui/core/styles';
 import Dialog from '@material-ui/core/Dialog';
@@ -10,8 +10,8 @@ import DialogTitle from '@material-ui/core/DialogTitle';
 import Slide from '@material-ui/core/Slide';
 import Button from '@material-ui/core/Button';
 import { TransitionProps } from '@material-ui/core/transitions';
-import { actions as factoryEditOtherValuesDialogActions } from '../redux/factory-edit-other-values-dialog-feature';
-import { actions as factoryActions } from '../redux/factory-feature';
+import { actions as factoryEditOtherValuesDialogActions } from '../../redux/factory/factory-edit-other-values-dialog-feature';
+import { actions as factoryActions } from '../../redux/factory/factory-feature';
 import { TextField } from '@material-ui/core';
 import { ToC } from 'netmd-tocmanip';
 import { batchActions } from 'redux-batched-actions';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useShallowEqualSelector } from '../utils';
+import { useShallowEqualSelector } from '../../utils';
 
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';

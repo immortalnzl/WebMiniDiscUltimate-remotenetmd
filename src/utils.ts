@@ -1,4 +1,4 @@
-import { Disc, formatTimeFromFrames, Encoding, Group } from 'netmd-js';
+import { Disc, formatTimeFromFrames, Encoding, Group, Track } from 'netmd-js';
 import { useSelector, shallowEqual } from 'react-redux';
 import { RootState } from './redux/store';
 import { Mutex } from 'async-mutex';
@@ -411,6 +411,22 @@ export function downloadBlob(buffer: Blob, fileName: string) {
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
+}
+
+export function createDownloadTrackName(track: Track) {
+    let title;
+    if (track.title) {
+        title = `${track.index + 1}. ${track.title}`;
+        if (track.fullWidthTitle) {
+            title += ` (${track.fullWidthTitle})`;
+        }
+    } else if (track.fullWidthTitle) {
+        title = `${track.index + 1}. ${track.fullWidthTitle}`;
+    } else {
+        title = `Track ${track.index + 1}`;
+    }
+    const fileName = title + ([Encoding.lp2, Encoding.lp4].includes(track.encoding) ? '.wav' : '.aea');
+    return fileName;
 }
 
 declare let process: any;

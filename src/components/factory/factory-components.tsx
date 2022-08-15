@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { makeStyles } from '@material-ui/core';
 import { Button, Table, TableBody, TableCell, TableRow, TextField, Tooltip, Typography } from '@material-ui/core';
-import { actions as factoryFragmentModeDialogActions } from '../redux/factory-fragment-mode-edit-dialog-feature';
+import { actions as factoryFragmentModeDialogActions } from '../../redux/factory/factory-fragment-mode-edit-dialog-feature';
 import { useDispatch } from 'react-redux';
 import { batchActions } from 'redux-batched-actions';
 import { DiscAddress, ModeFlag } from 'netmd-tocmanip';

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { useShallowEqualSelector } from '../utils';
 
-import { downloadTracks, exploitDownloadTracks, recordTracks } from '../redux/actions';
+import { downloadTracks, recordTracks } from '../redux/actions';
 import { actions as dumpDialogActions } from '../redux/dump-dialog-feature';
 
 import Dialog from '@material-ui/core/Dialog';
@@ -23,6 +23,7 @@ import serviceRegistry from '../services/registry';
 import { TransitionProps } from '@material-ui/core/transitions';
 import { W95DumpDialog } from './win95/dump-dialog';
 import { Capability } from '../services/netmd';
+import { exploitDownloadTracks } from '../redux/factory/factory-actions';
 
 const Transition = React.forwardRef(function Transition(
     props: TransitionProps & { children?: React.ReactElement<any, any> },
