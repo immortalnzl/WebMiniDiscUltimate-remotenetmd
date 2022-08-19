@@ -11,7 +11,7 @@ import {
 } from '../../utils';
 import { concatUint8Arrays } from 'netmd-js/dist/utils';
 import { NetMDFactoryService, ExploitCapability } from '../../services/netmd';
-import { parseTOC, getTitleByTrackNumber, reconstructTOC } from 'netmd-tocmanip';
+import { parseTOC, getTitleByTrackNumber, reconstructTOC, updateFlagAllFragmentsOfTrack, ModeFlag } from 'netmd-tocmanip';
 
 async function loadFactoryMode() {
     if (serviceRegistry.netmdFactoryService === undefined) {
@@ -153,7 +153,7 @@ export function downloadToc() {
         );
         let readSlices: Uint8Array[] = [];
         for (let i = 0; i < 6; i += 1) {
-            dispatch(factoryProgressDialogActions.setProgress({ current: i + 1, total: 6 }));
+            dispatch(factoryProgressDialogActions.setProgress({ current: i, total: 6 }));
             readSlices.push(await serviceRegistry.netmdFactoryService!.readUTOCSector(i));
         }
         const fileName = `toc_${getTitleByTrackNumber(getState().factory.toc!, 0 /* Disc */)}.bin`;
@@ -171,13 +171,16 @@ export function uploadToc(file: File) {
         dispatch(appStateActions.setLoading(true));
 
         const data = new Uint8Array(await file.arrayBuffer());
-
-        for (let i = 0; i < 6; i++) {
-            let sectorStart = i * 2352;
-            await serviceRegistry.netmdFactoryService!.writeUTOCSector(i, data.slice(sectorStart, sectorStart + 2352));
+        const sectors = [];
+        for(let i = 0; i<6; i++){
+            sectors.push(data.slice(i*2352, (i+1)*2352));
         }
-        await serviceRegistry.netmdFactoryService!.flushUTOCCacheToDisc();
-        readToc()(dispatch);
+        const toc = parseTOC(...sectors);
+        dispatch(batchActions([
+            factoryActions.setModified(true),
+            factoryActions.setToc(toc),
+            appStateActions.setLoading(false),
+        ]));
     };
 }
 
@@ -213,26 +216,35 @@ export function exploitDownloadTracks(trackIndexes: number[]) {
                 ])
             );
 
+            let timeout: ReturnType<typeof setTimeout> | null = null;
+
             const trackData = await serviceRegistry.netmdFactoryService!.exploitDownloadTrack(
                 trackIndex,
                 ({
-                    totalSectors,
-                    sectorsRead,
+                    total,
+                    read,
                     action,
                     sector,
                 }: {
-                    sectorsRead: number;
-                    totalSectors: number;
-                    action: 'READ' | 'SEEK';
+                    read: number;
+                    total: number;
+                    action: 'READ' | 'SEEK' | 'CHUNK';
                     sector?: string;
                 }) => {
-                    dispatch(
-                        factoryProgressDialogActions.setProgress({
-                            current: action === 'SEEK' ? -1 : sectorsRead,
-                            total: totalSectors,
-                            additionalInfo: action === 'SEEK' ? 'Seeking...' : `Reading sector ${sector!}...`,
-                        })
-                    );
+                    if(timeout !== null) clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        dispatch(
+                            factoryProgressDialogActions.setProgress({
+                                current: action === 'SEEK' ? -1 : read,
+                                total: total,
+                                additionalInfo: {
+                                    'SEEK': 'Seeking...',
+                                    'CHUNK': 'Receiving...',
+                                    'READ': `Reading sector ${sector!}...`
+                                }[action],
+                            })
+                        );
+                    }, 20);
                 }
             );
             const filename = createDownloadTrackName(track);
@@ -262,4 +274,21 @@ export function enableFactoryRippingModeInMainUi() {
 
         dispatch(batchActions([appStateActions.setFactoryModeRippingInMainUi(true), appStateActions.setLoading(false)]));
     };
+}
+
+export function stripSCMS(){
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        const toc = getState().factory.toc!;
+        for(let track = 0; track < toc?.nTracks; track++){
+            updateFlagAllFragmentsOfTrack(toc, track, ModeFlag.F_SCMS_DIG_COPY | ModeFlag.F_SCMS_UNRESTRICTED, true);
+        }
+        dispatch(factoryActions.setModified(true));
+    }
+}
+
+export function archiveDisc(){
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        await downloadToc()(dispatch, getState);
+        await exploitDownloadTracks(Array(getState().factory.toc!.nTracks).fill(0).map((_, i) => i))(dispatch, getState);
+    }
 }

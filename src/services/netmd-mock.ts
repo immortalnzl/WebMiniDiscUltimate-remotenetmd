@@ -434,7 +434,7 @@ class NetMDFactoryMockService implements NetMDFactoryService {
     }
 
     async readUTOCSector(index: number) {
-        return this.utoc[index];
+        return this.utoc[index] ?? new Uint8Array(Array(2352).fill(0));
     }
 
     async writeUTOCSector(index: number, data: Uint8Array) {
@@ -455,7 +455,7 @@ class NetMDFactoryMockService implements NetMDFactoryService {
 
     async exploitDownloadTrack(
         track: number,
-        callback: (progress: { sectorsRead: number; totalSectors: number; action: 'READ' | 'SEEK'; sector?: string }) => void
+        callback: (data: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => void
     ): Promise<Uint8Array> {
         return new Uint8Array(Buffer.from('***MOCK DATA***'));
     }

@@ -740,7 +740,7 @@ export function convertAndUpload(files: TitledFile[], format: UploadFormat) {
         dispatch(batchActions([uploadDialogActions.setVisible(true), uploadDialogActions.setCancelUpload(false)]));
 
         const updateProgressCallback = ({ written, encrypted, total }: { written: number; encrypted: number; total: number }) => {
-            dispatch(uploadDialogActions.setWriteProgress({ written, encrypted, total }));
+            queueMicrotask( () => dispatch(uploadDialogActions.setWriteProgress({ written, encrypted, total })) );
         };
 
         const hasUploadBeenCancelled = () => {

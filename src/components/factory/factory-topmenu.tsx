@@ -14,6 +14,8 @@ import {
     uploadToc,
     readToc,
     runTetris,
+    stripSCMS,
+    archiveDisc,
 } from '../../redux/factory/factory-actions';
 import { actions as appActions } from '../../redux/app-feature';
 import { actions as factoryEditOtherValuesDialogActions } from '../../redux/factory/factory-edit-other-values-dialog-feature';
@@ -37,6 +39,7 @@ import PublishIcon from '@material-ui/icons/Publish';
 import GamesIcon from '@material-ui/icons/Games';
 
 import { ExploitCapability } from '../../services/netmd';
+import { Archive, LockOpen } from '@material-ui/icons';
 
 const useStyles = makeStyles(theme => ({
     listItemIcon: {
@@ -61,13 +64,22 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
     const helpLinkRef = React.useRef<null | HTMLAnchorElement>(null);
     const hiddenFileInputRef = React.useRef<null | HTMLInputElement>(null);
     const [menuAnchorEl, setMenuAnchorEl] = React.useState<null | HTMLElement>(null);
+    const [submenuAnchorEl, setSubmenuAnchorEl] = React.useState<null | HTMLElement>(null);
     const menuOpen = Boolean(menuAnchorEl);
+    const submenuOpen = Boolean(submenuAnchorEl);
 
     const handleMenuOpen = useCallback(
         (event: React.MouseEvent<HTMLElement>) => {
             setMenuAnchorEl(event.currentTarget);
         },
         [setMenuAnchorEl]
+    );
+
+    const handleSubmenuOpen = useCallback(
+        (event: React.MouseEvent<HTMLElement>) => {
+            setSubmenuAnchorEl(event.currentTarget);
+        },
+        [setSubmenuAnchorEl]
     );
 
     const handleDarkMode = useCallback(() => {
@@ -77,6 +89,10 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
     const handleMenuClose = useCallback(() => {
         setMenuAnchorEl(null);
     }, [setMenuAnchorEl]);
+
+    const handleSubmenuClose = useCallback(() => {
+        setSubmenuAnchorEl(null);
+    }, [setSubmenuAnchorEl]);
 
     const handleExit = useCallback(() => {
         dispatch(appActions.setMainView('WELCOME'));
@@ -161,6 +177,17 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
+    const handleArchiveDisc = useCallback(() => {
+        dispatch(archiveDisc());
+        handleMenuClose();
+    }, [dispatch, handleMenuClose]);
+
+    const handleStripSCMS = useCallback(() => {
+        dispatch(stripSCMS());
+        handleMenuClose();
+    }, [dispatch, handleMenuClose]);
+
+
     const menuItems = [];
     menuItems.push(
         <MenuItem key="update" onClick={handleFactoryRefresh}>
@@ -175,9 +202,18 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
             <ListItemIcon className={classes.listItemIcon}>
                 <MemoryIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>Edit Other ToC values</ListItemText>
+            <ListItemText>Edit Other TOC values</ListItemText>
         </MenuItem>
     );
+    menuItems.push(
+        <MenuItem key="toolbox" onClick={handleSubmenuOpen}>
+            <ListItemIcon className={classes.listItemIcon}>
+                <MoreVertIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Toolbox</ListItemText>
+        </MenuItem>
+    );
+    menuItems.push(<Divider key="feature-divider" />);
     menuItems.push(
         <MenuItem key="readRAM" onClick={handleReadRAM}>
             <ListItemIcon className={classes.listItemIcon}>
@@ -203,7 +239,7 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
         </MenuItem>
     );
     menuItems.push(
-        <MenuItem key="uploadTOC" onClick={handleUploadTOC} disabled={!exploitCapabilities.includes(ExploitCapability.flushUTOC)}>
+        <MenuItem key="uploadTOC" onClick={handleUploadTOC}>
             <ListItemIcon className={classes.listItemIcon}>
                 <PublishIcon fontSize="small" />
             </ListItemIcon>
@@ -290,13 +326,48 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
         </MenuItem>
     );
 
+    const submenuItems = [];
+    submenuItems.push(
+        <MenuItem key="kill-scms" onClick={handleStripSCMS}>
+            <ListItemIcon className={classes.listItemIcon}>
+                <LockOpen fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Strip SCMS Information</ListItemText>
+        </MenuItem>
+    );
+    submenuItems.push(
+        <MenuItem key="archive-disc" onClick={handleArchiveDisc}>
+            <ListItemIcon className={classes.listItemIcon}>
+                <Archive fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Archive Disc</ListItemText>
+        </MenuItem>
+    );
+
     return (
         <React.Fragment>
             <IconButton aria-label="actions" aria-controls="actions-menu" aria-haspopup="true" onClick={handleMenuOpen}>
                 <MoreVertIcon />
             </IconButton>
-            <Menu id="actions-menu" anchorEl={menuAnchorEl} keepMounted open={menuOpen} onClose={handleMenuClose}>
+            <Menu id="factory-actions-menu" anchorEl={menuAnchorEl} keepMounted open={menuOpen} onClose={handleMenuClose}>
                 {menuItems}
+            </Menu>
+            <Menu 
+                id="factory-actions-submenu"
+                anchorEl={submenuAnchorEl}
+                keepMounted
+                open={submenuOpen}
+                onClose={handleSubmenuClose}
+                anchorOrigin={{
+                    vertical: 'top',
+                    horizontal: 'left',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                }}
+            >
+                {submenuItems}
             </Menu>
             <input type="file" ref={hiddenFileInputRef} style={{ display: 'none' }} onChange={handleTOCUpload} />
         </React.Fragment>

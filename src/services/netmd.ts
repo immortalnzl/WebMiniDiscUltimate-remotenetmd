@@ -30,7 +30,16 @@ import { Logger } from 'netmd-js/dist/logger';
 import { sanitizeHalfWidthTitle, sanitizeFullWidthTitle, concatUint8Arrays } from 'netmd-js/dist/utils';
 import { asyncMutex, sleep, isSequential, recomputeGroupsAfterTrackMove } from '../utils';
 import { Mutex } from 'async-mutex';
-import { CachedSectorAtracDownload, ExploitStateManager, FirmwareDumper, ForceTOCEdit, isCompatible, Tetris } from 'netmd-exploits';
+import {
+    AtracRecovery,
+    ExploitStateManager,
+    FirmwareDumper,
+    ForceTOCEdit,
+    Tetris,
+    KillEepromWrite,
+    getBestSuited,
+    isCompatible, 
+} from 'netmd-exploits';
 
 const Worker = require('worker-loader!netmd-js/dist/web-encrypt-worker.js'); // eslint-disable-line import/no-webpack-loader-syntax
 
@@ -110,7 +119,7 @@ export interface NetMDFactoryService {
     readFirmware(callback: (progress: { type: 'RAM' | 'ROM'; readBytes: number; totalBytes: number }) => void): Promise<Uint8Array>;
     exploitDownloadTrack(
         track: number,
-        callback: (progress: { sectorsRead: number; totalSectors: number; action: 'READ' | 'SEEK'; sector?: string }) => void
+        callback: (data: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => void
     ): Promise<Uint8Array>;
 }
 
@@ -474,10 +483,15 @@ export class NetMDUSBService implements NetMDService {
         try {
             await this.netmdInterface!.stop();
         } catch (_) {
-            /*Ignore*/
+            /* Ignore */
         }
         const factoryInstance = await this.netmdInterface!.factory();
         const esm = await ExploitStateManager.create(this.netmdInterface!, factoryInstance);
+        if(isCompatible(KillEepromWrite, esm.versionCode)){
+            // Prevent EEPROM corruptions by killing the EEPROM writing code
+            // in the device's firmware (it will be re-enabled after a device restart)
+            await (await esm.require(KillEepromWrite)).enable();
+        }
         return new NetMDFactoryUSBService(factoryInstance, this.mutex, esm);
     }
 }
@@ -486,10 +500,12 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
     constructor(private factoryInterface: NetMDFactoryInterface, public mutex: Mutex, public exploitStateManager: ExploitStateManager) {}
     async getExploitCapabilities() {
         let capabilities = [];
-        if (isCompatible(CachedSectorAtracDownload, this.exploitStateManager.versionCode))
+        if (isCompatible(AtracRecovery, this.exploitStateManager.versionCode))
             capabilities.push(ExploitCapability.downloadAtrac);
-        if (isCompatible(Tetris, this.exploitStateManager.versionCode)) capabilities.push(ExploitCapability.runTetris);
-        if (isCompatible(ForceTOCEdit, this.exploitStateManager.versionCode)) capabilities.push(ExploitCapability.flushUTOC);
+        if (isCompatible(Tetris, this.exploitStateManager.versionCode))
+            capabilities.push(ExploitCapability.runTetris);
+        if (isCompatible(ForceTOCEdit, this.exploitStateManager.versionCode))
+            capabilities.push(ExploitCapability.flushUTOC);
 
         return capabilities;
     }
@@ -541,9 +557,10 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
     @asyncMutex
     async exploitDownloadTrack(
         track: number,
-        callback: (data: { sectorsRead: number; totalSectors: number; action: 'READ' | 'SEEK'; sector?: string }) => void
+        callback: (data: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => void
     ) {
-        const atracDownloader = await this.exploitStateManager.require(CachedSectorAtracDownload);
+        const bestSuited = getBestSuited(AtracRecovery, this.exploitStateManager.versionCode)!;
+        const atracDownloader = (await this.exploitStateManager.require(bestSuited)) as AtracRecovery;
         return await atracDownloader.downloadTrack(track, callback);
     }
 }
