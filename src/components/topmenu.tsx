@@ -16,6 +16,7 @@ import {
 import { actions as appActions } from '../redux/app-feature';
 import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
 import { actions as factoryNoticeDialogActions } from '../redux/factory/factory-notice-dialog-feature';
+import { actions as encoderSetupDialogActions } from '../redux/encoder-setup-dialog-feature';
 import { useShallowEqualSelector } from '../utils';
 import Link from '@material-ui/core/Link';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
@@ -35,6 +36,7 @@ import ToggleOnIcon from '@material-ui/icons/ToggleOn';
 import Win95Icon from '../images/win95/win95.png';
 import HelpIcon from '@material-ui/icons/Help';
 import SettingsIcon from '@material-ui/icons/Settings';
+import MusicNote from '@material-ui/icons/MusicNote';
 
 import { W95TopMenu } from './win95/topmenu';
 import { Capability } from '../services/netmd';
@@ -54,7 +56,14 @@ export const TopMenu = function(props: { onClick?: () => void }) {
     const classes = useStyles();
     const dispatch = useDispatch();
 
-    let { mainView, darkMode, vintageMode, fullWidthSupport, factoryModeRippingInMainUi } = useShallowEqualSelector(
+    let { mainView,
+        darkMode,
+        vintageMode,
+        fullWidthSupport,
+        factoryModeRippingInMainUi,
+        audioExportService,
+        audioExportServiceConfig
+    } = useShallowEqualSelector(
         state => state.appState
     );
     const deviceCapabilities = useShallowEqualSelector(state => state.main.deviceCapabilities);
@@ -131,6 +140,15 @@ export const TopMenu = function(props: { onClick?: () => void }) {
         dispatch(appActions.showAboutDialog(true));
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
+
+    const handleEncoderSetup = useCallback(() => {
+        dispatch(batchActions([
+            encoderSetupDialogActions.setCustomParameters({...audioExportServiceConfig}),
+            encoderSetupDialogActions.setSelectedServiceIndex(audioExportService),
+            encoderSetupDialogActions.setVisible(true),
+        ]));
+        handleMenuClose();
+    }, [dispatch, handleMenuClose, audioExportService, audioExportServiceConfig]);
 
     const handleShowChangelog = useCallback(() => {
         dispatch(appActions.showChangelogDialog(true));
@@ -219,8 +237,6 @@ export const TopMenu = function(props: { onClick?: () => void }) {
                 <ListItemText>Exit</ListItemText>
             </MenuItem>
         );
-    }
-    if (mainView === 'MAIN') {
         menuItems.push(<Divider key="action-divider" />);
         menuItems.push(
             <MenuItem key="allowFullWidth" onClick={handleAllowFullWidth}>
@@ -289,6 +305,16 @@ export const TopMenu = function(props: { onClick?: () => void }) {
     }
     if (mainView === 'MAIN') {
         menuItems.push(<Divider key="feature-divider" />);
+    }
+    if (mainView === 'WELCOME'){
+        menuItems.push(
+            <MenuItem key="encoderSetup" onClick={handleEncoderSetup}>
+                <ListItemIcon className={classes.listItemIcon}>
+                    <MusicNote fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Encoder Setup</ListItemText>
+            </MenuItem>
+        );
     }
     menuItems.push(
         <MenuItem key="about" onClick={handleShowAbout}>

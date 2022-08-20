@@ -14,15 +14,13 @@ import App from './components/app';
 import './index.css';
 import './fonts/fonts.css';
 
-import { FFMpegAudioExportService } from './services/audio-export';
 import { MediaRecorderService } from './services/mediarecorder';
 import { BrowserMediaSessionService } from './services/media-session';
 import { listContent } from './redux/actions';
 
 // serviceRegistry.netmdService = (window as any).native?.interface || new NetMDUSBService({ debug: true });
 // serviceRegistry.netmdService = new NetMDMockService(); // Uncomment to work without a device attached
-serviceRegistry.netmdService = undefined;
-serviceRegistry.audioExportService = new FFMpegAudioExportService();
+// serviceRegistry.audioExportService = new FFMpegAudioExportService();
 serviceRegistry.mediaRecorderService = new MediaRecorderService();
 serviceRegistry.mediaSessionService = new BrowserMediaSessionService(store);
 

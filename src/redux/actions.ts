@@ -26,6 +26,7 @@ import NotificationCompleteIconUrl from '../images/record-complete-notification-
 import { assertNumber, getHalfWidthTitleLength } from 'netmd-js/dist/utils';
 import { NetMDService } from '../services/netmd';
 import { getSimpleServices, ServiceConstructionInfo } from '../services/service-manager';
+import { AudioServices } from '../services/audio-export-service-manager';
 
 export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pause' | 'seek', params?: unknown) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
@@ -239,6 +240,9 @@ export function pair(serviceInstance: NetMDService) {
         dispatch(batchActions([appStateActions.setPairingFailed(false), appStateActions.setFactoryModeRippingInMainUi(false)]));
 
         serviceRegistry.mediaSessionService?.init(); // no need to await
+
+        serviceRegistry.audioExportService = 
+            new AudioServices[getState().appState.audioExportService].create(getState().appState.audioExportServiceConfig);
         await serviceRegistry.audioExportService!.init();
 
         serviceRegistry.netmdService = serviceInstance;

@@ -24,6 +24,8 @@ import {
     cleanRead,
     MemoryType,
     formatQuery,
+    unpatch,
+    patch,
 } from 'netmd-js';
 import { makeGetAsyncPacketIteratorOnWorkerThread } from 'netmd-js/dist/web-encrypt-worker';
 import { Logger } from 'netmd-js/dist/logger';
@@ -152,10 +154,14 @@ export class NetMDUSBService implements NetMDService {
             writable: true,
             value: () => {
                 console.log('%cThe following features have been exposed:', 'font-size: 20px; color: cyan;');
-                console.log('%c- formatQuery() - a function that formats given hex data with parameters', 'font-size: 15px; color: cyan;');
+                console.log('%c- formatQuery() - a function which formats given hex data with parameters', 'font-size: 15px; color: cyan;');
+                console.log('%c- patch() - a function which patches the device', 'font-size: 15px; color: cyan;');
+                console.log('%c- unpatch() - a function which removes a patch', 'font-size: 15px; color: cyan;');
                 console.log("%c- interface - an instance of netmd-js's NetMDInterface", 'font-size: 15px; color: cyan;');
-                Object.defineProperty(window, 'formatQuery', { writable: false, value: formatQuery });
-                Object.defineProperty(window, 'interface', { writable: false, value: this.netmdInterface });
+                Object.defineProperty(window, 'formatQuery', { value: formatQuery });
+                Object.defineProperty(window, 'patch', { value: patch });
+                Object.defineProperty(window, 'unpatch', { value: unpatch });
+                Object.defineProperty(window, 'interface', { value: this.netmdInterface });
             },
         });
 

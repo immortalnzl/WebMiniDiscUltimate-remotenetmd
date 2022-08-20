@@ -1,19 +1,10 @@
 import React, { ReactHTMLElement } from 'react';
+import { CustomParameterInfo, CustomParameters } from '../custom-parameters';
 import { NetMDService, NetMDUSBService } from './netmd';
 // import { NetMDMockService } from './netmd-mock';
 import { NetMDRemoteService } from './remote-netmd';
 
-export type CustomParameters = { [key: string]: string | number | boolean };
-export type CustomParameterType = 'string' | 'number' | 'boolean';
-export type CustomParameterInfo = {
-    userFriendlyName: string;
-    varName: string;
-    type: CustomParameterType;
-    defaultValue?: string;
-    validator?: (content: string) => boolean;
-};
-
-type ServicePrototype = {
+interface ServicePrototype {
     create: (parameters?: CustomParameters) => NetMDService;
     getConnectName: (parameters?: CustomParameters) => string;
     name: string;
@@ -21,7 +12,7 @@ type ServicePrototype = {
     description?: ReactHTMLElement<any>;
 };
 
-export type ServiceConstructionInfo = {
+export interface ServiceConstructionInfo {
     name: string;
     parameters?: CustomParameters;
 };
@@ -125,26 +116,6 @@ export const Services: ServicePrototype[] = [
         ]
     },*/
 ];
-
-function getDefaultForType(type: CustomParameterType) {
-    switch (type) {
-        case 'boolean':
-            return false;
-        case 'string':
-            return '';
-        case 'number':
-            return 0;
-    }
-}
-
-export function initializeParameters(service: ServicePrototype) {
-    let emptyParameters: CustomParameters = {};
-    let parametersDefinition = service.customParameters!;
-    for (let param of parametersDefinition) {
-        emptyParameters[param.varName] = param.defaultValue || getDefaultForType(param.type);
-    }
-    return emptyParameters;
-}
 
 export function getSimpleServices() {
     return Services.filter(n => !n.customParameters).map(n => ({

@@ -1,26 +1,17 @@
 import { createWorker, setLogging } from '@ffmpeg/ffmpeg';
-import { AtracdencProcess } from './atracdenc-worker';
-import { getPublicPathFor } from '../utils';
-const AtracdencWorker = require('worker-loader!./atracdenc-worker'); // eslint-disable-line import/no-webpack-loader-syntax
+import { getATRACWAVEncoding, getPublicPathFor } from '../utils';
+import { AudioExportService, LogPayload } from './audio-export';
 
-export interface LogPayload {
-    message: string;
-    action: string;
-}
-
-export interface AudioExportService {
-    init(): Promise<void>;
-    export(params: { format: string }): Promise<ArrayBuffer>;
-    info(): Promise<{ format: string | null; input: string | null }>;
-    prepare(file: File): Promise<void>;
-}
-
-export class FFMpegAudioExportService implements AudioExportService {
+export class RemoteAtracExportService implements AudioExportService {
     public ffmpegProcess: any;
-    public atracdencProcess?: AtracdencProcess;
     public loglines: { action: string; message: string }[] = [];
     public inFileName: string = ``;
     public outFileNameNoExt: string = ``;
+    public address: string;
+
+    constructor({ address }: { address: string }){
+        this.address = address;
+    }
 
     async init() {
         setLogging(true);
@@ -37,9 +28,6 @@ export class FFMpegAudioExportService implements AudioExportService {
             workerPath: getPublicPathFor('worker.min.js'),
         });
         await this.ffmpegProcess.load();
-
-        this.atracdencProcess = new AtracdencProcess(new AtracdencWorker());
-        await this.atracdencProcess.init();
 
         let ext = file.name.split('.').slice(-1);
         if (ext.length === 0) {
@@ -90,22 +78,22 @@ export class FFMpegAudioExportService implements AudioExportService {
             const outFileName = `${this.outFileNameNoExt}.wav`;
             await this.ffmpegProcess.transcode(this.inFileName, outFileName, '-f wav -ar 44100 -ac 2');
             let { data } = await this.ffmpegProcess.read(outFileName);
-            let bitrate: string = `0`;
-            switch (format) {
-                case `LP2`:
-                    bitrate = `128`;
-                    break;
-                case `LP105`:
-                    bitrate = `102`;
-                    break;
-                case `LP4`:
-                    bitrate = `64`;
-                    break;
-            }
-            result = await this.atracdencProcess!.encode(data.buffer, bitrate);
+
+            const payload = new FormData();
+            payload.append('file', new Blob([data.buffer]), `${this.outFileNameNoExt}.wav`)
+            const encodingURL = new URL(this.address);
+            encodingURL.pathname = "/encode";
+            encodingURL.searchParams.set("type", format);
+            let response = await fetch(encodingURL.href, {
+                method: 'POST',
+                body: payload
+            });
+            const content = await response.arrayBuffer();
+            const file = new File([ content ], 'test.at3')
+            let headerLength = (await getATRACWAVEncoding(file))!.headerLength;
+            result = content.slice(headerLength);
         }
         this.ffmpegProcess.worker.terminate();
-        this.atracdencProcess!.terminate();
         return result;
     }
 }

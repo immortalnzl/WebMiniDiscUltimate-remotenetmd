@@ -13,6 +13,7 @@ import factoryFragmentModeEditDialog from './factory/factory-fragment-mode-edit-
 import factoryProgressDialog from './factory/factory-progress-dialog-feature';
 import factoryNoticeDialog from './factory/factory-notice-dialog-feature';
 import factoryEditOtherValuesDialog from './factory/factory-edit-other-values-dialog-feature';
+import encoderSetupDialog from './encoder-setup-dialog-feature';
 
 import main from './main-feature';
 
@@ -39,6 +40,7 @@ let reducer = combineReducers({
     factoryProgressDialog,
     factoryNoticeDialog,
     factoryEditOtherValuesDialog,
+    encoderSetupDialog,
     appState,
     main,
 });
