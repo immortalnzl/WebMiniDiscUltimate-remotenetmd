@@ -493,6 +493,9 @@ export class NetMDUSBService implements NetMDService {
         }
         const factoryInstance = await this.netmdInterface!.factory();
         const esm = await ExploitStateManager.create(this.netmdInterface!, factoryInstance);
+        for(let i = 0; i<esm.getMaxPatchesAmount(); i++){
+            await unpatch(factoryInstance, i, esm.getMaxPatchesAmount());
+        }
         if(isCompatible(KillEepromWrite, esm.versionCode)){
             // Prevent EEPROM corruptions by killing the EEPROM writing code
             // in the device's firmware (it will be re-enabled after a device restart)

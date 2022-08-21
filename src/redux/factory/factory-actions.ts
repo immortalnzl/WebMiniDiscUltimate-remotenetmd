@@ -235,7 +235,7 @@ export function exploitDownloadTracks(trackIndexes: number[]) {
                     timeout = setTimeout(() => {
                         dispatch(
                             factoryProgressDialogActions.setProgress({
-                                current: action === 'SEEK' ? -1 : read,
+                                current: action === 'SEEK' ? -1 : Math.min(read, total),
                                 total: total,
                                 additionalInfo: {
                                     'SEEK': 'Seeking...',
