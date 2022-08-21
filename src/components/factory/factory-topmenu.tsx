@@ -16,6 +16,7 @@ import {
     runTetris,
     stripSCMS,
     archiveDisc,
+    toggleSPUploadSpeedup,
 } from '../../redux/factory/factory-actions';
 import { actions as appActions } from '../../redux/app-feature';
 import { actions as factoryEditOtherValuesDialogActions } from '../../redux/factory/factory-edit-other-values-dialog-feature';
@@ -40,6 +41,7 @@ import GamesIcon from '@material-ui/icons/Games';
 
 import { ExploitCapability } from '../../services/netmd';
 import { Archive, LockOpen } from '@material-ui/icons';
+import { Tooltip } from '@material-ui/core';
 
 const useStyles = makeStyles(theme => ({
     listItemIcon: {
@@ -58,7 +60,7 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
     let { darkMode } = useShallowEqualSelector(
         state => state.appState
     );
-    const exploitCapabilities = useShallowEqualSelector(state => state.factory.exploitCapabilities ?? []);
+    const { exploitCapabilities, spUploadSpeedupActive } = useShallowEqualSelector(state => state.factory);
 
     const githubLinkRef = React.useRef<null | HTMLAnchorElement>(null);
     const helpLinkRef = React.useRef<null | HTMLAnchorElement>(null);
@@ -95,7 +97,7 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
     }, [setSubmenuAnchorEl]);
 
     const handleExit = useCallback(() => {
-        dispatch(appActions.setMainView('WELCOME'));
+        dispatch(appActions.setMainView('MAIN'));
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
@@ -187,6 +189,10 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
+    const handleToggleSPUploadSpeedup = useCallback(() => {
+        dispatch(toggleSPUploadSpeedup());
+        handleMenuClose();
+    }, [dispatch, handleMenuClose]);
 
     const menuItems = [];
     menuItems.push(
@@ -230,6 +236,7 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
             <ListItemText>Read Firmware</ListItemText>
         </MenuItem>
     );
+    menuItems.push(<Divider key="feature-divider" />);
     menuItems.push(
         <MenuItem key="downloadTOC" onClick={handleDownloadTOC}>
             <ListItemIcon className={classes.listItemIcon}>
@@ -246,6 +253,27 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
             <ListItemText>Upload TOC</ListItemText>
         </MenuItem>
     );
+    menuItems.push(<Divider key="feature-divider" />);
+    menuItems.push(
+        <MenuItem
+            key="speedupSP"
+            onClick={handleToggleSPUploadSpeedup}
+            disabled={!exploitCapabilities.includes(ExploitCapability.spUploadSpeedup)}
+        >
+            <ListItemIcon className={classes.listItemIcon}>
+                {spUploadSpeedupActive ? <ToggleOnIcon fontSize="small" /> : <ToggleOffIcon fontSize="small" />}
+            </ListItemIcon>
+            <ListItemText>
+                {spUploadSpeedupActive ? `Disable ` : `Enable `}
+                <Tooltip
+                    title="On some devices, this can speed up SP upload"
+                    arrow
+                >
+                    <span className={classes.toolTippedText}>SP Upload Speedup</span>
+                </Tooltip>
+            </ListItemText>
+        </MenuItem>
+    );
     menuItems.push(
         <MenuItem key="playTetris" onClick={handlePlayTetris} disabled={!exploitCapabilities.includes(ExploitCapability.runTetris)}>
             <ListItemIcon className={classes.listItemIcon}>
@@ -254,6 +282,7 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
             <ListItemText>Play TETRIS!</ListItemText>
         </MenuItem>
     );
+    menuItems.push(<Divider key="feature-divider" />);
     menuItems.push(
         <MenuItem key="exit" onClick={handleExit}>
             <ListItemIcon className={classes.listItemIcon}>

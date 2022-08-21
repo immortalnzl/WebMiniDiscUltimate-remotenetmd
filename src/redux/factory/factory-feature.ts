@@ -8,12 +8,14 @@ export interface FactoryState {
     modified: boolean;
     firmwareVersion: string;
     exploitCapabilities: ExploitCapability[];
+    spUploadSpeedupActive: boolean,
 }
 
 const initialState: FactoryState = {
     modified: false,
     firmwareVersion: '',
     exploitCapabilities: [],
+    spUploadSpeedupActive: false,
 };
 
 export const slice = createSlice({
@@ -31,6 +33,9 @@ export const slice = createSlice({
         },
         setExploitCapabilities: (state, action: PayloadAction<ExploitCapability[]>) => {
             state.exploitCapabilities = action.payload;
+        },
+        setSPUploadSpedUp: (state, action: PayloadAction<boolean>) => {
+            state.spUploadSpeedupActive = action.payload;
         },
     },
 });

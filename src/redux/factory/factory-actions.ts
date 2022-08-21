@@ -292,3 +292,11 @@ export function archiveDisc(){
         await exploitDownloadTracks(Array(getState().factory.toc!.nTracks).fill(0).map((_, i) => i))(dispatch, getState);
     }
 }
+
+export function toggleSPUploadSpeedup(){
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        let spUploadSpeedupActive = getState().factory.spUploadSpeedupActive;
+        await serviceRegistry.netmdFactoryService!.setSPSpeedupActive(!spUploadSpeedupActive);
+        dispatch(factoryActions.setSPUploadSpedUp(!spUploadSpeedupActive));
+    }
+}

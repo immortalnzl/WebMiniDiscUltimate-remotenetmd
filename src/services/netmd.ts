@@ -40,7 +40,8 @@ import {
     Tetris,
     KillEepromWrite,
     getBestSuited,
-    isCompatible, 
+    isCompatible,
+    SPFasterUpload,
 } from 'netmd-exploits';
 
 const Worker = require('worker-loader!netmd-js/dist/web-encrypt-worker.js'); // eslint-disable-line import/no-webpack-loader-syntax
@@ -60,6 +61,7 @@ export enum ExploitCapability {
     flushUTOC,
     downloadAtrac,
     readFirmware,
+    spUploadSpeedup,
 }
 
 export interface NetMDService {
@@ -123,6 +125,8 @@ export interface NetMDFactoryService {
         track: number,
         callback: (data: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => void
     ): Promise<Uint8Array>;
+
+    setSPSpeedupActive(newState: boolean): Promise<void>;
 }
 
 export class NetMDUSBService implements NetMDService {
@@ -515,6 +519,8 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
             capabilities.push(ExploitCapability.runTetris);
         if (isCompatible(ForceTOCEdit, this.exploitStateManager.versionCode))
             capabilities.push(ExploitCapability.flushUTOC);
+        if (isCompatible(SPFasterUpload, this.exploitStateManager.versionCode))
+            capabilities.push(ExploitCapability.spUploadSpeedup);
 
         return capabilities;
     }
@@ -571,5 +577,15 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
         const bestSuited = getBestSuited(AtracRecovery, this.exploitStateManager.versionCode)!;
         const atracDownloader = (await this.exploitStateManager.require(bestSuited)) as AtracRecovery;
         return await atracDownloader.downloadTrack(track, callback);
+    }
+
+    @asyncMutex
+    async setSPSpeedupActive(newState: boolean){
+        const exploit = await this.exploitStateManager.require(SPFasterUpload);
+        if(newState){
+            await exploit.enable();
+        }else{
+            await exploit.disable();
+        }
     }
 }

@@ -459,6 +459,8 @@ class NetMDFactoryMockService implements NetMDFactoryService {
     ): Promise<Uint8Array> {
         return new Uint8Array(Buffer.from('***MOCK DATA***'));
     }
+
+    async setSPSpeedupActive(newState: boolean) {}
 }
 
 export { NetMDMockService };
