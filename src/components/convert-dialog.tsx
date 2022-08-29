@@ -154,7 +154,7 @@ const useStyles = makeStyles(theme => ({
         },
     },
     advancedOptionsAccordionContents: {
-        flexDirection: 'column'
+        flexDirection: 'column',
     },
     advancedOptionsAccordionSummary: {
         boxShadow: 'none',
@@ -350,9 +350,12 @@ export const ConvertDialog = (props: { files: File[] }) => {
         setEnableNormalization(enableNormalization => !enableNormalization);
     }, [setEnableNormalization]);
     const [normalizationTarget, setNormalizationTarget] = useState<number>(-5);
-    const handleNormalizationSliderChange = useCallback((evt: any, newValue: number | number[]) => {
-        setNormalizationTarget(newValue as number);
-    }, [setNormalizationTarget]);
+    const handleNormalizationSliderChange = useCallback(
+        (evt: any, newValue: number | number[]) => {
+            setNormalizationTarget(newValue as number);
+        },
+        [setNormalizationTarget]
+    );
 
     const handleConvert = useCallback(() => {
         handleClose();
@@ -362,7 +365,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                 titles.map((n, i) => ({ ...n, file: files[i].file })),
                 format,
                 {
-                    loudnessTarget: enableNormalization ? normalizationTarget: undefined,
+                    loudnessTarget: enableNormalization ? normalizationTarget : undefined,
                 }
             )
         );
@@ -387,12 +390,12 @@ export const ConvertDialog = (props: { files: File[] }) => {
 
     useEffect(() => {
         if (!disc) return;
-        const durationMultiplier = ({
+        const durationMultiplier = {
             SP: 1,
             LP2: 2,
-            LP4: 4
-        })[format];
-    
+            LP4: 4,
+        }[format];
+
         let testedDisc = JSON.parse(JSON.stringify(disc)) as Disc;
         let ungrouped = testedDisc.groups.find(n => n.title === null);
         if (!ungrouped) {
@@ -411,10 +414,10 @@ export const ConvertDialog = (props: { files: File[] }) => {
             } as Track);
         }
         setAvailableCharacters(getRemainingCharactersForTitles(testedDisc));
-        let secondsLeft = (disc.left / 512) * durationMultiplier
+        let secondsLeft = (disc.left / 512) * durationMultiplier;
         let totalTracksDuration = titles.reduce((a, b) => a + b.duration, 0);
         setAvailableSeconds(secondsLeft - totalTracksDuration);
-        setAvailableSPSeconds((disc.left / 512) - (totalTracksDuration / durationMultiplier));
+        setAvailableSPSeconds(disc.left / 512 - totalTracksDuration / durationMultiplier);
         setBeforeConversionAvailableSeconds(secondsLeft);
         setBeforeConversionAvailableCharacters(getRemainingCharactersForTitles(disc));
     }, [disc, setAvailableCharacters, titles, format]);
@@ -627,11 +630,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                     Warning: You have used up all the available space on the disc.
                 </Typography>
                 <span className={classes.durationsSpan}>
-                    <Typography
-                        component="h3"
-                        align="center"
-                        hidden={loadingMetadata}
-                    >
+                    <Typography component="h3" align="center" hidden={loadingMetadata}>
                         Total:{' '}
                         <Tooltip
                             title={
@@ -643,14 +642,16 @@ export const ConvertDialog = (props: { files: File[] }) => {
                             }
                             arrow
                         >
-                            <span className={classes.timeTooltip}>{secondsToNormal((disc?.left ?? 0) / 512 - availableSPSeconds)} SP time </span>
+                            <span className={classes.timeTooltip}>
+                                {secondsToNormal((disc?.left ?? 0) / 512 - availableSPSeconds)} SP time{' '}
+                            </span>
                         </Tooltip>
                     </Typography>
                     <Typography
                         component="h3"
                         align="center"
                         hidden={loadingMetadata}
-                        className={clsx({[classes.durationNotFit]: availableSPSeconds <= 0})}
+                        className={clsx({ [classes.durationNotFit]: availableSPSeconds <= 0 })}
                     >
                         Remaining:{' '}
                         <Tooltip
@@ -703,36 +704,28 @@ export const ConvertDialog = (props: { files: File[] }) => {
                     </div>
                 </Accordion>
                 <Accordion className={classes.advancedOptionsAccordion} square={true}>
-                    <AccordionSummary
-                        expandIcon={<ExpandMoreIcon/>}
-                        className={classes.advancedOptionsAccordionSummary}
-                    >
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />} className={classes.advancedOptionsAccordionSummary}>
                         Advanced Options
                     </AccordionSummary>
                     <AccordionDetails className={classes.advancedOptionsAccordionContents}>
                         <FormControlLabel
-                            label={`Normalize tracks${enableNormalization ? (` to ${normalizationTarget} dB`) : ''}`}
+                            label={`Normalize tracks${enableNormalization ? ` to ${normalizationTarget} dB` : ''}`}
                             className={classes.advancedOption}
-                            control={
-                                <Checkbox
-                                    checked={enableNormalization}
-                                    onChange={handleToggleNormalization}
-                                />
-                            }
+                            control={<Checkbox checked={enableNormalization} onChange={handleToggleNormalization} />}
                         />
                         <Slider
                             min={-70}
                             max={-5}
-                            step={.2}
+                            step={0.2}
                             marks={[
-                                {value: -70, label: '-70dB'},
-                                {value: -5, label: '-5dB'}
+                                { value: -70, label: '-70dB' },
+                                { value: -5, label: '-5dB' },
                             ]}
                             className={classes.advancedOption}
                             value={normalizationTarget}
                             onChange={handleNormalizationSliderChange}
                             disabled={!enableNormalization}
-                            />
+                        />
                     </AccordionDetails>
                 </Accordion>
             </DialogContent>

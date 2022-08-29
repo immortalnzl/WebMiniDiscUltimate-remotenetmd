@@ -8,11 +8,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import Divider from '@material-ui/core/Divider';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 
-import {
-    wipeDisc,
-    listContent,
-    selfTest,
-} from '../redux/actions';
+import { wipeDisc, listContent, selfTest } from '../redux/actions';
 import { actions as appActions } from '../redux/app-feature';
 import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
 import { actions as factoryNoticeDialogActions } from '../redux/factory/factory-notice-dialog-feature';
@@ -56,16 +52,15 @@ export const TopMenu = function(props: { onClick?: () => void }) {
     const classes = useStyles();
     const dispatch = useDispatch();
 
-    let { mainView,
+    let {
+        mainView,
         darkMode,
         vintageMode,
         fullWidthSupport,
         factoryModeRippingInMainUi,
         audioExportService,
-        audioExportServiceConfig
-    } = useShallowEqualSelector(
-        state => state.appState
-    );
+        audioExportServiceConfig,
+    } = useShallowEqualSelector(state => state.appState);
     const deviceCapabilities = useShallowEqualSelector(state => state.main.deviceCapabilities);
     let discTitle = useShallowEqualSelector(state => state.main.disc?.title ?? ``);
     let fullWidthDiscTitle = useShallowEqualSelector(state => state.main.disc?.fullWidthTitle ?? ``);
@@ -142,11 +137,13 @@ export const TopMenu = function(props: { onClick?: () => void }) {
     }, [dispatch, handleMenuClose]);
 
     const handleEncoderSetup = useCallback(() => {
-        dispatch(batchActions([
-            encoderSetupDialogActions.setCustomParameters({...audioExportServiceConfig}),
-            encoderSetupDialogActions.setSelectedServiceIndex(audioExportService),
-            encoderSetupDialogActions.setVisible(true),
-        ]));
+        dispatch(
+            batchActions([
+                encoderSetupDialogActions.setCustomParameters({ ...audioExportServiceConfig }),
+                encoderSetupDialogActions.setSelectedServiceIndex(audioExportService),
+                encoderSetupDialogActions.setVisible(true),
+            ])
+        );
         handleMenuClose();
     }, [dispatch, handleMenuClose, audioExportService, audioExportServiceConfig]);
 
@@ -254,7 +251,7 @@ export const TopMenu = function(props: { onClick?: () => void }) {
                 </ListItemText>
             </MenuItem>
         );
-        if(isCapable(Capability.factoryMode)) {
+        if (isCapable(Capability.factoryMode)) {
             menuItems.push(
                 <MenuItem key="factoryUnify" onClick={handleToggleFactoryModeRippingInMainUi}>
                     <ListItemIcon className={classes.listItemIcon}>
@@ -306,7 +303,7 @@ export const TopMenu = function(props: { onClick?: () => void }) {
     if (mainView === 'MAIN') {
         menuItems.push(<Divider key="feature-divider" />);
     }
-    if (mainView === 'WELCOME'){
+    if (mainView === 'WELCOME') {
         menuItems.push(
             <MenuItem key="encoderSetup" onClick={handleEncoderSetup}>
                 <ListItemIcon className={classes.listItemIcon}>

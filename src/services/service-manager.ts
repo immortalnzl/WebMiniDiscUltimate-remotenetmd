@@ -10,12 +10,12 @@ interface ServicePrototype {
     name: string;
     customParameters?: CustomParameterInfo[];
     description?: ReactHTMLElement<any>;
-};
+}
 
 export interface ServiceConstructionInfo {
     name: string;
     parameters?: CustomParameters;
-};
+}
 
 export const Services: ServicePrototype[] = [
     {

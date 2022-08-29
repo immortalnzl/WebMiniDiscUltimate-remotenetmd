@@ -57,9 +57,7 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
     const classes = useStyles();
     const dispatch = useDispatch();
 
-    let { darkMode } = useShallowEqualSelector(
-        state => state.appState
-    );
+    let { darkMode } = useShallowEqualSelector(state => state.appState);
     const { exploitCapabilities, spUploadSpeedupActive } = useShallowEqualSelector(state => state.factory);
 
     const githubLinkRef = React.useRef<null | HTMLAnchorElement>(null);
@@ -265,10 +263,7 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
             </ListItemIcon>
             <ListItemText>
                 {spUploadSpeedupActive ? `Disable ` : `Enable `}
-                <Tooltip
-                    title="On some devices, this can speed up SP upload"
-                    arrow
-                >
+                <Tooltip title="On some devices, this can speed up SP upload" arrow>
                     <span className={classes.toolTippedText}>SP Upload Speedup</span>
                 </Tooltip>
             </ListItemText>
@@ -381,7 +376,7 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
             <Menu id="factory-actions-menu" anchorEl={menuAnchorEl} keepMounted open={menuOpen} onClose={handleMenuClose}>
                 {menuItems}
             </Menu>
-            <Menu 
+            <Menu
                 id="factory-actions-submenu"
                 anchorEl={submenuAnchorEl}
                 keepMounted

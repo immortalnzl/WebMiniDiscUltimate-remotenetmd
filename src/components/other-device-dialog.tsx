@@ -87,10 +87,10 @@ export const OtherDeviceDialog = (props: {}) => {
         [dispatch, otherDeviceDialogCustomParameters]
     );
 
-    useEffect(() => 
-        setAddButtonDisabled(!isAllValid(currentService.customParameters!,otherDeviceDialogCustomParameters)),
-        [otherDeviceDialogCustomParameters, currentService.customParameters]
-    );
+    useEffect(() => setAddButtonDisabled(!isAllValid(currentService.customParameters!, otherDeviceDialogCustomParameters)), [
+        otherDeviceDialogCustomParameters,
+        currentService.customParameters,
+    ]);
 
     return (
         <Dialog
@@ -117,7 +117,7 @@ export const OtherDeviceDialog = (props: {}) => {
                 </Select>
                 {currentService.description}
                 <div className={classes.fullWidth}>
-                    {currentService.customParameters!.map(n => 
+                    {currentService.customParameters!.map(n =>
                         renderCustomParameter(n, otherDeviceDialogCustomParameters[n.varName], handleParameterChange)
                     )}
                 </div>

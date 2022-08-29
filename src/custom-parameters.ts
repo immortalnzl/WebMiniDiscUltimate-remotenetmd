@@ -8,7 +8,7 @@ export type CustomParameterInfo = {
     validator?: (content: string) => boolean;
 };
 
-export function isAllValid(archetype: CustomParameterInfo[] | undefined, parameters: CustomParameters){
+export function isAllValid(archetype: CustomParameterInfo[] | undefined, parameters: CustomParameters) {
     for (let parameter of archetype ?? []) {
         if (parameter.validator) {
             if (!parameter.validator(parameters[parameter.varName]?.toString())) {

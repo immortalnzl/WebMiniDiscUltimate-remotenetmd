@@ -47,14 +47,16 @@ export const EncoderSetupDialog = (props: {}) => {
     const { visible, customParameters, selectedServiceIndex } = useShallowEqualSelector(state => state.encoderSetupDialog);
     const currentService = AudioServices[selectedServiceIndex];
 
-    const [ okButtonDisabled, setOkButtonDisabled ] = useState(false);
+    const [okButtonDisabled, setOkButtonDisabled] = useState(false);
 
     const handleClose = useCallback(() => {
-        dispatch(batchActions([
-            encoderSetupDialogActions.setVisible(false),
-            appActions.setAudioExportService(selectedServiceIndex),
-            appActions.setAudioExportServiceConfig({...customParameters}),
-        ]));
+        dispatch(
+            batchActions([
+                encoderSetupDialogActions.setVisible(false),
+                appActions.setAudioExportService(selectedServiceIndex),
+                appActions.setAudioExportServiceConfig({ ...customParameters }),
+            ])
+        );
     }, [dispatch, customParameters, selectedServiceIndex]);
 
     const handleServiceSelectionChanged = useCallback(
@@ -69,7 +71,6 @@ export const EncoderSetupDialog = (props: {}) => {
         [dispatch]
     );
 
-
     const handleParameterChange = useCallback(
         (varName, value) => {
             const newData = { ...customParameters };
@@ -79,11 +80,10 @@ export const EncoderSetupDialog = (props: {}) => {
         [dispatch, customParameters]
     );
 
-    useEffect(() => 
-        setOkButtonDisabled(!isAllValid(currentService.customParameters, customParameters)),
-        [customParameters, currentService.customParameters]
-    );
-
+    useEffect(() => setOkButtonDisabled(!isAllValid(currentService.customParameters, customParameters)), [
+        customParameters,
+        currentService.customParameters,
+    ]);
 
     return (
         <Dialog
@@ -96,12 +96,7 @@ export const EncoderSetupDialog = (props: {}) => {
         >
             <DialogTitle id="encoder-setup-dialog-slide-title">Encoder Configuration</DialogTitle>
             <DialogContent>
-                <Select
-                    onChange={handleServiceSelectionChanged}
-                    value={selectedServiceIndex}
-                    className={classes.select}
-                    label="Service"
-                >
+                <Select onChange={handleServiceSelectionChanged} value={selectedServiceIndex} className={classes.select} label="Service">
                     {AudioServices.map((n, i) => (
                         <MenuItem value={i} key={`${i}`}>
                             {n.name}
@@ -110,13 +105,15 @@ export const EncoderSetupDialog = (props: {}) => {
                 </Select>
                 <p>{currentService.description}</p>
                 <div className={classes.fullWidth}>
-                    {currentService.customParameters?.map(n => 
+                    {currentService.customParameters?.map(n =>
                         renderCustomParameter(n, customParameters[n.varName], handleParameterChange)
                     )}
                 </div>
             </DialogContent>
             <DialogActions>
-                <Button onClick={handleClose} disabled={okButtonDisabled}>OK</Button>
+                <Button onClick={handleClose} disabled={okButtonDisabled}>
+                    OK
+                </Button>
             </DialogActions>
         </Dialog>
     );

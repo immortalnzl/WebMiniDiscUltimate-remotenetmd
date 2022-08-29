@@ -210,9 +210,9 @@ export const Main = (props: {}) => {
 
     const onDrop = useCallback(
         (acceptedFiles: File[], rejectedFiles: File[]) => {
-            const bannedTypes = ["audio/mpegurl", "audio/x-mpegurl"];
+            const bannedTypes = ['audio/mpegurl', 'audio/x-mpegurl'];
             const accepted = acceptedFiles.filter(n => !bannedTypes.includes(n.type));
-            if(accepted.length > 0){
+            if (accepted.length > 0) {
                 setUploadedFiles(accepted);
                 dispatch(convertDialogActions.setVisible(true));
             }

@@ -8,7 +8,7 @@ export interface FactoryState {
     modified: boolean;
     firmwareVersion: string;
     exploitCapabilities: ExploitCapability[];
-    spUploadSpeedupActive: boolean,
+    spUploadSpeedupActive: boolean;
 }
 
 const initialState: FactoryState = {

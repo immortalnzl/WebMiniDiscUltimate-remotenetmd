@@ -1,8 +1,12 @@
 import React from 'react';
-import { Checkbox, FormControlLabel, TextField } from "@material-ui/core";
-import { CustomParameterInfo, CustomParameterType } from "../custom-parameters";
+import { Checkbox, FormControlLabel, TextField } from '@material-ui/core';
+import { CustomParameterInfo, CustomParameterType } from '../custom-parameters';
 
-export function renderCustomParameter (parameter: CustomParameterInfo, value: any, parameterChangeCallback: (varName: string, newValue: any) => void) {
+export function renderCustomParameter(
+    parameter: CustomParameterInfo,
+    value: any,
+    parameterChangeCallback: (varName: string, newValue: any) => void
+) {
     const handleParameterChange = (event: any, type: CustomParameterType, name: string) => {
         parameterChangeCallback(
             name,
@@ -16,12 +20,7 @@ export function renderCustomParameter (parameter: CustomParameterInfo, value: an
         case 'boolean':
             return (
                 <FormControlLabel
-                    control={
-                        <Checkbox
-                            checked={value}
-                            onChange={e => handleParameterChange(e, parameter.type, parameter.varName)}
-                        />
-                    }
+                    control={<Checkbox checked={value} onChange={e => handleParameterChange(e, parameter.type, parameter.varName)} />}
                     label={parameter.userFriendlyName}
                     style={fullWidth}
                     key={parameter.varName}
@@ -32,11 +31,7 @@ export function renderCustomParameter (parameter: CustomParameterInfo, value: an
                 <TextField
                     key={parameter.varName}
                     label={parameter.userFriendlyName}
-                    error={
-                        parameter.validator
-                            ? !parameter.validator(value)
-                            : false
-                    }
+                    error={parameter.validator ? !parameter.validator(value) : false}
                     value={value || ''}
                     onChange={e => handleParameterChange(e, parameter.type, parameter.varName)}
                     style={fullWidth}
@@ -46,11 +41,7 @@ export function renderCustomParameter (parameter: CustomParameterInfo, value: an
             return (
                 <TextField
                     label={parameter.userFriendlyName}
-                    error={
-                        parameter.validator
-                            ? !parameter.validator(value)
-                            : false
-                    }
+                    error={parameter.validator ? !parameter.validator(value) : false}
                     type="number"
                     value={value || 0}
                     onChange={e => handleParameterChange(e, parameter.type, parameter.varName)}
@@ -59,4 +50,4 @@ export function renderCustomParameter (parameter: CustomParameterInfo, value: an
                 />
             );
     }
-};
+}

@@ -79,7 +79,9 @@ export const W95AboutDialog = (props: { visible: boolean; handleClose: () => voi
                             , to build the user interface.
                         </li>
                     </ul>
-                    <p style={{textAlign: 'center', fontSize: 13}}>Version #{GIT_HASH} {(GIT_DIFF as any) === "0" ? "" : `(${GIT_DIFF} diff-lines ahead)`} built on {BUILD_DATE}</p>
+                    <p style={{ textAlign: 'center', fontSize: 13 }}>
+                        Version #{GIT_HASH} {(GIT_DIFF as any) === '0' ? '' : `(${GIT_DIFF} diff-lines ahead)`} built on {BUILD_DATE}
+                    </p>
                     <DialogFooter>
                         <FooterButton onClick={props.handleClose}>OK</FooterButton>
                     </DialogFooter>

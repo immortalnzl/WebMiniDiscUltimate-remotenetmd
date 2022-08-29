@@ -1,6 +1,6 @@
-import { CustomParameterInfo, CustomParameters } from "../custom-parameters";
-import { AudioExportService, FFMpegAudioExportService } from "./audio-export";
-import { RemoteAtracExportService } from "./remote-atrac-export";
+import { CustomParameterInfo, CustomParameters } from '../custom-parameters';
+import { AudioExportService, FFMpegAudioExportService } from './audio-export';
+import { RemoteAtracExportService } from './remote-atrac-export';
 
 interface AudioServicePrototype {
     create: new (parameters: CustomParameters) => AudioExportService;
@@ -13,16 +13,16 @@ export const AudioServices: AudioServicePrototype[] = [
     {
         name: 'Atracdenc',
         create: FFMpegAudioExportService as any,
-        description: "The standard open-source ATRAC encoder. Its ATRAC3 support is incomplete",
+        description: 'The standard open-source ATRAC encoder. Its ATRAC3 support is incomplete',
     },
     {
-        name: "Remote ATRAC Encoder",
+        name: 'Remote ATRAC Encoder',
         create: RemoteAtracExportService as any,
         customParameters: [
             {
-                userFriendlyName: "Server Address",
-                varName: "address",
-                type: "string",
+                userFriendlyName: 'Server Address',
+                varName: 'address',
+                type: 'string',
                 validator: content => {
                     try {
                         const asURL = new URL(content);
@@ -31,8 +31,9 @@ export const AudioServices: AudioServicePrototype[] = [
                         return false;
                     }
                 },
-            }
+            },
         ],
-        description: "A separate high-quality ATRAC encoder hosted on another server (as defined by https://github.com/thinkbrown/atrac-api)",
-    }
+        description:
+            'A separate high-quality ATRAC encoder hosted on another server (as defined by https://github.com/thinkbrown/atrac-api)',
+    },
 ];

@@ -131,7 +131,9 @@ export const AboutDialog = (props: {}) => {
                         </Link>
                     </li>
                 </ul>
-                <DialogContentText style={{textAlign: 'center', fontSize: 13}}>Version #{GIT_HASH} {(GIT_DIFF as any) === "0" ? "" : `(${GIT_DIFF} diff-lines ahead)`} built on {BUILD_DATE}</DialogContentText>
+                <DialogContentText style={{ textAlign: 'center', fontSize: 13 }}>
+                    Version #{GIT_HASH} {(GIT_DIFF as any) === '0' ? '' : `(${GIT_DIFF} diff-lines ahead)`} built on {BUILD_DATE}
+                </DialogContentText>
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleClose}>Close</Button>

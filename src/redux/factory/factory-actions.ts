@@ -5,10 +5,7 @@ import { AppDispatch, RootState } from '../store';
 import { actions as appStateActions } from '../app-feature';
 import serviceRegistry from '../../services/registry';
 import { getTracks } from 'netmd-js';
-import {
-    createDownloadTrackName,
-    downloadBlob,
-} from '../../utils';
+import { createDownloadTrackName, downloadBlob } from '../../utils';
 import { concatUint8Arrays } from 'netmd-js/dist/utils';
 import { NetMDFactoryService, ExploitCapability } from '../../services/netmd';
 import { parseTOC, getTitleByTrackNumber, reconstructTOC, updateFlagAllFragmentsOfTrack, ModeFlag } from 'netmd-tocmanip';
@@ -172,15 +169,11 @@ export function uploadToc(file: File) {
 
         const data = new Uint8Array(await file.arrayBuffer());
         const sectors = [];
-        for(let i = 0; i<6; i++){
-            sectors.push(data.slice(i*2352, (i+1)*2352));
+        for (let i = 0; i < 6; i++) {
+            sectors.push(data.slice(i * 2352, (i + 1) * 2352));
         }
         const toc = parseTOC(...sectors);
-        dispatch(batchActions([
-            factoryActions.setModified(true),
-            factoryActions.setToc(toc),
-            appStateActions.setLoading(false),
-        ]));
+        dispatch(batchActions([factoryActions.setModified(true), factoryActions.setToc(toc), appStateActions.setLoading(false)]));
     };
 }
 
@@ -220,27 +213,17 @@ export function exploitDownloadTracks(trackIndexes: number[]) {
 
             const trackData = await serviceRegistry.netmdFactoryService!.exploitDownloadTrack(
                 trackIndex,
-                ({
-                    total,
-                    read,
-                    action,
-                    sector,
-                }: {
-                    read: number;
-                    total: number;
-                    action: 'READ' | 'SEEK' | 'CHUNK';
-                    sector?: string;
-                }) => {
-                    if(timeout !== null) clearTimeout(timeout);
+                ({ total, read, action, sector }: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => {
+                    if (timeout !== null) clearTimeout(timeout);
                     timeout = setTimeout(() => {
                         dispatch(
                             factoryProgressDialogActions.setProgress({
                                 current: action === 'SEEK' ? -1 : Math.min(read, total),
                                 total: total,
                                 additionalInfo: {
-                                    'SEEK': 'Seeking...',
-                                    'CHUNK': 'Receiving...',
-                                    'READ': `Reading sector ${sector!}...`
+                                    SEEK: 'Seeking...',
+                                    CHUNK: 'Receiving...',
+                                    READ: `Reading sector ${sector!}...`,
                                 }[action],
                             })
                         );
@@ -276,27 +259,31 @@ export function enableFactoryRippingModeInMainUi() {
     };
 }
 
-export function stripSCMS(){
+export function stripSCMS() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         const toc = getState().factory.toc!;
-        for(let track = 0; track < toc?.nTracks; track++){
+        for (let track = 0; track < toc?.nTracks; track++) {
             updateFlagAllFragmentsOfTrack(toc, track, ModeFlag.F_SCMS_DIG_COPY | ModeFlag.F_SCMS_UNRESTRICTED, true);
         }
         dispatch(factoryActions.setModified(true));
-    }
+    };
 }
 
-export function archiveDisc(){
+export function archiveDisc() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         await downloadToc()(dispatch, getState);
-        await exploitDownloadTracks(Array(getState().factory.toc!.nTracks).fill(0).map((_, i) => i))(dispatch, getState);
-    }
+        await exploitDownloadTracks(
+            Array(getState().factory.toc!.nTracks)
+                .fill(0)
+                .map((_, i) => i)
+        )(dispatch, getState);
+    };
 }
 
-export function toggleSPUploadSpeedup(){
+export function toggleSPUploadSpeedup() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         let spUploadSpeedupActive = getState().factory.spUploadSpeedupActive;
         await serviceRegistry.netmdFactoryService!.setSPSpeedupActive(!spUploadSpeedupActive);
         dispatch(factoryActions.setSPUploadSpedUp(!spUploadSpeedupActive));
-    }
+    };
 }

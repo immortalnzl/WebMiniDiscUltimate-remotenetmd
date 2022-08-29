@@ -189,7 +189,9 @@ export class NetMDUSBService implements NetMDService {
         // TODO: Add a flag for this instead of relying just on the name.
         const deviceName = this.netmdInterface?.netMd.getDeviceName();
         if (
-            (deviceName?.includes('Sony') && (deviceName?.includes('MZ-N') || deviceName?.includes("MZ-S1")) && !deviceName.includes('MZ-NH')) ||
+            (deviceName?.includes('Sony') &&
+                (deviceName?.includes('MZ-N') || deviceName?.includes('MZ-S1')) &&
+                !deviceName.includes('MZ-NH')) ||
             (deviceName?.includes('Aiwa') && deviceName?.includes('AM-NX'))
         ) {
             // Only non-HiMD Sony (and Aiwa since it's the same thing) portables have the factory mode.
@@ -500,7 +502,7 @@ export class NetMDUSBService implements NetMDService {
         // for(let i = 0; i<esm.getMaxPatchesAmount(); i++){
         //     await unpatch(factoryInstance, i, esm.getMaxPatchesAmount());
         // }
-        if(isCompatible(KillEepromWrite, esm.versionCode)){
+        if (isCompatible(KillEepromWrite, esm.versionCode)) {
             // Prevent EEPROM corruptions by killing the EEPROM writing code
             // in the device's firmware (it will be re-enabled after a device restart)
             await (await esm.require(KillEepromWrite)).enable();
@@ -513,14 +515,10 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
     constructor(private factoryInterface: NetMDFactoryInterface, public mutex: Mutex, public exploitStateManager: ExploitStateManager) {}
     async getExploitCapabilities() {
         let capabilities = [];
-        if (isCompatible(AtracRecovery, this.exploitStateManager.versionCode))
-            capabilities.push(ExploitCapability.downloadAtrac);
-        if (isCompatible(Tetris, this.exploitStateManager.versionCode))
-            capabilities.push(ExploitCapability.runTetris);
-        if (isCompatible(ForceTOCEdit, this.exploitStateManager.versionCode))
-            capabilities.push(ExploitCapability.flushUTOC);
-        if (isCompatible(SPFasterUpload, this.exploitStateManager.versionCode))
-            capabilities.push(ExploitCapability.spUploadSpeedup);
+        if (isCompatible(AtracRecovery, this.exploitStateManager.versionCode)) capabilities.push(ExploitCapability.downloadAtrac);
+        if (isCompatible(Tetris, this.exploitStateManager.versionCode)) capabilities.push(ExploitCapability.runTetris);
+        if (isCompatible(ForceTOCEdit, this.exploitStateManager.versionCode)) capabilities.push(ExploitCapability.flushUTOC);
+        if (isCompatible(SPFasterUpload, this.exploitStateManager.versionCode)) capabilities.push(ExploitCapability.spUploadSpeedup);
 
         return capabilities;
     }
@@ -580,11 +578,11 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
     }
 
     @asyncMutex
-    async setSPSpeedupActive(newState: boolean){
+    async setSPSpeedupActive(newState: boolean) {
         const exploit = await this.exploitStateManager.require(SPFasterUpload);
-        if(newState){
+        if (newState) {
             await exploit.enable();
-        }else{
+        } else {
             await exploit.disable();
         }
     }

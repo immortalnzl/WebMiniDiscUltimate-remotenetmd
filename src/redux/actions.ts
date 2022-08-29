@@ -241,8 +241,9 @@ export function pair(serviceInstance: NetMDService) {
 
         serviceRegistry.mediaSessionService?.init(); // no need to await
 
-        serviceRegistry.audioExportService = 
-            new AudioServices[getState().appState.audioExportService].create(getState().appState.audioExportServiceConfig);
+        serviceRegistry.audioExportService = new AudioServices[getState().appState.audioExportService].create(
+            getState().appState.audioExportServiceConfig
+        );
         await serviceRegistry.audioExportService!.init();
 
         serviceRegistry.netmdService = serviceInstance;
@@ -744,7 +745,7 @@ export function convertAndUpload(files: TitledFile[], format: UploadFormat, addi
         dispatch(batchActions([uploadDialogActions.setVisible(true), uploadDialogActions.setCancelUpload(false)]));
 
         const updateProgressCallback = ({ written, encrypted, total }: { written: number; encrypted: number; total: number }) => {
-            queueMicrotask( () => dispatch(uploadDialogActions.setWriteProgress({ written, encrypted, total })) );
+            queueMicrotask(() => dispatch(uploadDialogActions.setWriteProgress({ written, encrypted, total })));
         };
 
         const hasUploadBeenCancelled = () => {

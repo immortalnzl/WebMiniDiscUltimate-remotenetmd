@@ -9,7 +9,7 @@ export class RemoteAtracExportService implements AudioExportService {
     public outFileNameNoExt: string = ``;
     public address: string;
 
-    constructor({ address }: { address: string }){
+    constructor({ address }: { address: string }) {
         this.address = address;
     }
 
@@ -67,10 +67,10 @@ export class RemoteAtracExportService implements AudioExportService {
         return { format, input };
     }
 
-    async export({ format, loudnessTarget }: { format: string, loudnessTarget?: number }) {
+    async export({ format, loudnessTarget }: { format: string; loudnessTarget?: number }) {
         let result: ArrayBuffer;
-        let additionalCommands = "";
-        if(loudnessTarget !== undefined && loudnessTarget <= -5 && loudnessTarget >= -70){
+        let additionalCommands = '';
+        if (loudnessTarget !== undefined && loudnessTarget <= -5 && loudnessTarget >= -70) {
             additionalCommands += `-filter_complex loudnorm=I=${loudnessTarget}`;
         }
         if (format === `SP`) {
@@ -84,16 +84,16 @@ export class RemoteAtracExportService implements AudioExportService {
             let { data } = await this.ffmpegProcess.read(outFileName);
 
             const payload = new FormData();
-            payload.append('file', new Blob([data.buffer]), `${this.outFileNameNoExt}.wav`)
+            payload.append('file', new Blob([data.buffer]), `${this.outFileNameNoExt}.wav`);
             const encodingURL = new URL(this.address);
-            encodingURL.pathname = "/encode";
-            encodingURL.searchParams.set("type", format);
+            encodingURL.pathname = '/encode';
+            encodingURL.searchParams.set('type', format);
             let response = await fetch(encodingURL.href, {
                 method: 'POST',
-                body: payload
+                body: payload,
             });
             const content = await response.arrayBuffer();
-            const file = new File([ content ], 'test.at3')
+            const file = new File([content], 'test.at3');
             let headerLength = (await getATRACWAVEncoding(file))!.headerLength;
             result = content.slice(headerLength);
         }

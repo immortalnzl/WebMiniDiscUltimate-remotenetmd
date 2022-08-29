@@ -22,8 +22,8 @@ export interface AppState {
     availableServices: ServiceConstructionInfo[];
     lastSelectedService: number;
     factoryModeRippingInMainUi: boolean;
-    audioExportService: number,
-    audioExportServiceConfig: CustomParameters,
+    audioExportService: number;
+    audioExportServiceConfig: CustomParameters;
 }
 
 export const buildInitialState = (): AppState => {
@@ -119,7 +119,6 @@ export const slice = createSlice({
             state.audioExportServiceConfig = action.payload;
             savePreference('audioExportServiceConfig', state.audioExportServiceConfig);
         },
-
     },
 });
 
