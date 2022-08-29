@@ -4,7 +4,7 @@ export type CustomParameterInfo = {
     userFriendlyName: string;
     varName: string;
     type: CustomParameterType;
-    defaultValue?: string;
+    defaultValue?: string | number | boolean;
     validator?: (content: string) => boolean;
 };
 

@@ -82,36 +82,43 @@ export const Services: ServicePrototype[] = [
                 userFriendlyName: 'capabilityContentList',
                 type: 'boolean',
                 varName: 'capabilityContentList',
+                defaultValue: true,
             },
             {
                 userFriendlyName: 'capabilityPlaybackControl',
                 type: 'boolean',
                 varName: 'capabilityPlaybackControl',
+                defaultValue: true,
             },
             {
                 userFriendlyName: 'capabilityMetadataEdit',
                 type: 'boolean',
                 varName: 'capabilityMetadataEdit',
+                defaultValue: true,
             },
             {
                 userFriendlyName: 'capabilityTrackUpload',
                 type: 'boolean',
                 varName: 'capabilityTrackUpload',
+                defaultValue: true,
             },
             {
                 userFriendlyName: 'capabilityTrackDownload',
                 type: 'boolean',
                 varName: 'capabilityTrackDownload',
+                defaultValue: true,
             },
             {
                 userFriendlyName: 'capabilityDiscEject',
                 type: 'boolean',
                 varName: 'capabilityDiscEject',
+                defaultValue: true,
             },
             {
                 userFriendlyName: 'capabilityFactoryMode',
                 type: 'boolean',
                 varName: 'capabilityFactoryMode',
+                defaultValue: true,
             }
         ]
     },*/
