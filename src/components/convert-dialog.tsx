@@ -181,7 +181,6 @@ export const ConvertDialog = (props: { files: File[] }) => {
         LP2: 2,
         LP4: 4
     })[format];
-    console.log(format)
 
     const loadMetadataFromFiles = async (files: File[]): Promise<FileWithMetadata[]> => {
         setLoadingMetadata(true);
