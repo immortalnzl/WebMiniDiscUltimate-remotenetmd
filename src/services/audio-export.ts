@@ -10,7 +10,7 @@ export interface LogPayload {
 
 export interface AudioExportService {
     init(): Promise<void>;
-    export(params: { format: string }): Promise<ArrayBuffer>;
+    export(params: { format: string, loudnessTarget?: number }): Promise<ArrayBuffer>;
     info(): Promise<{ format: string | null; input: string | null }>;
     prepare(file: File): Promise<void>;
 }
@@ -79,16 +79,20 @@ export class FFMpegAudioExportService implements AudioExportService {
         return { format, input };
     }
 
-    async export({ format }: { format: string }) {
+    async export({ format, loudnessTarget }: { format: string, loudnessTarget?: number }) {
         let result: ArrayBuffer;
+        let additionalCommands = "";
+        if(loudnessTarget !== undefined && loudnessTarget <= -5 && loudnessTarget >= -70){
+            additionalCommands += `-filter_complex loudnorm=I=${loudnessTarget}`;
+        }
         if (format === `SP`) {
             const outFileName = `${this.outFileNameNoExt}.raw`;
-            await this.ffmpegProcess.transcode(this.inFileName, outFileName, '-ac 2 -ar 44100 -f s16be');
+            await this.ffmpegProcess.transcode(this.inFileName, outFileName, `${additionalCommands} -ac 2 -ar 44100 -f s16be`);
             let { data } = await this.ffmpegProcess.read(outFileName);
             result = data.buffer;
         } else {
             const outFileName = `${this.outFileNameNoExt}.wav`;
-            await this.ffmpegProcess.transcode(this.inFileName, outFileName, '-f wav -ar 44100 -ac 2');
+            await this.ffmpegProcess.transcode(this.inFileName, outFileName, `${additionalCommands} -f wav -ar 44100 -ac 2`);
             let { data } = await this.ffmpegProcess.read(outFileName);
             let bitrate: string = `0`;
             switch (format) {

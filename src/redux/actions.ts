@@ -726,7 +726,7 @@ export const WireformatDict: { [k: string]: Wireformat } = {
     LP4: Wireformat.lp4,
 };
 
-export function convertAndUpload(files: TitledFile[], format: UploadFormat) {
+export function convertAndUpload(files: TitledFile[], format: UploadFormat, additionalParameters?: { loudnessTarget?: number }) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         const { audioExportService, netmdService } = serviceRegistry;
         const wireformat = WireformatDict[format];
@@ -813,7 +813,7 @@ export function convertAndUpload(files: TitledFile[], format: UploadFormat) {
                             let data: ArrayBuffer;
                             try {
                                 await audioExportService!.prepare(f.file);
-                                data = await audioExportService!.export({ format });
+                                data = await audioExportService!.export({ format, loudnessTarget: additionalParameters?.loudnessTarget });
                                 convertNext();
                                 resolve({ file: f, data: data });
                             } catch (err) {

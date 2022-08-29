@@ -30,7 +30,12 @@ import Select from '@material-ui/core/Select';
 import Input from '@material-ui/core/Input';
 import MenuItem from '@material-ui/core/MenuItem';
 import Accordion from '@material-ui/core/Accordion';
+import AccordionSummary from '@material-ui/core/AccordionSummary';
 import AccordionDetails from '@material-ui/core/AccordionDetails';
+import Checkbox from '@material-ui/core/Checkbox';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Slider from '@material-ui/core/Slider';
+import Tooltip from '@material-ui/core/Tooltip';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import ExpandLessIcon from '@material-ui/icons/ExpandLess';
 import AddIcon from '@material-ui/icons/Add';
@@ -50,7 +55,6 @@ import { W95ConvertDialog } from './win95/convert-dialog';
 import { batchActions } from 'redux-batched-actions';
 import { Disc, getCellsForTitle, getRemainingCharactersForTitles, Track } from 'netmd-js';
 import { sanitizeFullWidthTitle, sanitizeHalfWidthTitle } from 'netmd-js/dist/utils';
-import { Tooltip } from '@material-ui/core';
 import clsx from 'clsx';
 
 const Transition = React.forwardRef(function Transition(
@@ -141,7 +145,26 @@ const useStyles = makeStyles(theme => ({
         display: 'flex',
         justifyContent: 'space-between',
         marginTop: theme.spacing(2),
-    }
+    },
+    advancedOptionsAccordion: {
+        boxShadow: 'none',
+        marginTop: theme.spacing(2),
+        '&:before': {
+            opacity: 0,
+        },
+    },
+    advancedOptionsAccordionContents: {
+        flexDirection: 'column'
+    },
+    advancedOptionsAccordionSummary: {
+        boxShadow: 'none',
+        minHeight: '32px !important',
+        height: '32px',
+        padding: 0,
+    },
+    advancedOption: {
+        width: '100%',
+    },
 }));
 
 export const ConvertDialog = (props: { files: File[] }) => {
@@ -317,20 +340,33 @@ export const ConvertDialog = (props: { files: File[] }) => {
         [dispatch]
     );
 
+    const [tracksOrderVisible, setTracksOrderVisible] = useState(false);
+    const handleToggleTracksOrder = useCallback(() => {
+        setTracksOrderVisible(tracksOrderVisible => !tracksOrderVisible);
+    }, [setTracksOrderVisible]);
+
+    const [enableNormalization, setEnableNormalization] = useState(false);
+    const handleToggleNormalization = useCallback(() => {
+        setEnableNormalization(enableNormalization => !enableNormalization);
+    }, [setEnableNormalization]);
+    const [normalizationTarget, setNormalizationTarget] = useState<number>(-5);
+    const handleNormalizationSliderChange = useCallback((evt: any, newValue: number | number[]) => {
+        setNormalizationTarget(newValue as number);
+    }, [setNormalizationTarget]);
+
     const handleConvert = useCallback(() => {
         handleClose();
+        setEnableNormalization(false);
         dispatch(
             convertAndUpload(
                 titles.map((n, i) => ({ ...n, file: files[i].file })),
-                format
+                format,
+                {
+                    loudnessTarget: enableNormalization ? normalizationTarget: undefined,
+                }
             )
         );
-    }, [dispatch, titles, format, handleClose, files]);
-
-    const [tracksOrderVisible, setTracksOrderVisible] = useState(false);
-    const handleToggleTracksOrder = useCallback(() => {
-        setTracksOrderVisible(!tracksOrderVisible);
-    }, [tracksOrderVisible, setTracksOrderVisible]);
+    }, [dispatch, handleClose, titles, format, files, normalizationTarget, enableNormalization]);
 
     // Dialog init on new files
     useEffect(() => {
@@ -665,6 +701,39 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         </Backdrop>
                         <input {...getInputProps()} />
                     </div>
+                </Accordion>
+                <Accordion className={classes.advancedOptionsAccordion} square={true}>
+                    <AccordionSummary
+                        expandIcon={<ExpandMoreIcon/>}
+                        className={classes.advancedOptionsAccordionSummary}
+                    >
+                        Advanced Options
+                    </AccordionSummary>
+                    <AccordionDetails className={classes.advancedOptionsAccordionContents}>
+                        <FormControlLabel
+                            label={`Normalize tracks${enableNormalization ? (` to ${normalizationTarget} dB`) : ''}`}
+                            className={classes.advancedOption}
+                            control={
+                                <Checkbox
+                                    checked={enableNormalization}
+                                    onChange={handleToggleNormalization}
+                                />
+                            }
+                        />
+                        <Slider
+                            min={-70}
+                            max={-5}
+                            step={.2}
+                            marks={[
+                                {value: -70, label: '-70dB'},
+                                {value: -5, label: '-5dB'}
+                            ]}
+                            className={classes.advancedOption}
+                            value={normalizationTarget}
+                            onChange={handleNormalizationSliderChange}
+                            disabled={!enableNormalization}
+                            />
+                    </AccordionDetails>
                 </Accordion>
             </DialogContent>
             <DialogActions>
