@@ -176,12 +176,6 @@ export const ConvertDialog = (props: { files: File[] }) => {
     const [availableSPSeconds, setAvailableSPSeconds] = useState(0);
     const [loadingMetadata, setLoadingMetadata] = useState(true);
 
-    const durationMultiplier = ({
-        SP: 1,
-        LP2: 2,
-        LP4: 4
-    })[format];
-
     const loadMetadataFromFiles = async (files: File[]): Promise<FileWithMetadata[]> => {
         setLoadingMetadata(true);
         let titledFiles = [];
@@ -357,6 +351,12 @@ export const ConvertDialog = (props: { files: File[] }) => {
 
     useEffect(() => {
         if (!disc) return;
+        const durationMultiplier = ({
+            SP: 1,
+            LP2: 2,
+            LP4: 4
+        })[format];
+    
         let testedDisc = JSON.parse(JSON.stringify(disc)) as Disc;
         let ungrouped = testedDisc.groups.find(n => n.title === null);
         if (!ungrouped) {
