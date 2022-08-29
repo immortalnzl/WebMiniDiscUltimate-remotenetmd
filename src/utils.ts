@@ -196,8 +196,9 @@ export function timeToSeekArgs(timeInSecs: number): number[] {
 }
 
 export function secondsToNormal(time: number): string {
-    const [h, m, s] = timeToSeekArgs(time);
-    return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    let negative = time < 0;
+    const [h, m, s] = timeToSeekArgs(Math.abs(time));
+    return `${negative ? '-' : ''}${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
 export const EncodingName: { [k: number]: string } = {

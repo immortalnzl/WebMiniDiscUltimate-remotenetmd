@@ -50,6 +50,8 @@ import { W95ConvertDialog } from './win95/convert-dialog';
 import { batchActions } from 'redux-batched-actions';
 import { Disc, getCellsForTitle, getRemainingCharactersForTitles, Track } from 'netmd-js';
 import { sanitizeFullWidthTitle, sanitizeHalfWidthTitle } from 'netmd-js/dist/utils';
+import { Tooltip } from '@material-ui/core';
+import clsx from 'clsx';
 
 const Transition = React.forwardRef(function Transition(
     props: TransitionProps & { children?: React.ReactElement<any, any> },
@@ -130,6 +132,16 @@ const useStyles = makeStyles(theme => ({
     durationNotFit: {
         color: theme.palette.error.main,
     },
+    timeTooltip: {
+        textDecoration: 'underline',
+        textDecorationStyle: 'dotted',
+        textUnderlineOffset: '3px',
+    },
+    durationsSpan: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginTop: theme.spacing(2),
+    }
 }));
 
 export const ConvertDialog = (props: { files: File[] }) => {
@@ -161,7 +173,15 @@ export const ConvertDialog = (props: { files: File[] }) => {
     }>({ fullWidth: 0, halfWidth: 0 });
     const [beforeConversionAvailableSeconds, setBeforeConversionAvailableSeconds] = useState(0);
     const [availableSeconds, setAvailableSeconds] = useState(0);
+    const [availableSPSeconds, setAvailableSPSeconds] = useState(0);
     const [loadingMetadata, setLoadingMetadata] = useState(true);
+
+    const durationMultiplier = ({
+        SP: 1,
+        LP2: 2,
+        LP4: 4
+    })[format];
+    console.log(format)
 
     const loadMetadataFromFiles = async (files: File[]): Promise<FileWithMetadata[]> => {
         setLoadingMetadata(true);
@@ -356,10 +376,10 @@ export const ConvertDialog = (props: { files: File[] }) => {
             } as Track);
         }
         setAvailableCharacters(getRemainingCharactersForTitles(testedDisc));
-        let secondsLeft = disc.left / 512;
-        if (format === 'LP2') secondsLeft *= 2;
-        else if (format === 'LP4') secondsLeft *= 4;
-        setAvailableSeconds(secondsLeft - titles.reduce((a, b) => a + b.duration, 0));
+        let secondsLeft = (disc.left / 512) * durationMultiplier
+        let totalTracksDuration = titles.reduce((a, b) => a + b.duration, 0);
+        setAvailableSeconds(secondsLeft - totalTracksDuration);
+        setAvailableSPSeconds((disc.left / 512) - (totalTracksDuration / durationMultiplier));
         setBeforeConversionAvailableSeconds(secondsLeft);
         setBeforeConversionAvailableCharacters(getRemainingCharactersForTitles(disc));
     }, [disc, setAvailableCharacters, titles, format]);
@@ -571,6 +591,47 @@ export const ConvertDialog = (props: { files: File[] }) => {
                 >
                     Warning: You have used up all the available space on the disc.
                 </Typography>
+                <span className={classes.durationsSpan}>
+                    <Typography
+                        component="h3"
+                        align="center"
+                        hidden={loadingMetadata}
+                    >
+                        Total:{' '}
+                        <Tooltip
+                            title={
+                                <React.Fragment>
+                                    <span>{`${secondsToNormal(((disc?.left ?? 0) / 512 - availableSPSeconds) * 2)} in LP2 Mode`}</span>
+                                    <br />
+                                    <span>{`${secondsToNormal(((disc?.left ?? 0) / 512 - availableSPSeconds) * 4)} in LP4 Mode`}</span>
+                                </React.Fragment>
+                            }
+                            arrow
+                        >
+                            <span className={classes.timeTooltip}>{secondsToNormal((disc?.left ?? 0) / 512 - availableSPSeconds)} SP time </span>
+                        </Tooltip>
+                    </Typography>
+                    <Typography
+                        component="h3"
+                        align="center"
+                        hidden={loadingMetadata}
+                        className={clsx({[classes.durationNotFit]: availableSPSeconds <= 0})}
+                    >
+                        Remaining:{' '}
+                        <Tooltip
+                            title={
+                                <React.Fragment>
+                                    <span>{`${secondsToNormal(availableSPSeconds * 2)} in LP2 Mode`}</span>
+                                    <br />
+                                    <span>{`${secondsToNormal(availableSPSeconds * 4)} in LP4 Mode`}</span>
+                                </React.Fragment>
+                            }
+                            arrow
+                        >
+                            <span className={classes.timeTooltip}>{secondsToNormal(availableSPSeconds)} SP time </span>
+                        </Tooltip>
+                    </Typography>
+                </span>
                 <Typography component="h3" color="error" hidden={!loadingMetadata} style={{ marginTop: '1em' }} align="center">
                     Reading Metadata...
                 </Typography>
