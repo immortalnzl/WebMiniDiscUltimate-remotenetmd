@@ -54,7 +54,7 @@ export function writeModifiedTOC() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         dispatch(appStateActions.setLoading(true));
         const toc = getState().factory.toc!;
-        const sectors = reconstructTOC(toc);
+        const sectors = reconstructTOC(toc, false);
         for (let i = 0; i < 3; i++) {
             await serviceRegistry.netmdFactoryService!.writeUTOCSector(i, sectors[i]!);
         }
