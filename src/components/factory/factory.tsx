@@ -312,7 +312,13 @@ const Toc = () => {
                 break;
             case 1:
                 // Half-Width sector
-                applyParameters(newContents, toc?.titleCellList ?? [], e => e.title !== '\0\0\0\0\0\0\0', 'T', '#5ec8f9'); // Text
+                applyParameters(
+                    newContents,
+                    toc?.titleCellList ?? [],
+                    e => e.title !== '\0\0\0\0\0\0\0',
+                    'T',
+                    '#5ec8f9'
+                ); // Text
                 applyParameters(
                     newContents,
                     toc?.titleCellList ?? [],

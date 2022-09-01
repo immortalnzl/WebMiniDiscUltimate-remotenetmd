@@ -206,7 +206,7 @@ export const TopMenu = function(props: { onClick?: () => void }) {
                     <ListItemIcon className={classes.listItemIcon}>
                         <SettingsIcon fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText>Enter Factory Mode</ListItemText>
+                    <ListItemText>Enter Homebrew Mode</ListItemText>
                 </MenuItem>
             );
         }
@@ -263,7 +263,7 @@ export const TopMenu = function(props: { onClick?: () => void }) {
                             title="This advanced feature enables RH1-style ripping from the main ui. The factory mode's notice still applies."
                             arrow
                         >
-                            <span className={classes.toolTippedText}>Factory Mode Ripping In Main UI</span>
+                            <span className={classes.toolTippedText}>Homebrew Mode Ripping In Main UI</span>
                         </Tooltip>
                     </ListItemText>
                 </MenuItem>
