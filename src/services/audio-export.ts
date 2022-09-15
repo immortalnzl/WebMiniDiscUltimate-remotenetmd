@@ -82,17 +82,20 @@ export class FFMpegAudioExportService implements AudioExportService {
     async export({ format, loudnessTarget }: { format: string; loudnessTarget?: number }) {
         let result: ArrayBuffer;
         let additionalCommands = '';
+        let commonFormatting = `-ac 2 -ar 44100`;
         if (loudnessTarget !== undefined && loudnessTarget <= -5 && loudnessTarget >= -70) {
             additionalCommands += `-filter_complex loudnorm=I=${loudnessTarget}`;
+        } else {
+            additionalCommands += `-af volume=replaygain=track`;
         }
         if (format === `SP`) {
             const outFileName = `${this.outFileNameNoExt}.raw`;
-            await this.ffmpegProcess.transcode(this.inFileName, outFileName, `${additionalCommands} -ac 2 -ar 44100 -f s16be`);
+            await this.ffmpegProcess.transcode(this.inFileName, outFileName, `${additionalCommands} ${commonFormatting} -f s16be`);
             let { data } = await this.ffmpegProcess.read(outFileName);
             result = data.buffer;
         } else {
             const outFileName = `${this.outFileNameNoExt}.wav`;
-            await this.ffmpegProcess.transcode(this.inFileName, outFileName, `${additionalCommands} -f wav -ar 44100 -ac 2`);
+            await this.ffmpegProcess.transcode(this.inFileName, outFileName, `${additionalCommands} ${commonFormatting} -f wav`);
             let { data } = await this.ffmpegProcess.read(outFileName);
             let bitrate: string = `0`;
             switch (format) {
