@@ -16,13 +16,17 @@ import factoryEditOtherValuesDialog from './factory/factory-edit-other-values-di
 import encoderSetupDialog from './encoder-setup-dialog-feature';
 
 import main from './main-feature';
+import { batchActions } from 'redux-batched-actions';
 
 const errorCatcher: Middleware = store => next => async action => {
     try {
         await next(action);
     } catch (e) {
         console.error(e);
-        next(panicDialogActions.setVisible(true));
+        next(batchActions([
+            panicDialogActions.setErrorProvided((e as any).stack ?? "<Not Provided>"),
+            panicDialogActions.setVisible(true),
+        ]));
     }
 };
 
