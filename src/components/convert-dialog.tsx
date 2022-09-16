@@ -345,9 +345,16 @@ export const ConvertDialog = (props: { files: File[] }) => {
         setTracksOrderVisible(tracksOrderVisible => !tracksOrderVisible);
     }, [setTracksOrderVisible]);
 
+    const [enableReplayGain, setEnableReplayGain] = useState(false);
+    const handleToggleReplayGain = useCallback(() => {
+        setEnableReplayGain(enableReplayGain => !enableReplayGain);
+        setEnableNormalization(false);
+    }, [setEnableReplayGain]);
+
     const [enableNormalization, setEnableNormalization] = useState(false);
     const handleToggleNormalization = useCallback(() => {
         setEnableNormalization(enableNormalization => !enableNormalization);
+        setEnableReplayGain(false);
     }, [setEnableNormalization]);
     const [normalizationTarget, setNormalizationTarget] = useState<number>(-5);
     const handleNormalizationSliderChange = useCallback(
@@ -359,6 +366,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
 
     const handleConvert = useCallback(() => {
         handleClose();
+        setEnableReplayGain(false);
         setEnableNormalization(false);
         dispatch(
             convertAndUpload(
@@ -366,6 +374,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                 format,
                 {
                     loudnessTarget: enableNormalization ? normalizationTarget : undefined,
+                    enableReplayGain: enableReplayGain,
                 }
             )
         );
@@ -708,6 +717,11 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         Advanced Options
                     </AccordionSummary>
                     <AccordionDetails className={classes.advancedOptionsAccordionContents}>
+                        <FormControlLabel
+                            label={`Use ReplayGain`}
+                            className={classes.advancedOption}
+                            control={<Checkbox checked={enableReplayGain} onChange={handleToggleReplayGain} />}
+                        />
                         <FormControlLabel
                             label={`Normalize tracks${enableNormalization ? ` to ${normalizationTarget} dB` : ''}`}
                             className={classes.advancedOption}

@@ -10,7 +10,7 @@ export interface LogPayload {
 
 export interface AudioExportService {
     init(): Promise<void>;
-    export(params: { format: string; loudnessTarget?: number }): Promise<ArrayBuffer>;
+    export(params: { format: string; loudnessTarget?: number; enableReplayGain?: boolean }): Promise<ArrayBuffer>;
     info(): Promise<{ format: string | null; input: string | null }>;
     prepare(file: File): Promise<void>;
 }
@@ -79,13 +79,13 @@ export class FFMpegAudioExportService implements AudioExportService {
         return { format, input };
     }
 
-    async export({ format, loudnessTarget }: { format: string; loudnessTarget?: number }) {
+    async export({ format, loudnessTarget, enableReplayGain }: { format: string; loudnessTarget?: number; enableReplayGain: boolean }) {
         let result: ArrayBuffer;
         let additionalCommands = '';
         let commonFormatting = `-ac 2 -ar 44100`;
         if (loudnessTarget !== undefined && loudnessTarget <= -5 && loudnessTarget >= -70) {
             additionalCommands += `-filter_complex loudnorm=I=${loudnessTarget}`;
-        } else {
+        } else if (enableReplayGain) {
             additionalCommands += `-af volume=replaygain=track`;
         }
         if (format === `SP`) {
