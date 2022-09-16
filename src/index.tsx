@@ -124,3 +124,7 @@ if (process.env.REACT_APP_NO_GA_RELEASE !== 'true') {
     serviceWorker.register();
     // serviceWorker.unregister();
 }
+
+if ((module as any).hot) {
+    (module as any).hot.accept();
+}
