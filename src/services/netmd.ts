@@ -502,7 +502,7 @@ export class NetMDUSBService implements NetMDService {
         // for(let i = 0; i<esm.getMaxPatchesAmount(); i++){
         //     await unpatch(factoryInstance, i, esm.getMaxPatchesAmount());
         // }
-        if (isCompatible(KillEepromWrite, esm.versionCode)) {
+        if (isCompatible(KillEepromWrite, esm.device)) {
             // Prevent EEPROM corruptions by killing the EEPROM writing code
             // in the device's firmware (it will be re-enabled after a device restart)
             await (await esm.require(KillEepromWrite)).enable();
@@ -515,10 +515,10 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
     constructor(private factoryInterface: NetMDFactoryInterface, public mutex: Mutex, public exploitStateManager: ExploitStateManager) {}
     async getExploitCapabilities() {
         let capabilities = [];
-        if (isCompatible(AtracRecovery, this.exploitStateManager.versionCode)) capabilities.push(ExploitCapability.downloadAtrac);
-        if (isCompatible(Tetris, this.exploitStateManager.versionCode)) capabilities.push(ExploitCapability.runTetris);
-        if (isCompatible(ForceTOCEdit, this.exploitStateManager.versionCode)) capabilities.push(ExploitCapability.flushUTOC);
-        if (isCompatible(SPFasterUpload, this.exploitStateManager.versionCode)) capabilities.push(ExploitCapability.spUploadSpeedup);
+        if (isCompatible(AtracRecovery, this.exploitStateManager.device)) capabilities.push(ExploitCapability.downloadAtrac);
+        if (isCompatible(Tetris, this.exploitStateManager.device)) capabilities.push(ExploitCapability.runTetris);
+        if (isCompatible(ForceTOCEdit, this.exploitStateManager.device)) capabilities.push(ExploitCapability.flushUTOC);
+        if (isCompatible(SPFasterUpload, this.exploitStateManager.device)) capabilities.push(ExploitCapability.spUploadSpeedup);
 
         return capabilities;
     }
@@ -572,7 +572,7 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
         track: number,
         callback: (data: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => void
     ) {
-        const bestSuited = getBestSuited(AtracRecovery, this.exploitStateManager.versionCode)!;
+        const bestSuited = getBestSuited(AtracRecovery, this.exploitStateManager.device)!;
         const atracDownloader = (await this.exploitStateManager.require(bestSuited)) as AtracRecovery;
         return await atracDownloader.downloadTrack(track, callback);
     }
