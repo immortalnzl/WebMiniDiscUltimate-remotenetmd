@@ -92,10 +92,11 @@ export class RemoteAtracExportService implements AudioExportService {
                 method: 'POST',
                 body: payload,
             });
-            const content = await response.arrayBuffer();
+            const source = await response.arrayBuffer();
+            const content = new Uint8Array(source);
             const file = new File([content], 'test.at3');
             let headerLength = (await getATRACWAVEncoding(file))!.headerLength;
-            result = content.slice(headerLength);
+            result = source.slice(headerLength);
         }
         this.ffmpegProcess.worker.terminate();
         return result;
