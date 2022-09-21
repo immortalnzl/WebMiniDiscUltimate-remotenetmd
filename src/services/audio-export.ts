@@ -79,7 +79,7 @@ export class FFMpegAudioExportService implements AudioExportService {
         return { format, input };
     }
 
-    async export({ format, loudnessTarget, enableReplayGain }: { format: string; loudnessTarget?: number; enableReplayGain: boolean }) {
+    async export({ format, loudnessTarget, enableReplayGain }: { format: string; loudnessTarget?: number; enableReplayGain?: boolean }) {
         let result: ArrayBuffer;
         let additionalCommands = '';
         let commonFormatting = `-ac 2 -ar 44100`;

@@ -67,11 +67,13 @@ export class RemoteAtracExportService implements AudioExportService {
         return { format, input };
     }
 
-    async export({ format, loudnessTarget }: { format: string; loudnessTarget?: number }) {
+    async export({ format, loudnessTarget, enableReplayGain }: { format: string; loudnessTarget?: number; enableReplayGain?: boolean }) {
         let result: ArrayBuffer;
         let additionalCommands = '';
         if (loudnessTarget !== undefined && loudnessTarget <= -5 && loudnessTarget >= -70) {
             additionalCommands += `-filter_complex loudnorm=I=${loudnessTarget}`;
+        } else if (enableReplayGain) {
+            additionalCommands += `-af volume=replaygain=track`;
         }
         if (format === `SP`) {
             const outFileName = `${this.outFileNameNoExt}.raw`;

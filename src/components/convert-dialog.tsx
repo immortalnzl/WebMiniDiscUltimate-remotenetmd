@@ -346,17 +346,18 @@ export const ConvertDialog = (props: { files: File[] }) => {
     }, [setTracksOrderVisible]);
 
     const [enableReplayGain, setEnableReplayGain] = useState(false);
+    const [enableNormalization, setEnableNormalization] = useState(false);
+    const [normalizationTarget, setNormalizationTarget] = useState<number>(-5);
+
     const handleToggleReplayGain = useCallback(() => {
         setEnableReplayGain(enableReplayGain => !enableReplayGain);
         setEnableNormalization(false);
-    }, [setEnableReplayGain]);
+    }, [setEnableReplayGain, setEnableNormalization]);
 
-    const [enableNormalization, setEnableNormalization] = useState(false);
     const handleToggleNormalization = useCallback(() => {
         setEnableNormalization(enableNormalization => !enableNormalization);
         setEnableReplayGain(false);
     }, [setEnableNormalization]);
-    const [normalizationTarget, setNormalizationTarget] = useState<number>(-5);
     const handleNormalizationSliderChange = useCallback(
         (evt: any, newValue: number | number[]) => {
             setNormalizationTarget(newValue as number);
@@ -374,11 +375,11 @@ export const ConvertDialog = (props: { files: File[] }) => {
                 format,
                 {
                     loudnessTarget: enableNormalization ? normalizationTarget : undefined,
-                    enableReplayGain: enableReplayGain,
+                    enableReplayGain,
                 }
             )
         );
-    }, [dispatch, handleClose, titles, format, files, normalizationTarget, enableNormalization]);
+    }, [dispatch, handleClose, titles, format, files, normalizationTarget, enableNormalization, enableReplayGain]);
 
     // Dialog init on new files
     useEffect(() => {
