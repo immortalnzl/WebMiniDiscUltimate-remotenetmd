@@ -8,7 +8,7 @@ import { actions as appStateActions } from './app-feature';
 import { actions as mainActions } from './main-feature';
 import { actions as convertDialogActions } from './convert-dialog-feature';
 import serviceRegistry from '../services/registry';
-import { Wireformat, getTracks, Disc, DiscFormat, getRemainingCharactersForTitles } from 'netmd-js';
+import { Wireformat, getTracks, Disc, DiscFormat, getRemainingCharactersForTitles, EncodingName } from 'netmd-js';
 import { AnyAction } from '@reduxjs/toolkit';
 import {
     framesToSec,
@@ -20,6 +20,7 @@ import {
     TitledFile,
     downloadBlob,
     createDownloadTrackName,
+    secondsToNormal,
 } from '../utils';
 import { UploadFormat } from './convert-dialog-feature';
 import NotificationCompleteIconUrl from '../images/record-complete-notification-icon.png';
@@ -718,6 +719,132 @@ export function setNotifyWhenFinished(value: boolean) {
         }
         dispatch(appStateActions.setNotifyWhenFinished(value));
     };
+}
+
+const csvHeader = (["INDEX", "GROUP RANGE", "GROUP NAME", "GROUP FULL WIDTH NAME", "NAME", "FULL WIDTH NAME", "DURATION", "ENCODING"]);
+
+export function exportCSV() {
+    return async function (dispatch: AppDispatch, getState: () => RootState) {
+        dispatch(appStateActions.setLoading(true));
+        const disc = await serviceRegistry.netmdService!.listContent();
+        const rows: any[][] = [];
+        rows.push([
+            0,      // track index - 0 is disc title
+            "0-0",  // No group range
+            "",     // No group name
+            "",     // No group fw name
+            disc.title ?? "",
+            disc.fullWidthTitle ?? "",
+            Math.round(framesToSec(disc.used)),
+            ""
+        ]);
+        for (const group of disc.groups) {
+            const groupStart = Math.min(...group.tracks.map(e => e.index));
+            const groupEnd = Math.max(...group.tracks.map(e => e.index));
+            const groupRange = group.index === 0 ? '' : `${groupStart}-${groupEnd}`;
+            for (const track of group.tracks) {
+                rows.push([
+                    track.index + 1,
+                    groupRange,
+                    group.title ?? "",
+                    group.fullWidthTitle ?? "",
+                    track.title ?? "",
+                    track.fullWidthTitle ?? "",
+                    Math.round(framesToSec(track.duration)),
+                    EncodingName[track.encoding],
+                ]);
+            }
+        }
+        let csvDocument =
+            [csvHeader, ...rows]
+                .map(e =>
+                    e.map(q => q.toString().replace(/,/g, "\\,"))
+                        .join(','))
+                .join('\n');
+        
+        let title;
+        if(disc.title){
+            title = disc.title;
+            if(disc.fullWidthTitle){
+                title += ` (${disc.fullWidthTitle})`;
+            }
+        }else if(disc.fullWidthTitle){
+            title = disc.fullWidthTitle;
+        }else{
+            title = "Disc";
+        }
+
+        downloadBlob(new Blob([ csvDocument ]), title + ".csv");
+        dispatch(appStateActions.setLoading(false));
+    }
+}
+
+export function importCSV(file: File) {
+    return async function (dispatch: AppDispatch, getState: () => RootState) {
+        const text = new TextDecoder("utf-8").decode(await file.arrayBuffer());
+        const records = text.split("\n").map(e => e.trim().split(/(?<!\\),/g));
+
+        if(records.length === 0 || records[0].some((e, i) => e !== csvHeader[i])){
+            alert("Malformed CSV file");
+            return;
+        }
+
+        let addedGroupRanges = new Set<string>();
+
+        const isTimeDifferenceAcceptable = (a: number, b: number) => Math.abs(a - b) < 2;
+
+        // Make sure the CSV matches the disc
+        dispatch(appStateActions.setLoading(true));
+        const disc = await serviceRegistry.netmdService!.listContent();
+        const ungroupedTracks = getTracks(disc).sort((a, b) => a.index - b.index);
+        if(disc.trackCount !== records.length - 2){ // - 2 - one for the header, second for the disc title / info
+            if(!window.confirm(`The CSV file describes a disc with ${records.length - 2} tracks.\nThe disc inserted has ${disc.trackCount} tracks.\nContinue importing?`)){
+                dispatch(appStateActions.setLoading(false));
+                return;
+            }
+        }
+        
+        await serviceRegistry.netmdService!.wipeDiscTitleInfo();
+
+        for(let [sIndex, gRange, groupName, groupFullWidthName, name, fwName, sDuration, encoding] of records.slice(1)){
+            let index = parseInt(sIndex),
+                duration = parseInt(sDuration);
+            gRange = gRange.replace(/ /g, '');
+            if(index === 0){
+                // Disc title info
+                await serviceRegistry.netmdService!.renameDisc(name, fwName);
+                continue;
+            }
+
+            let currentTrackEncoding = EncodingName[ungroupedTracks[index-1].encoding];
+            if(!isTimeDifferenceAcceptable(framesToSec(ungroupedTracks[index - 1].duration), duration) || currentTrackEncoding !== encoding){
+                if(!window.confirm(`
+                    The CSV file describes track ${index} as a ${secondsToNormal(duration)} ${encoding} track.
+                    The actual track${index} is a ${secondsToNormal(framesToSec(ungroupedTracks[index-1].duration))} ${currentTrackEncoding} track.
+                    Label it according to the file?
+                `.trim())){
+                    continue;
+                }
+            }
+            
+
+            if(gRange !== ""){
+                // Is part of group
+                if(!addedGroupRanges.has(gRange)){
+                    addedGroupRanges.add(gRange);
+                    const [startS, endS] = gRange.split("-");
+                    let start = parseInt(startS),
+                        end = parseInt(endS),
+                        length = end - start + 1;
+                    await serviceRegistry.netmdService!.addGroup(start, length, groupName, groupFullWidthName);
+                }
+            }
+
+            await serviceRegistry.netmdService!.renameTrack(index - 1, name, fwName);
+        }
+
+        listContent()(dispatch);
+    }
 }
 
 export const WireformatDict: { [k: string]: Wireformat } = {

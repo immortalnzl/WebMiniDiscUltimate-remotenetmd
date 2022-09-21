@@ -179,7 +179,7 @@ class NetMDMockService implements NetMDService {
         }
     }
 
-    async addGroup(groupBegin: number, groupLength: number, newName: string) {
+    async addGroup(groupBegin: number, groupLength: number, newName: string, fullWidthTitle: string = "") {
         let ungroupedDefs = this._groupsDef.find(g => g.title === null);
         if (!ungroupedDefs) {
             return; // You can only group tracks that aren't already in a different group, if there's no such tracks, there's no point to continue
@@ -193,7 +193,7 @@ class NetMDMockService implements NetMDService {
 
         const newGroupDef = {
             title: newName,
-            fullWidthTitle: '',
+            fullWidthTitle,
             index: groupBegin,
             tracksIdx: newGroupTracks,
         };
