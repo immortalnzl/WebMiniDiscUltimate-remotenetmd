@@ -72,10 +72,8 @@ export const TopMenu = function (props: { onClick?: () => void }) {
     const helpLinkRef = React.useRef<null | HTMLAnchorElement>(null);
     const hiddenFileInputRef = React.useRef<null | HTMLInputElement>(null);
     const [menuAnchorEl, setMenuAnchorEl] = React.useState<null | HTMLElement>(null);
-    const [submenuAnchorEl, setSubmenuAnchorEl] = React.useState<null | HTMLElement>(null);
     const [isShiftDown, setIsShiftDown] = React.useState(false);
     const menuOpen = Boolean(menuAnchorEl);
-    const submenuOpen = Boolean(submenuAnchorEl);
 
     const isCapable = (capability: Capability) => deviceCapabilities.includes(capability);
 
@@ -87,13 +85,6 @@ export const TopMenu = function (props: { onClick?: () => void }) {
         [setMenuAnchorEl, setIsShiftDown]
     );
 
-    const handleSubmenuOpen = useCallback(
-        (event: React.MouseEvent<HTMLElement>) => {
-            setSubmenuAnchorEl(event.currentTarget);
-        },
-        [setSubmenuAnchorEl]
-    );
-
     const handleDarkMode = useCallback(() => {
         dispatch(appActions.setDarkMode(!darkMode));
     }, [dispatch, darkMode]);
@@ -102,14 +93,9 @@ export const TopMenu = function (props: { onClick?: () => void }) {
         dispatch(appActions.setVintageMode(!vintageMode));
     }, [dispatch, vintageMode]);
 
-    const handleSubmenuClose = useCallback(() => {
-        setSubmenuAnchorEl(null);
-    }, [setSubmenuAnchorEl]);
-
     const handleMenuClose = useCallback(() => {
         setMenuAnchorEl(null);
-        handleSubmenuClose();
-    }, [setMenuAnchorEl, handleSubmenuClose]);
+    }, [setMenuAnchorEl]);
 
     const handleWipeDisc = useCallback(() => {
         dispatch(wipeDisc());
@@ -260,14 +246,25 @@ export const TopMenu = function (props: { onClick?: () => void }) {
                 <ListItemText>Wipe Disc</ListItemText>
             </MenuItem>
         );
+
         menuItems.push(
-            <MenuItem key="toolbox" onClick={handleSubmenuOpen}>
+            <MenuItem key="import-csv" onClick={handleImportCSV}>
                 <ListItemIcon className={classes.listItemIcon}>
-                    <MoreVertIcon fontSize="small" />
+                    <PublishIcon fontSize="small" />
                 </ListItemIcon>
-                <ListItemText>Toolbox</ListItemText>
+                <ListItemText>Import titles from CSV</ListItemText>
             </MenuItem>
         );
+    
+        menuItems.push(
+            <MenuItem key="export-csv" onClick={handleExportCSV}>
+                <ListItemIcon className={classes.listItemIcon}>
+                    <GetAppIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Export titles to CSV</ListItemText>
+            </MenuItem>
+        );
+    
         menuItems.push(
             <MenuItem key="exit" onClick={handleExit}>
                 <ListItemIcon className={classes.listItemIcon}>
@@ -408,26 +405,6 @@ export const TopMenu = function (props: { onClick?: () => void }) {
         </MenuItem>
     );
 
-    const submenuItems = [];
-
-    submenuItems.push(
-        <MenuItem key="import-csv" onClick={handleImportCSV}>
-            <ListItemIcon className={classes.listItemIcon}>
-                <PublishIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Import titles from CSV</ListItemText>
-        </MenuItem>
-    );
-
-    submenuItems.push(
-        <MenuItem key="export-csv" onClick={handleExportCSV}>
-            <ListItemIcon className={classes.listItemIcon}>
-                <GetAppIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Export titles to CSV</ListItemText>
-        </MenuItem>
-    );
-
     if (vintageMode) {
         const p = {
             mainView,
@@ -450,23 +427,6 @@ export const TopMenu = function (props: { onClick?: () => void }) {
             </IconButton>
             <Menu id="actions-menu" anchorEl={menuAnchorEl} keepMounted open={menuOpen} onClose={handleMenuClose}>
                 {menuItems}
-            </Menu>
-            <Menu
-                id="actions-submenu"
-                anchorEl={submenuAnchorEl}
-                keepMounted
-                open={submenuOpen}
-                onClose={handleSubmenuClose}
-                anchorOrigin={{
-                    vertical: 'top',
-                    horizontal: 'left',
-                }}
-                transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                }}
-            >
-                {submenuItems}
             </Menu>
             <input type="file" ref={hiddenFileInputRef} style={{ display: 'none' }} onChange={handleCSVImportFromFile} />
         </React.Fragment>
