@@ -32,6 +32,7 @@ jobs:
   # 'do not treat warnings as errors' per 'deploy-to-gh-pages.yml'
     - name: install and build
       run: |
+        git config --global url."https://".insteadOf git://
         npm ci
         npm run build
       env:
