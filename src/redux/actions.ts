@@ -990,9 +990,19 @@ export function recognizeTracks(indices: number[], mode: 'exploits' | 'line-in',
                         window.alert(
                             'Cannot enable homebrew mode ripping in main UI.\nThis device is not supported yet.\nStay tuned for future updates.'
                         );
+                        dispatch(songRecognitionProgressDialogActions.setVisible(false));
                         return;
                     }
                     // Download the track
+
+                    // TODO: Fix this temporary solution
+                    if((await serviceRegistry.netmdFactoryService!.getDeviceFirmware()).startsWith("R")){
+                        window.alert(
+                            'Cannot recognise tracks using exploits on Type-R devices yet!'
+                        );
+                        dispatch(songRecognitionProgressDialogActions.setVisible(false));
+                        return;
+                    }
 
                     let atracData = await serviceRegistry.netmdFactoryService!.exploitDownloadTrack(
                         index,
