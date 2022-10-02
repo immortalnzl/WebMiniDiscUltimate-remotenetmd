@@ -4,7 +4,6 @@
 // @version      0.1.0
 // @namespace    http://tampermonkey.net/
 // @author       Asivery
-// @match        https://testing.minidisc.wiki/b0824780-3c0c-11ed-b994-2c56dc399093/
 // @match        https://web.minidisc.wiki/
 // @grant        GM.xmlHttpRequest
 // @grant        unsafeWindow
