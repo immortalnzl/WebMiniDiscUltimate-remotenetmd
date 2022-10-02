@@ -108,14 +108,14 @@ export const TocTable = ({
                     {Array(16)
                         .fill(0)
                         .map((_, i) => (
-                            <TableRow key={`r${i}`}>
+                            <TableRow key={`${name}-r${i}`}>
                                 {Array(16)
                                     .fill(0)
                                     .map((_, j) => (
                                         <TableCell
                                             onClick={() => onSelectionChanged(i * 16 + j)}
                                             className={classes.tocCell}
-                                            key={`r${i}-c${j}`}
+                                            key={`${name}-r${i}-c${j}`}
                                             style={{
                                                 backgroundColor:
                                                     data[i * 16 + j].contents[contentCounter % data[i * 16 + j].contents.length].color,

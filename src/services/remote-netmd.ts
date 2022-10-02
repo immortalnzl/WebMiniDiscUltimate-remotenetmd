@@ -127,7 +127,7 @@ export class NetMDRemoteService implements NetMDService {
     }
 
     @asyncMutex
-    async addGroup(groupBegin: number, groupLength: number, title: string, fullWidthTitle: string = "") {
+    async addGroup(groupBegin: number, groupLength: number, title: string, fullWidthTitle: string = '') {
         return await this.getFromServer('addGroup', { groupBegin, groupLength, title, fullWidthTitle });
     }
 

@@ -7,8 +7,11 @@ import panicDialog, { actions as panicDialogActions } from './panic-dialog-featu
 import convertDialog from './convert-dialog-feature';
 import dumpDialog from './dump-dialog-feature';
 import recordDialog from './record-dialog-feature';
+import songRecognitionDialog from './song-recognition-dialog-feature';
+import songRecognitionProgressDialog from './song-recognition-progress-dialog-feature';
 import appState, { actions as appActions, buildInitialState as buildInitialAppState } from './app-feature';
 import factory from './factory/factory-feature';
+
 import factoryFragmentModeEditDialog from './factory/factory-fragment-mode-edit-dialog-feature';
 import factoryProgressDialog from './factory/factory-progress-dialog-feature';
 import factoryNoticeDialog from './factory/factory-notice-dialog-feature';
@@ -23,10 +26,9 @@ const errorCatcher: Middleware = store => next => async action => {
         await next(action);
     } catch (e) {
         console.error(e);
-        next(batchActions([
-            panicDialogActions.setErrorProvided((e as any).stack ?? "<Not Provided>"),
-            panicDialogActions.setVisible(true),
-        ]));
+        next(
+            batchActions([panicDialogActions.setErrorProvided((e as any).stack ?? '<Not Provided>'), panicDialogActions.setVisible(true)])
+        );
     }
 };
 
@@ -39,6 +41,8 @@ let reducer = combineReducers({
     convertDialog,
     dumpDialog,
     recordDialog,
+    songRecognitionDialog,
+    songRecognitionProgressDialog,
     factory,
     factoryFragmentModeEditDialog,
     factoryProgressDialog,

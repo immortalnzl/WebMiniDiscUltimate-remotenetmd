@@ -42,6 +42,7 @@ import {
     getBestSuited,
     isCompatible,
     SPFasterUpload,
+    AtracRecoveryConfig,
 } from 'netmd-exploits';
 
 const Worker = require('worker-loader!netmd-js/dist/web-encrypt-worker.js'); // eslint-disable-line import/no-webpack-loader-syntax
@@ -70,7 +71,7 @@ export interface NetMDService {
     getDeviceStatus(): Promise<DeviceStatus>;
     pair(): Promise<boolean>;
     connect(): Promise<boolean>;
-    listContent(): Promise<Disc>;
+    listContent(dropCache?: boolean): Promise<Disc>;
     getDeviceName(): Promise<string>;
     finalize(): Promise<void>;
     renameTrack(index: number, newTitle: string, newFullWidthTitle?: string): Promise<void>;
@@ -123,7 +124,8 @@ export interface NetMDFactoryService {
     readFirmware(callback: (progress: { type: 'RAM' | 'ROM'; readBytes: number; totalBytes: number }) => void): Promise<Uint8Array>;
     exploitDownloadTrack(
         track: number,
-        callback: (data: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => void
+        callback: (data: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => void,
+        config?: AtracRecoveryConfig
     ): Promise<Uint8Array>;
 
     setSPSpeedupActive(newState: boolean): Promise<void>;
@@ -243,8 +245,8 @@ export class NetMDUSBService implements NetMDService {
     }
 
     @asyncMutex
-    async listContent() {
-        this.dropCachedContentList();
+    async listContent(dropCache: boolean = false) {
+        if (dropCache) this.dropCachedContentList();
         return await this.listContentUsingCache();
     }
 
@@ -268,6 +270,7 @@ export class NetMDUSBService implements NetMDService {
     async rewriteGroups(groups: Group[]) {
         const disc = await this.listContentUsingCache();
         disc.groups = groups;
+        this.cachedContentList = disc;
         await rewriteDiscGroups(this.netmdInterface!, disc);
     }
 
@@ -278,7 +281,18 @@ export class NetMDUSBService implements NetMDService {
         if (fullWidthTitle !== undefined) {
             await this.netmdInterface!.setTrackTitle(index, sanitizeFullWidthTitle(fullWidthTitle), true);
         }
-        this.dropCachedContentList();
+        const disc = await this.listContentUsingCache();
+        for (let group of disc.groups) {
+            for (let track of group.tracks) {
+                if (track.index === index) {
+                    track.title = title;
+                    if (fullWidthTitle !== undefined) {
+                        track.fullWidthTitle = fullWidthTitle;
+                    }
+                }
+            }
+        }
+        this.cachedContentList = disc;
     }
 
     @asyncMutex
@@ -293,11 +307,12 @@ export class NetMDUSBService implements NetMDService {
         if (newFullWidthName !== undefined) {
             thisGroup.fullWidthTitle = newFullWidthName;
         }
+        this.cachedContentList = disc;
         await rewriteDiscGroups(this.netmdInterface!, disc);
     }
 
     @asyncMutex
-    async addGroup(groupBegin: number, groupLength: number, title: string, fullWidthTitle: string = "") {
+    async addGroup(groupBegin: number, groupLength: number, title: string, fullWidthTitle: string = '') {
         const disc = await this.listContentUsingCache();
         let ungrouped = disc.groups.find(n => n.title === null);
         if (!ungrouped) {
@@ -324,6 +339,7 @@ export class NetMDUSBService implements NetMDService {
             tracks: thisGroupTracks,
         });
         disc.groups = disc.groups.filter(g => g.tracks.length !== 0).sort((a, b) => a.tracks[0].index - b.tracks[0].index);
+        this.cachedContentList = disc;
         await rewriteDiscGroups(this.netmdInterface!, disc);
     }
 
@@ -343,7 +359,12 @@ export class NetMDUSBService implements NetMDService {
     @asyncMutex
     async renameDisc(newName: string, newFullWidthName?: string) {
         await renameDisc(this.netmdInterface!, newName, newFullWidthName);
-        this.dropCachedContentList();
+        const disc = await this.listContentUsingCache();
+        disc.title = newName;
+        if (newFullWidthName !== undefined) {
+            disc.fullWidthTitle = newFullWidthName;
+        }
+        this.cachedContentList = disc;
     }
 
     @asyncMutex
@@ -382,16 +403,27 @@ export class NetMDUSBService implements NetMDService {
     async wipeDiscTitleInfo() {
         await this.netmdInterface!.setDiscTitle('');
         await this.netmdInterface!.setDiscTitle('', true);
+        this.dropCachedContentList();
     }
 
     @asyncMutex
     async moveTrack(src: number, dst: number, updateGroups?: boolean) {
         await this.netmdInterface!.moveTrack(src, dst);
 
+        const content = await this.listContentUsingCache();
         if (updateGroups === undefined || updateGroups) {
-            await rewriteDiscGroups(this.netmdInterface!, recomputeGroupsAfterTrackMove(await this.listContentUsingCache(), src, dst));
+            await rewriteDiscGroups(this.netmdInterface!, recomputeGroupsAfterTrackMove(content, src, dst));
         }
-        this.dropCachedContentList();
+        for (let group of content.groups) {
+            for (let track of group.tracks) {
+                if (track.index === dst) {
+                    track.index = src;
+                } else if (track.index === src) {
+                    track.index = dst;
+                }
+            }
+        }
+        this.cachedContentList = content;
     }
 
     @asyncMutex
@@ -444,6 +476,7 @@ export class NetMDUSBService implements NetMDService {
         });
 
         w.terminate();
+        this.dropCachedContentList();
     }
 
     @asyncMutex
@@ -502,11 +535,11 @@ export class NetMDUSBService implements NetMDService {
         // for(let i = 0; i<esm.getMaxPatchesAmount(); i++){
         //     await unpatch(factoryInstance, i, esm.getMaxPatchesAmount());
         // }
-        if (isCompatible(KillEepromWrite, esm.device)) {
-            // Prevent EEPROM corruptions by killing the EEPROM writing code
-            // in the device's firmware (it will be re-enabled after a device restart)
-            await (await esm.require(KillEepromWrite)).enable();
-        }
+        // if (isCompatible(KillEepromWrite, esm.device)) {
+        //     // Prevent EEPROM corruptions by killing the EEPROM writing code
+        //     // in the device's firmware (it will be re-enabled after a device restart)
+        //     await (await esm.require(KillEepromWrite)).enable();
+        // }
         return new NetMDFactoryUSBService(factoryInstance, this.mutex, esm);
     }
 }
@@ -514,11 +547,13 @@ export class NetMDUSBService implements NetMDService {
 class NetMDFactoryUSBService implements NetMDFactoryService {
     constructor(private factoryInterface: NetMDFactoryInterface, public mutex: Mutex, public exploitStateManager: ExploitStateManager) {}
     async getExploitCapabilities() {
-        let capabilities = [];
-        if (isCompatible(AtracRecovery, this.exploitStateManager.device)) capabilities.push(ExploitCapability.downloadAtrac);
-        if (isCompatible(Tetris, this.exploitStateManager.device)) capabilities.push(ExploitCapability.runTetris);
-        if (isCompatible(ForceTOCEdit, this.exploitStateManager.device)) capabilities.push(ExploitCapability.flushUTOC);
-        if (isCompatible(SPFasterUpload, this.exploitStateManager.device)) capabilities.push(ExploitCapability.spUploadSpeedup);
+        let capabilities: ExploitCapability[] = [];
+        const bind = (a: any, b: ExploitCapability) => isCompatible(a, this.exploitStateManager.device) && capabilities.push(b);
+
+        bind(AtracRecovery, ExploitCapability.downloadAtrac);
+        bind(Tetris, ExploitCapability.runTetris);
+        bind(ForceTOCEdit, ExploitCapability.flushUTOC);
+        bind(SPFasterUpload, ExploitCapability.spUploadSpeedup);
 
         return capabilities;
     }
@@ -570,11 +605,12 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
     @asyncMutex
     async exploitDownloadTrack(
         track: number,
-        callback: (data: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => void
+        callback: (data: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => void,
+        config?: AtracRecoveryConfig
     ) {
         const bestSuited = getBestSuited(AtracRecovery, this.exploitStateManager.device)!;
         const atracDownloader = (await this.exploitStateManager.require(bestSuited)) as AtracRecovery;
-        return await atracDownloader.downloadTrack(track, callback);
+        return await atracDownloader.downloadTrack(track, callback, config);
     }
 
     @asyncMutex

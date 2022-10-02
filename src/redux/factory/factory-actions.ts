@@ -13,6 +13,15 @@ import { parseTOC, getTitleByTrackNumber, reconstructTOC, updateFlagAllFragments
 async function loadFactoryMode() {
     if (serviceRegistry.netmdFactoryService === undefined) {
         serviceRegistry.netmdFactoryService = (await serviceRegistry.netmdService!.factory()) as NetMDFactoryService;
+        const firmwareVersion = await serviceRegistry.netmdFactoryService!.getDeviceFirmware();
+        if (firmwareVersion.startsWith('R'))
+            window.alert(
+                `
+The device you are using right now is a Type-R device.
+If you decide to rip ATRAC via USB with it, please take out and reinsert the batteries after ripping the selected tracks from disc.
+During the transfer of ATRAC data, Type-R devices are in an unstable state. To restore them back to their normal mode of operation, they need to be reset.
+            `.trim()
+            );
     }
 }
 
@@ -191,7 +200,7 @@ export function exploitDownloadTracks(trackIndexes: number[]) {
         dispatch(factoryProgressDialogActions.setVisible(true));
         for (let trackIndex of trackIndexes) {
             if (trackIndex >= disc.trackCount) {
-                window.alert("This track does not exist. Make sure you've read the instructions on how to use the factory mode.");
+                window.alert("This track does not exist. Make sure you've read the instructions on how to use the homebrew mode.");
                 return;
             }
             const track = tracks.find(n => n.index === trackIndex)!;
@@ -237,22 +246,26 @@ export function exploitDownloadTracks(trackIndexes: number[]) {
     };
 }
 
+export async function checkIfAtracDownloadPossible() {
+    await serviceRegistry.netmdService!.stop();
+    await loadFactoryMode();
+
+    const capabilities = await serviceRegistry.netmdFactoryService!.getExploitCapabilities();
+    return capabilities.includes(ExploitCapability.downloadAtrac);
+}
+
 export function enableFactoryRippingModeInMainUi() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         dispatch(appStateActions.setLoading(true));
-        await serviceRegistry.netmdService!.stop();
-        await loadFactoryMode();
-
-        const capabilities = await serviceRegistry.netmdFactoryService!.getExploitCapabilities();
-        if (!capabilities.includes(ExploitCapability.downloadAtrac)) {
+        if (!(await checkIfAtracDownloadPossible())) {
             dispatch(appStateActions.setLoading(false));
             window.alert(
-                'Cannot enable factory mode ripping in main UI.\nThis device is not supported yet.\nStay tuned for future updates.'
+                'Cannot enable homebrew mode ripping in main UI.\nThis device is not supported yet.\nStay tuned for future updates.'
             );
             return;
         }
 
-        // At this point we're in the factory mode, and CSAR is allowed.
+        // At this point we're in the homebrew mode, and CSAR is allowed.
         // It's safe to enable this functionality.
 
         dispatch(batchActions([appStateActions.setFactoryModeRippingInMainUi(true), appStateActions.setLoading(false)]));

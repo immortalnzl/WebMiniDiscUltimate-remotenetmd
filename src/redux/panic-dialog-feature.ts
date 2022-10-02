@@ -3,7 +3,7 @@ import { enableBatching } from 'redux-batched-actions';
 
 export const initialState = {
     visible: false,
-    errorProvided: "",
+    errorProvided: '',
     dismissed: false, // This will prevent showing the dialog during the same session
 };
 

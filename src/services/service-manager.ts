@@ -21,7 +21,7 @@ export const Services: ServicePrototype[] = [
     {
         name: 'USB NetMD',
         getConnectName: () => 'Connect',
-        create: () => (window as any).native?.interface ?? new NetMDUSBService({ debug: true }),
+        create: () => window.native?.interface ?? new NetMDUSBService({ debug: true }),
     },
     {
         name: 'Remote NetMD',

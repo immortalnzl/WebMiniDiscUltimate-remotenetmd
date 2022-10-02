@@ -179,7 +179,7 @@ class NetMDMockService implements NetMDService {
         }
     }
 
-    async addGroup(groupBegin: number, groupLength: number, newName: string, fullWidthTitle: string = "") {
+    async addGroup(groupBegin: number, groupLength: number, newName: string, fullWidthTitle: string = '') {
         let ungroupedDefs = this._groupsDef.find(g => g.title === null);
         if (!ungroupedDefs) {
             return; // You can only group tracks that aren't already in a different group, if there's no such tracks, there's no point to continue
@@ -455,7 +455,8 @@ class NetMDFactoryMockService implements NetMDFactoryService {
 
     async exploitDownloadTrack(
         track: number,
-        callback: (data: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => void
+        callback: (data: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => void,
+        config?: any
     ): Promise<Uint8Array> {
         return new Uint8Array(Buffer.from('***MOCK DATA***'));
     }

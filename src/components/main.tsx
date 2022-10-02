@@ -64,6 +64,8 @@ import { Capability } from '../services/netmd';
 import { LinearProgress } from '@material-ui/core';
 import { FactoryModeNoticeDialog } from './factory/factory-notice-dialog';
 import { FactoryModeProgressDialog } from './factory/factory-progress-dialog';
+import { SongRecognitionDialog } from './song-recognition-dialog';
+import { SongRecognitionProgressDialog } from './song-recognition-progress-dialog';
 
 const useStyles = makeStyles(theme => ({
     add: {
@@ -222,7 +224,7 @@ export const Main = (props: {}) => {
 
     const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
         onDrop,
-        accept: [`audio/*`, `video/mp4`, `.oma`, `.at3`],
+        accept: [`audio/*`, `video/mp4`, `video/webm`, `.oma`, `.at3`],
         noClick: true,
     });
 
@@ -684,6 +686,8 @@ export const Main = (props: {}) => {
                 isCapableOfDownload={isCapable(Capability.trackDownload) || factoryModeRippingInMainUi}
                 isExploitDownload={factoryModeRippingInMainUi}
             />
+            <SongRecognitionDialog trackIndexes={selected} />
+            <SongRecognitionProgressDialog />
             <FactoryModeNoticeDialog />
             <AboutDialog />
             <ChangelogDialog />

@@ -8,7 +8,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import Divider from '@material-ui/core/Divider';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 
-import { wipeDisc, listContent, selfTest, exportCSV, importCSV } from '../redux/actions';
+import { wipeDisc, listContent, selfTest, exportCSV, importCSV, openRecognizeTrackDialog } from '../redux/actions';
 import { actions as appActions } from '../redux/app-feature';
 import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
 import { actions as factoryNoticeDialogActions } from '../redux/factory/factory-notice-dialog-feature';
@@ -29,13 +29,13 @@ import ExitToAppIcon from '@material-ui/icons/ExitToApp';
 import InfoIcon from '@material-ui/icons/Info';
 import ToggleOffIcon from '@material-ui/icons/ToggleOff';
 import ToggleOnIcon from '@material-ui/icons/ToggleOn';
+import MusicNoteIcon from '@material-ui/icons/MusicNote';
 import Win95Icon from '../images/win95/win95.png';
 import HelpIcon from '@material-ui/icons/Help';
 import SettingsIcon from '@material-ui/icons/Settings';
 import MusicNote from '@material-ui/icons/MusicNote';
 import GetAppIcon from '@material-ui/icons/GetApp';
 import PublishIcon from '@material-ui/icons/Publish';
-
 
 import { W95TopMenu } from './win95/topmenu';
 import { Capability } from '../services/netmd';
@@ -51,7 +51,7 @@ const useStyles = makeStyles(theme => ({
     },
 }));
 
-export const TopMenu = function (props: { onClick?: () => void }) {
+export const TopMenu = function(props: { onClick?: () => void }) {
     const classes = useStyles();
     const dispatch = useDispatch();
 
@@ -64,7 +64,7 @@ export const TopMenu = function (props: { onClick?: () => void }) {
         audioExportService,
         audioExportServiceConfig,
     } = useShallowEqualSelector(state => state.appState);
-    const deviceCapabilities = useShallowEqualSelector(state => state.main.deviceCapabilities);
+    const { deviceCapabilities, disc } = useShallowEqualSelector(state => state.main);
     let discTitle = useShallowEqualSelector(state => state.main.disc?.title ?? ``);
     let fullWidthDiscTitle = useShallowEqualSelector(state => state.main.disc?.fullWidthTitle ?? ``);
 
@@ -107,7 +107,7 @@ export const TopMenu = function (props: { onClick?: () => void }) {
     }, [dispatch, fullWidthSupport]);
 
     const handleRefresh = useCallback(() => {
-        dispatch(listContent());
+        dispatch(listContent(true));
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
@@ -194,7 +194,6 @@ export const TopMenu = function (props: { onClick?: () => void }) {
         handleMenuClose();
     }, [dispatch, factoryModeRippingInMainUi, handleMenuClose]);
 
-
     const handleExportCSV = useCallback(() => {
         dispatch(exportCSV());
         handleMenuClose();
@@ -205,13 +204,21 @@ export const TopMenu = function (props: { onClick?: () => void }) {
         handleMenuClose();
     }, [hiddenFileInputRef, handleMenuClose]);
 
-    const handleCSVImportFromFile = useCallback((event: any) => {
-        const file = event.target.files[0];
-        dispatch(importCSV(file));
-    }, [dispatch]);
+    const handleCSVImportFromFile = useCallback(
+        (event: any) => {
+            const file = event.target.files[0];
+            dispatch(importCSV(file));
+        },
+        [dispatch]
+    );
+
+    const handleOpenSongRecognition = useCallback(() => {
+        dispatch(openRecognizeTrackDialog());
+        handleMenuClose();
+    }, [dispatch, handleMenuClose]);
 
     const menuItems = [];
-    if (mainView === 'MAIN') {
+    if (mainView === 'MAIN' && disc !== null) {
         menuItems.push(
             <MenuItem key="update" onClick={handleRefresh}>
                 <ListItemIcon className={classes.listItemIcon}>
@@ -248,6 +255,19 @@ export const TopMenu = function (props: { onClick?: () => void }) {
         );
 
         menuItems.push(
+            <MenuItem
+                key="song-recognition"
+                onClick={handleOpenSongRecognition}
+                disabled={!isCapable(Capability.playbackControl) || !isCapable(Capability.contentList)}
+            >
+                <ListItemIcon className={classes.listItemIcon}>
+                    <MusicNoteIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Song Recognition</ListItemText>
+            </MenuItem>
+        );
+
+        menuItems.push(
             <MenuItem key="import-csv" onClick={handleImportCSV}>
                 <ListItemIcon className={classes.listItemIcon}>
                     <PublishIcon fontSize="small" />
@@ -255,7 +275,7 @@ export const TopMenu = function (props: { onClick?: () => void }) {
                 <ListItemText>Import titles from CSV</ListItemText>
             </MenuItem>
         );
-    
+
         menuItems.push(
             <MenuItem key="export-csv" onClick={handleExportCSV}>
                 <ListItemIcon className={classes.listItemIcon}>
@@ -264,7 +284,7 @@ export const TopMenu = function (props: { onClick?: () => void }) {
                 <ListItemText>Export titles to CSV</ListItemText>
             </MenuItem>
         );
-    
+
         menuItems.push(
             <MenuItem key="exit" onClick={handleExit}>
                 <ListItemIcon className={classes.listItemIcon}>
@@ -299,7 +319,7 @@ export const TopMenu = function (props: { onClick?: () => void }) {
                     <ListItemText>
                         {factoryModeRippingInMainUi ? `Disable ` : `Enable `}
                         <Tooltip
-                            title="This advanced feature enables RH1-style ripping from the main ui. The factory mode's notice still applies."
+                            title="This advanced feature enables RH1-style ripping from the main ui. The homebrew mode's notice still applies."
                             arrow
                         >
                             <span className={classes.toolTippedText}>Homebrew Mode Ripping In Main UI</span>

@@ -6,6 +6,7 @@ export class RemoteAtracExportService implements AudioExportService {
     public ffmpegProcess: any;
     public loglines: { action: string; message: string }[] = [];
     public inFileName: string = ``;
+    public originalFileName: string = ``;
     public outFileNameNoExt: string = ``;
     public address: string;
 
@@ -36,6 +37,7 @@ export class RemoteAtracExportService implements AudioExportService {
 
         this.inFileName = `inAudioFile.${ext[0]}`;
         this.outFileNameNoExt = `outAudioFile`;
+        this.originalFileName = file.name;
 
         await this.ffmpegProcess.write(this.inFileName, file);
     }
@@ -81,15 +83,15 @@ export class RemoteAtracExportService implements AudioExportService {
             let { data } = await this.ffmpegProcess.read(outFileName);
             result = data.buffer;
         } else {
-            const outFileName = `${this.outFileNameNoExt}.wav`;
-            await this.ffmpegProcess.transcode(this.inFileName, outFileName, `${additionalCommands} -f wav -ar 44100 -ac 2`);
-            let { data } = await this.ffmpegProcess.read(outFileName);
+            let { data } = await this.ffmpegProcess.read(this.inFileName);
 
             const payload = new FormData();
-            payload.append('file', new Blob([data.buffer]), `${this.outFileNameNoExt}.wav`);
+            payload.append('file', new Blob([data.buffer]), this.originalFileName);
             const encodingURL = new URL(this.address);
-            encodingURL.pathname = '/encode';
+            encodingURL.pathname = '/transcode';
             encodingURL.searchParams.set('type', format);
+            if (loudnessTarget !== undefined) encodingURL.searchParams.set('loudnessTarget', loudnessTarget.toString());
+            if (enableReplayGain !== undefined) encodingURL.searchParams.set('applyReplaygain', enableReplayGain.toString());
             let response = await fetch(encodingURL.href, {
                 method: 'POST',
                 body: payload,

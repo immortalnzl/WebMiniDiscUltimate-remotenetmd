@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import {
     belowDesktop,
@@ -12,6 +12,7 @@ import {
 
 import { actions as convertDialogActions, TitleFormatType, UploadFormat } from '../redux/convert-dialog-feature';
 import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
+import { actions as appActions } from '../redux/app-feature';
 import { convertAndUpload } from '../redux/actions';
 
 import Dialog from '@material-ui/core/Dialog';
@@ -56,6 +57,7 @@ import { batchActions } from 'redux-batched-actions';
 import { Disc, getCellsForTitle, getRemainingCharactersForTitles, Track } from 'netmd-js';
 import { sanitizeFullWidthTitle, sanitizeHalfWidthTitle } from 'netmd-js/dist/utils';
 import clsx from 'clsx';
+import { Link } from '@material-ui/core';
 
 const Transition = React.forwardRef(function Transition(
     props: TransitionProps & { children?: React.ReactElement<any, any> },
@@ -198,6 +200,25 @@ export const ConvertDialog = (props: { files: File[] }) => {
     const [availableSeconds, setAvailableSeconds] = useState(0);
     const [availableSPSeconds, setAvailableSPSeconds] = useState(0);
     const [loadingMetadata, setLoadingMetadata] = useState(true);
+
+    const fullWidthCharactersUsed = useMemo(() => {
+        return (
+            files
+                .map(
+                    e =>
+                        (e.title + e.album + e.artist)
+                            .split('')
+                            .map(n => n.charCodeAt(0))
+                            .filter(
+                                n =>
+                                    (n >= 0x3040 && n <= 0x309f) || // Hiragana
+                                    (n >= 0x4e00 && n <= 0x9faf) || // Kanji
+                                    (n >= 0x3400 && n <= 0x4dbf) // Rare kanji
+                            ).length
+                )
+                .filter(e => e > 0).length > 0
+        );
+    }, [files]);
 
     const loadMetadataFromFiles = async (files: File[]): Promise<FileWithMetadata[]> => {
         setLoadingMetadata(true);
@@ -365,6 +386,10 @@ export const ConvertDialog = (props: { files: File[] }) => {
         [setNormalizationTarget]
     );
 
+    const handleToggleFullWidthSupport = useCallback(() => {
+        dispatch(appActions.setFullWidthSupport(!fullWidthSupport));
+    }, [dispatch, fullWidthSupport]);
+
     const handleConvert = useCallback(() => {
         handleClose();
         setEnableReplayGain(false);
@@ -498,17 +523,21 @@ export const ConvertDialog = (props: { files: File[] }) => {
     // Add/Remove tracks
     const onDrop = useCallback(
         (acceptedFiles: File[], rejectedFiles: File[]) => {
-            loadMetadataFromFiles(acceptedFiles)
-                .then(acceptedTitledFiles => {
-                    setFiles(files => files.slice().concat(acceptedTitledFiles));
-                })
-                .catch(console.error);
+            const bannedTypes = ['audio/mpegurl', 'audio/x-mpegurl'];
+            const accepted = acceptedFiles.filter(n => !bannedTypes.includes(n.type));
+            if (accepted.length > 0) {
+                loadMetadataFromFiles(accepted)
+                    .then(acceptedTitledFiles => {
+                        setFiles(files => files.slice().concat(acceptedTitledFiles));
+                    })
+                    .catch(console.error);
+            }
         },
         [setFiles]
     );
     const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
         onDrop,
-        accept: [`audio/*`, `video/mp4`, `.oma`],
+        accept: [`audio/*`, `video/mp4`, `video/webm`, `.oma`, `.at3`],
         noClick: true,
     });
     const disableRemove = selectedTrackIndex < 0 || selectedTrackIndex >= files.length;
@@ -678,6 +707,16 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         </Tooltip>
                     </Typography>
                 </span>
+                {!fullWidthSupport && fullWidthCharactersUsed ? (
+                    <Typography color="error" component="p">
+                        You seem to be trying to enter full-width text into the half-width slot.{' '}
+                        <Link onClick={handleToggleFullWidthSupport} color="error" underline="always" style={{ cursor: 'pointer' }}>
+                            Enable full-width title support
+                        </Link>
+                        ?
+                    </Typography>
+                ) : null}
+
                 <Typography component="h3" color="error" hidden={!loadingMetadata} style={{ marginTop: '1em' }} align="center">
                     Reading Metadata...
                 </Typography>
@@ -718,6 +757,12 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         Advanced Options
                     </AccordionSummary>
                     <AccordionDetails className={classes.advancedOptionsAccordionContents}>
+                        <FormControlLabel
+                            label={`Enable full width titles support`}
+                            className={classes.advancedOption}
+                            control={<Checkbox checked={fullWidthSupport} onChange={handleToggleFullWidthSupport} />}
+                        />
+
                         <FormControlLabel
                             label={`Use ReplayGain`}
                             className={classes.advancedOption}

@@ -217,7 +217,7 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
             <ListItemText>Toolbox</ListItemText>
         </MenuItem>
     );
-    menuItems.push(<Divider key="feature-divider" />);
+    menuItems.push(<Divider key="feature-divider-1" />);
     menuItems.push(
         <MenuItem key="readRAM" onClick={handleReadRAM}>
             <ListItemIcon className={classes.listItemIcon}>
@@ -234,7 +234,7 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
             <ListItemText>Read Firmware</ListItemText>
         </MenuItem>
     );
-    menuItems.push(<Divider key="feature-divider" />);
+    menuItems.push(<Divider key="feature-divider-2" />);
     menuItems.push(
         <MenuItem key="downloadTOC" onClick={handleDownloadTOC}>
             <ListItemIcon className={classes.listItemIcon}>
@@ -251,7 +251,7 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
             <ListItemText>Upload TOC</ListItemText>
         </MenuItem>
     );
-    menuItems.push(<Divider key="feature-divider" />);
+    menuItems.push(<Divider key="feature-divider-3" />);
     menuItems.push(
         <MenuItem
             key="speedupSP"
@@ -277,7 +277,7 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
             <ListItemText>Play TETRIS!</ListItemText>
         </MenuItem>
     );
-    menuItems.push(<Divider key="feature-divider" />);
+    menuItems.push(<Divider key="feature-divider-4" />);
     menuItems.push(
         <MenuItem key="exit" onClick={handleExit}>
             <ListItemIcon className={classes.listItemIcon}>

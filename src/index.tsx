@@ -25,7 +25,7 @@ serviceRegistry.mediaRecorderService = new MediaRecorderService();
 serviceRegistry.mediaSessionService = new BrowserMediaSessionService(store);
 
 Object.defineProperty(window, 'wmdVersion', {
-    value: '1.2.2',
+    value: '1.3.0',
     writable: false,
 });
 
@@ -82,7 +82,9 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
             state.recordDialog.visible === false &&
             state.panicDialog.visible === false &&
             state.errorDialog.visible === false &&
-            state.dumpDialog.visible === false
+            state.dumpDialog.visible === false &&
+            state.songRecognitionProgressDialog.visible === false &&
+            state.factoryProgressDialog.visible === false
         );
     }
 
@@ -99,7 +101,7 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
                     return;
                 }
                 if (!deviceStatus.discPresent && state.main.disc !== null) store.dispatch(mainActions.setDisc(null));
-                if (deviceStatus.discPresent && state.main.disc === null) await listContent()(store.dispatch);
+                if (deviceStatus.discPresent && state.main.disc === null) await listContent(true)(store.dispatch);
                 if (JSON.stringify(deviceStatus) !== JSON.stringify(state.main.deviceStatus)) {
                     store.dispatch(mainActions.setDeviceStatus(deviceStatus));
                 }

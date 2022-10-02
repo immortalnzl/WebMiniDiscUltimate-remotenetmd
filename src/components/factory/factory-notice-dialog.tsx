@@ -56,15 +56,15 @@ export const FactoryModeNoticeDialog = (props: {}) => {
             <DialogTitle id="factory-notice-dialog-slide-title">Important information</DialogTitle>
             <DialogContent>
                 <DialogContentText id="factory-notice-dialog-slide-description" className={classes.mainText}>
-                    You are about to enter the factory mode. The features accessible through this mode aren't part of the NetMD
+                    You are about to enter the homebrew mode. The features accessible through this mode aren't part of the NetMD
                     specification and have not been developed by Sony. The developers of netmd‑exploits / netmd‑js are not responsible for
                     any damage done to the discs, data and / or players. From this point on, the software assumes you know what you are
                     doing and will not ask for confirmations or try to prevent damage.
                     {`\n\n`}
                     Some things to keep in mind:
-                    {`\n`}- After exiting factory mode, the player needs to be reset by taking out the batteries. TOC changes won't be
-                    applied otherwise.
-                    {`\n`}- Don't enter the factory mode if there are any TOC Edits queued up.
+                    {`\n`}- After exiting homebrew mode, the player needs to be reset by taking out the batteries. TOC changes won't be
+                    applied otherwise. <b>This is important for Type-R devices in particular.</b>
+                    {`\n`}- Don't enter the homebrew mode if there are any TOC Edits queued up.
                     {`\n`}- If any tracks / fragments / cells / timestamps are removed / added you will need to update the "Other TOC
                     Values", otherwise the changes won't be applied or the disc will become corrupted.
                     {`\n`}- Digital transferring of tracks via USB only works if the track can be played by the player. If you create an
@@ -81,7 +81,7 @@ export const FactoryModeNoticeDialog = (props: {}) => {
                     {`\n`}- With 'Shift' pressed down, the ToC tiles show their numbers instead of descriptions
                     {`\n`}- Select the ToC tile with the number of the track you want to download on the Track Junction Map
                     {`\n`}- If your device supports it, there should be a download button below the tables
-                    {`\n\n`}Enter the factory mode?
+                    {`\n\n`}Enter the homebrew mode?
                 </DialogContentText>
             </DialogContent>
             <DialogActions>

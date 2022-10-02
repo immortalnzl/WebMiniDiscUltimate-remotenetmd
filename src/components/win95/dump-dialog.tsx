@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, WindowHeader, Fieldset, Select } from 'react95';
 import { Capability } from '../../services/netmd';
 import { Controls } from '../controls';
@@ -14,13 +14,23 @@ export const W95DumpDialog = (props: {
     handleStartTransfer: () => void;
     visible: boolean;
     deviceCapabilities: Capability[];
-    devices: {
-        deviceId: string;
-        label: string;
-    }[];
     inputDeviceId: string;
     isCapableOfDownload: boolean;
 }) => {
+    const [devices, setInputDevices] = useState<{ deviceId: string; label: string }[]>([]);
+
+    useEffect(() => {
+        async function updateDeviceList() {
+            await navigator.mediaDevices.getUserMedia({ audio: true });
+            let devices = await navigator.mediaDevices.enumerateDevices();
+            let inputDevices = devices
+                .filter(device => device.kind === 'audioinput')
+                .map(device => ({ deviceId: device.deviceId, label: device.label }));
+            setInputDevices(inputDevices);
+        }
+        updateDeviceList();
+    }, [setInputDevices]);
+
     if (!props.visible) {
         return null;
     }
@@ -42,8 +52,8 @@ export const W95DumpDialog = (props: {
                             <React.Fragment>
                                 {props.deviceCapabilities.includes(Capability.factoryMode) && (
                                     <p style={{ marginBottom: '32px' }}>
-                                        It looks like this player supports the factory mode - it might be capable of RH1-style digital
-                                        transfer. Please check the factory mode for more information.
+                                        It looks like this player supports the homebrew mode - it might be capable of RH1-style digital
+                                        transfer. Please check the homebrew mode for more information.
                                     </p>
                                 )}
 
@@ -54,7 +64,7 @@ export const W95DumpDialog = (props: {
                                 <Fieldset label="Input Source" style={{ display: 'flex', flex: '1 1 auto', margin: '32px 0' }}>
                                     <Select
                                         defaultValue={props.inputDeviceId || ''}
-                                        options={props.devices
+                                        options={devices
                                             .concat([{ deviceId: '', label: 'None' }])
                                             .map(({ deviceId, label }) => ({ value: deviceId, label }))}
                                         onChange={props.handleChange}

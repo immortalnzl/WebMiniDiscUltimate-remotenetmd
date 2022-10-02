@@ -22,17 +22,15 @@ const Transition = React.forwardRef(function Transition(
 const useStyles = makeStyles(theme => ({
     codeBlock: {
         marginTop: theme.spacing(3),
-        fontFamily: "monospace",
-        color: "white",
-        backgroundColor: "#EF5350",
-        whiteSpace: "pre-wrap",
+        fontFamily: 'monospace',
+        color: 'white',
+        backgroundColor: '#EF5350',
+        whiteSpace: 'pre-wrap',
         padding: theme.spacing(2),
         borderRadius: theme.spacing(1),
         fontSize: 10,
-
     },
 }));
-
 
 export const PanicDialog = (props: {}) => {
     const dispatch = useDispatch();

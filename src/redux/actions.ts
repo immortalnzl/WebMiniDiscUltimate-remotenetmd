@@ -7,8 +7,10 @@ import { actions as recordDialogAction } from './record-dialog-feature';
 import { actions as appStateActions } from './app-feature';
 import { actions as mainActions } from './main-feature';
 import { actions as convertDialogActions } from './convert-dialog-feature';
+import { actions as songRecognitionDialogActions } from './song-recognition-dialog-feature';
+import { actions as songRecognitionProgressDialogActions } from './song-recognition-progress-dialog-feature';
 import serviceRegistry from '../services/registry';
-import { Wireformat, getTracks, Disc, DiscFormat, getRemainingCharactersForTitles, EncodingName } from 'netmd-js';
+import { Wireformat, getTracks, Disc, DiscFormat, getRemainingCharactersForTitles, EncodingName, Encoding } from 'netmd-js';
 import { AnyAction } from '@reduxjs/toolkit';
 import {
     framesToSec,
@@ -21,13 +23,17 @@ import {
     downloadBlob,
     createDownloadTrackName,
     secondsToNormal,
+    getPublicPathFor,
 } from '../utils';
 import { UploadFormat } from './convert-dialog-feature';
 import NotificationCompleteIconUrl from '../images/record-complete-notification-icon.png';
 import { assertNumber, getHalfWidthTitleLength } from 'netmd-js/dist/utils';
-import { NetMDService } from '../services/netmd';
+import { Capability, NetMDService } from '../services/netmd';
 import { getSimpleServices, ServiceConstructionInfo } from '../services/service-manager';
 import { AudioServices } from '../services/audio-export-service-manager';
+import { checkIfAtracDownloadPossible } from './factory/factory-actions';
+import { createWorker } from '@ffmpeg/ffmpeg';
+import { Shazam } from 'shazam-api/dist/api';
 
 export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pause' | 'seek', params?: unknown) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
@@ -264,7 +270,13 @@ export function pair(serviceInstance: NetMDService) {
         try {
             let paired = await serviceRegistry.netmdService!.pair();
             if (paired) {
-                dispatch(appStateActions.setMainView('MAIN'));
+                dispatch(
+                    batchActions([
+                        appStateActions.setMainView('MAIN'),
+                        errorDialogAction.setErrorMessage(''),
+                        errorDialogAction.setVisible(false),
+                    ])
+                );
                 return;
             }
             dispatch(batchActions([appStateActions.setPairingMessage(`Connection Failed`), appStateActions.setPairingFailed(true)]));
@@ -276,7 +288,7 @@ export function pair(serviceInstance: NetMDService) {
     };
 }
 
-export function listContent() {
+export function listContent(dropCache: boolean = false) {
     return async function(dispatch: AppDispatch) {
         // Issue loading
         dispatch(appStateActions.setLoading(true));
@@ -292,7 +304,7 @@ export function listContent() {
 
         if (deviceStatus?.discPresent) {
             try {
-                disc = await serviceRegistry.netmdService!.listContent();
+                disc = await serviceRegistry.netmdService!.listContent(dropCache);
             } catch (err) {
                 console.log(err);
                 if (!(err as any).message.startsWith('Rejected')) {
@@ -302,7 +314,7 @@ export function listContent() {
                         )
                     ) {
                         await serviceRegistry.netmdService!.wipeDiscTitleInfo();
-                        disc = await serviceRegistry.netmdService!.listContent();
+                        disc = await serviceRegistry.netmdService!.listContent(true);
                     } else throw err;
                 }
             }
@@ -319,15 +331,23 @@ export function listContent() {
     };
 }
 
-export function renameTrack({ index, newName, newFullWidthName }: { index: number; newName: string; newFullWidthName?: string }) {
+export function renameTrack(...entries: { index: number; newName: string; newFullWidthName?: string }[]) {
     return async function(dispatch: AppDispatch) {
         const { netmdService } = serviceRegistry;
-        dispatch(renameDialogActions.setVisible(false));
+        dispatch(batchActions([renameDialogActions.setVisible(false), appStateActions.setLoading(true)]));
         try {
-            await netmdService!.renameTrack(index, newName, newFullWidthName);
+            for (const { index, newName, newFullWidthName } of entries) {
+                await netmdService!.renameTrack(index, newName, newFullWidthName);
+            }
         } catch (err) {
             console.error(err);
-            dispatch(batchActions([errorDialogAction.setVisible(true), errorDialogAction.setErrorMessage(`Rename failed.`)]));
+            dispatch(
+                batchActions([
+                    errorDialogAction.setVisible(true),
+                    errorDialogAction.setErrorMessage(`Rename failed.`),
+                    appStateActions.setLoading(false),
+                ])
+            );
         }
         listContent()(dispatch);
     };
@@ -472,8 +492,7 @@ export function recordTracks(indexes: number[], deviceId: string) {
             console.log('Waiting for track to be ready to play');
             let position = await netmdService!.getPosition();
             let expected = [track.index, 0, 0, 1];
-            const arrayShallowEquals = <T>(a: T[], b: T[]) => a.length === b.length && a.every((n, i) => b[i] === n);
-            while (position === null || !arrayShallowEquals(expected, position)) {
+            while (position === null || !expected.every((_, i) => expected[i] === position![i])) {
                 await sleep(250);
                 position = await netmdService!.getPosition();
             }
@@ -721,22 +740,22 @@ export function setNotifyWhenFinished(value: boolean) {
     };
 }
 
-const csvHeader = (["INDEX", "GROUP RANGE", "GROUP NAME", "GROUP FULL WIDTH NAME", "NAME", "FULL WIDTH NAME", "DURATION", "ENCODING"]);
+const csvHeader = ['INDEX', 'GROUP RANGE', 'GROUP NAME', 'GROUP FULL WIDTH NAME', 'NAME', 'FULL WIDTH NAME', 'DURATION', 'ENCODING'];
 
 export function exportCSV() {
-    return async function (dispatch: AppDispatch, getState: () => RootState) {
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
         dispatch(appStateActions.setLoading(true));
         const disc = await serviceRegistry.netmdService!.listContent();
         const rows: any[][] = [];
         rows.push([
-            0,      // track index - 0 is disc title
-            "0-0",  // No group range
-            "",     // No group name
-            "",     // No group fw name
-            disc.title ?? "",
-            disc.fullWidthTitle ?? "",
+            0, // track index - 0 is disc title
+            '0-0', // No group range
+            '', // No group name
+            '', // No group fw name
+            disc.title ?? '',
+            disc.fullWidthTitle ?? '',
             Math.round(framesToSec(disc.used)),
-            ""
+            '',
         ]);
         for (const group of disc.groups) {
             const groupStart = Math.min(...group.tracks.map(e => e.index));
@@ -746,46 +765,45 @@ export function exportCSV() {
                 rows.push([
                     track.index + 1,
                     groupRange,
-                    group.title ?? "",
-                    group.fullWidthTitle ?? "",
-                    track.title ?? "",
-                    track.fullWidthTitle ?? "",
+                    group.title ?? '',
+                    group.fullWidthTitle ?? '',
+                    track.title ?? '',
+                    track.fullWidthTitle ?? '',
                     Math.round(framesToSec(track.duration)),
                     EncodingName[track.encoding],
                 ]);
             }
         }
-        let csvDocument =
-            [csvHeader, ...rows]
-                .map(e =>
-                    e.map(q => q.toString().replace(/,/g, "\\,"))
-                        .join(','))
-                .join('\n');
-        
+        let csvDocument = [csvHeader, ...rows].map(e => e.map(q => q.toString().replace(/,/g, '\\,')).join(',')).join('\n');
+
         let title;
-        if(disc.title){
+        if (disc.title) {
             title = disc.title;
-            if(disc.fullWidthTitle){
+            if (disc.fullWidthTitle) {
                 title += ` (${disc.fullWidthTitle})`;
             }
-        }else if(disc.fullWidthTitle){
+        } else if (disc.fullWidthTitle) {
             title = disc.fullWidthTitle;
-        }else{
-            title = "Disc";
+        } else {
+            title = 'Disc';
         }
 
-        downloadBlob(new Blob([ csvDocument ]), title + ".csv");
+        downloadBlob(new Blob([csvDocument]), title + '.csv');
         dispatch(appStateActions.setLoading(false));
-    }
+    };
 }
 
 export function importCSV(file: File) {
-    return async function (dispatch: AppDispatch, getState: () => RootState) {
-        const text = new TextDecoder("utf-8").decode(await file.arrayBuffer());
-        const records = text.split("\n").map(e => e.trim().split(/(?<!\\),/g));
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        const text = new TextDecoder('utf-8').decode(await file.arrayBuffer());
+        const records = text
+            .split('\n')
+            .map(e => e.trim())
+            .filter(e => e.length !== 0)
+            .map(e => e.split(/(?<!\\),/g));
 
-        if(records.length === 0 || records[0].some((e, i) => e !== csvHeader[i])){
-            alert("Malformed CSV file");
+        if (records.length === 0 || records[0].some((e, i) => e !== csvHeader[i])) {
+            alert('Malformed CSV file');
             return;
         }
 
@@ -797,42 +815,57 @@ export function importCSV(file: File) {
         dispatch(appStateActions.setLoading(true));
         const disc = await serviceRegistry.netmdService!.listContent();
         const ungroupedTracks = getTracks(disc).sort((a, b) => a.index - b.index);
-        if(disc.trackCount !== records.length - 2){ // - 2 - one for the header, second for the disc title / info
-            if(!window.confirm(`The CSV file describes a disc with ${records.length - 2} tracks.\nThe disc inserted has ${disc.trackCount} tracks.\nContinue importing?`)){
+        if (disc.trackCount !== records.length - 2) {
+            // - 2 - one for the header, second for the disc title / info
+            if (
+                !window.confirm(
+                    `The CSV file describes a disc with ${records.length - 2} tracks.\nThe disc inserted has ${
+                        disc.trackCount
+                    } tracks.\nContinue importing?`
+                )
+            ) {
                 dispatch(appStateActions.setLoading(false));
                 return;
             }
         }
-        
+
         await serviceRegistry.netmdService!.wipeDiscTitleInfo();
 
-        for(let [sIndex, gRange, groupName, groupFullWidthName, name, fwName, sDuration, encoding] of records.slice(1)){
+        for (let [sIndex, gRange, groupName, groupFullWidthName, name, fwName, sDuration, encoding] of records.slice(1)) {
             let index = parseInt(sIndex),
                 duration = parseInt(sDuration);
             gRange = gRange.replace(/ /g, '');
-            if(index === 0){
+            if (index === 0) {
                 // Disc title info
                 await serviceRegistry.netmdService!.renameDisc(name, fwName);
                 continue;
             }
 
-            let currentTrackEncoding = EncodingName[ungroupedTracks[index-1].encoding];
-            if(!isTimeDifferenceAcceptable(framesToSec(ungroupedTracks[index - 1].duration), duration) || currentTrackEncoding !== encoding){
-                if(!window.confirm(`
+            let currentTrackEncoding = EncodingName[ungroupedTracks[index - 1].encoding];
+            if (
+                !isTimeDifferenceAcceptable(framesToSec(ungroupedTracks[index - 1].duration), duration) ||
+                currentTrackEncoding !== encoding
+            ) {
+                if (
+                    !window.confirm(
+                        `
                     The CSV file describes track ${index} as a ${secondsToNormal(duration)} ${encoding} track.
-                    The actual track${index} is a ${secondsToNormal(framesToSec(ungroupedTracks[index-1].duration))} ${currentTrackEncoding} track.
+                    The actual track${index} is a ${secondsToNormal(
+                            framesToSec(ungroupedTracks[index - 1].duration)
+                        )} ${currentTrackEncoding} track.
                     Label it according to the file?
-                `.trim())){
+                `.trim()
+                    )
+                ) {
                     continue;
                 }
             }
-            
 
-            if(gRange !== ""){
+            if (gRange !== '') {
                 // Is part of group
-                if(!addedGroupRanges.has(gRange)){
+                if (!addedGroupRanges.has(gRange)) {
                     addedGroupRanges.add(gRange);
-                    const [startS, endS] = gRange.split("-");
+                    const [startS, endS] = gRange.split('-');
                     let start = parseInt(startS),
                         end = parseInt(endS),
                         length = end - start + 1;
@@ -844,7 +877,7 @@ export function importCSV(file: File) {
         }
 
         listContent()(dispatch);
-    }
+    };
 }
 
 export const WireformatDict: { [k: string]: Wireformat } = {
@@ -853,6 +886,208 @@ export const WireformatDict: { [k: string]: Wireformat } = {
     LP105: Wireformat.l105kbps,
     LP4: Wireformat.lp4,
 };
+
+export function openRecognizeTrackDialog() {
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        const { deviceCapabilities } = getState().main;
+        if (deviceCapabilities.length > 0 && !deviceCapabilities.includes(Capability.factoryMode)) {
+            dispatch(songRecognitionDialogActions.setImportMethod('line-in'));
+        }
+
+        dispatch(
+            batchActions([
+                songRecognitionDialogActions.setTitles(
+                    getTracks(getState().main.disc!)
+                        .sort((a, b) => a.index - b.index)
+                        .map(track => ({
+                            originalTitle: track.title ?? '',
+                            originalFullWidthTitle: track.fullWidthTitle ?? '',
+                            index: track.index,
+
+                            newTitle: '',
+                            newFullWidthTitle: '',
+
+                            songAlbum: '',
+                            songArtist: '',
+                            songTitle: '',
+
+                            alreadyRecognized: false,
+                            recognizeFail: false,
+                        }))
+                ),
+                songRecognitionDialogActions.setVisible(true),
+            ])
+        );
+    };
+}
+
+export function recognizeTracks(indices: number[], mode: 'exploits' | 'line-in', inputModeConfiguration?: { deviceId?: string }) {
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        const shazam = new Shazam();
+
+        // Bypass CORS
+        shazam.endpoint.sendRecognizeRequest = async (url: string, body: string) => {
+            return await window.native!.unrestrictedFetchJSON(url, {
+                method: 'POST',
+                body,
+                headers: shazam.endpoint.headers(),
+            });
+        };
+
+        const tracks = [...getState().songRecognitionDialog.titles];
+
+        dispatch(
+            batchActions([
+                songRecognitionProgressDialogActions.setCancelled(false),
+                songRecognitionProgressDialogActions.setVisible(true),
+                songRecognitionProgressDialogActions.setCurrentTrack(0),
+                songRecognitionProgressDialogActions.setTotalTracks(indices.length),
+            ])
+        );
+
+        let i = 0;
+        for (let index of indices) {
+            dispatch(songRecognitionProgressDialogActions.setCurrentTrack(i++));
+
+            // 6 tries to get the song right:
+            const track = getTracks(getState().main.disc!).find(e => e.index === index)!;
+
+            const transcodeAnyToValid = async (data: Uint8Array, extension: string) => {
+                let ffmpegProcess = createWorker({
+                    logger: (payload: any) => {
+                        console.log(payload.action, payload.message);
+                    },
+                    corePath: getPublicPathFor('ffmpeg-core.js'),
+                    workerPath: getPublicPathFor('worker.min.js'),
+                });
+                await ffmpegProcess.load();
+
+                await ffmpegProcess.write(`audio.${extension}`, data);
+                try {
+                    await ffmpegProcess.transcode(`audio.${extension}`, `raw`, '-ar 16000 -ac 1 -f s16le');
+                } catch (er) {
+                    console.log(er);
+                }
+                const rawSamples = (await ffmpegProcess.read(`raw`)).data;
+                await ffmpegProcess.worker.terminate();
+                return rawSamples;
+            };
+
+            for (let offset = 0; offset < 48; offset += 8) {
+                let rawSamples: Uint8Array;
+                dispatch(
+                    batchActions([
+                        songRecognitionProgressDialogActions.setCurrentStep(0),
+                        songRecognitionProgressDialogActions.setCurrentStepProgress(0),
+                        songRecognitionProgressDialogActions.setCurrentStepTotal(1),
+                    ])
+                );
+
+                const optimalStartSeconds = Math.floor(framesToSec(track.duration) / 2) + offset;
+
+                if (mode === 'exploits') {
+                    if (!(await checkIfAtracDownloadPossible())) {
+                        window.alert(
+                            'Cannot enable homebrew mode ripping in main UI.\nThis device is not supported yet.\nStay tuned for future updates.'
+                        );
+                        return;
+                    }
+                    // Download the track
+
+                    let atracData = await serviceRegistry.netmdFactoryService!.exploitDownloadTrack(
+                        index,
+                        e =>
+                            dispatch(
+                                batchActions([
+                                    songRecognitionProgressDialogActions.setCurrentStepProgress(e.read),
+                                    songRecognitionProgressDialogActions.setCurrentStepTotal(e.total),
+                                ])
+                            ),
+                        {
+                            secondsToRead: 16,
+                            startSeconds: optimalStartSeconds,
+                            writeHeader: true,
+                        }
+                    );
+
+                    dispatch(
+                        batchActions([
+                            songRecognitionProgressDialogActions.setCurrentStepProgress(-1),
+                            songRecognitionProgressDialogActions.setCurrentStepTotal(0),
+                            songRecognitionProgressDialogActions.setCurrentStep(1),
+                        ])
+                    );
+
+                    let extension = [Encoding.lp2, Encoding.lp4].includes(track.encoding) ? 'wav' : 'aea';
+                    rawSamples = await transcodeAnyToValid(atracData, extension);
+                } else {
+                    const deviceId = inputModeConfiguration!.deviceId!;
+                    dispatch(songRecognitionProgressDialogActions.setCurrentStepTotal(100));
+
+                    const { mediaRecorderService, netmdService } = serviceRegistry;
+                    await netmdService?.stop();
+                    await netmdService?.gotoTrack(track.index);
+                    await netmdService?.gotoTime(
+                        track.index,
+                        Math.floor(optimalStartSeconds / 3600),
+                        Math.floor((optimalStartSeconds % 3600) / 60),
+                        optimalStartSeconds % 60,
+                        0
+                    );
+                    await netmdService?.play();
+                    await mediaRecorderService?.initStream(deviceId);
+                    await mediaRecorderService?.startRecording();
+                    await sleepWithProgressCallback(16 * 1000, (perc: number) => {
+                        dispatch(songRecognitionProgressDialogActions.setCurrentStepProgress(perc));
+                    });
+                    await mediaRecorderService?.stopRecording();
+                    await netmdService?.stop();
+                    dispatch(
+                        batchActions([
+                            songRecognitionProgressDialogActions.setCurrentStepProgress(-1),
+                            songRecognitionProgressDialogActions.setCurrentStepTotal(0),
+                            songRecognitionProgressDialogActions.setCurrentStep(1),
+                        ])
+                    );
+                    const rawWav = await new Promise<Uint8Array>(res =>
+                        mediaRecorderService!.recorder.exportWAV(async (blob: Blob) => res(new Uint8Array(await blob.arrayBuffer())))
+                    );
+                    rawSamples = await transcodeAnyToValid(rawWav, 'wav');
+                    await mediaRecorderService?.closeStream();
+                }
+                dispatch(batchActions([songRecognitionProgressDialogActions.setCurrentStepProgress(-1)]));
+
+                const samplesArray = [];
+                for (let i = 0; i < rawSamples.length / 2; i++) {
+                    samplesArray.push(rawSamples[2 * i] | (rawSamples[2 * i + 1] << 8));
+                }
+                const songData = await shazam.recognizeSong(samplesArray, state =>
+                    dispatch(songRecognitionProgressDialogActions.setCurrentStep(state === 'generating' ? 1 : 2))
+                );
+                if (songData !== null) {
+                    tracks[index] = {
+                        ...tracks[index],
+                        alreadyRecognized: true,
+                        recognizeFail: false,
+
+                        songTitle: songData.title,
+                        songArtist: songData.artist,
+                        songAlbum: songData.album ?? 'Unknown',
+                    };
+                    break;
+                } else {
+                    tracks[index] = {
+                        ...tracks[index],
+                        recognizeFail: true,
+                    };
+                }
+                if (getState().songRecognitionProgressDialog.cancelled) break;
+            }
+        }
+
+        dispatch(batchActions([songRecognitionDialogActions.setTitles(tracks), songRecognitionProgressDialogActions.setVisible(false)]));
+    };
+}
 
 export function convertAndUpload(
     files: TitledFile[],
@@ -875,8 +1110,13 @@ export function convertAndUpload(
         await netmdService?.stop();
         dispatch(batchActions([uploadDialogActions.setVisible(true), uploadDialogActions.setCancelUpload(false)]));
 
+        let lastProgress = new Date().getTime();
         const updateProgressCallback = ({ written, encrypted, total }: { written: number; encrypted: number; total: number }) => {
-            queueMicrotask(() => dispatch(uploadDialogActions.setWriteProgress({ written, encrypted, total })));
+            let now = new Date().getTime();
+            if (now - lastProgress > 200) {
+                queueMicrotask(() => dispatch(uploadDialogActions.setWriteProgress({ written, encrypted, total })));
+                lastProgress = now;
+            }
         };
 
         const hasUploadBeenCancelled = () => {
