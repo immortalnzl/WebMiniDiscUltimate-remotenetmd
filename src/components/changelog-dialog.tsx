@@ -67,12 +67,6 @@ export const ChangelogDialog = (props: {}) => {
 
     const content = (
         <React.Fragment>
-            <h2 className={classes.header}>Version 1.3.1</h2>
-            <ul>
-                <li>Disabled EEPROM writing routines when entering the homebrew mode for Type-R units</li>
-                <li>[Temporary] Disabled exploits-based track recognition for Type-R units</li>
-            </ul>
-            
             <h2 className={classes.header}>Version 1.3.0</h2>
             <ul className={classes.list}>
                 <li>Renamed 'Factory Mode' to 'Homebrew Mode'</li>

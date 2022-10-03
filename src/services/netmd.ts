@@ -535,12 +535,11 @@ export class NetMDUSBService implements NetMDService {
         // for(let i = 0; i<esm.getMaxPatchesAmount(); i++){
         //     await unpatch(factoryInstance, i, esm.getMaxPatchesAmount());
         // }
-        if (isCompatible(KillEepromWrite, esm.device) && esm.device.versionCode.startsWith("R")) {
-            // Prevent EEPROM corruptions by killing the EEPROM writing code
-            // in the device's firmware (it will be re-enabled after a device restart)
-            await (await esm.require(KillEepromWrite)).enable();
-            console.log("Killed EEPROM writing routines");
-        }
+        // if (isCompatible(KillEepromWrite, esm.device)) {
+        //     // Prevent EEPROM corruptions by killing the EEPROM writing code
+        //     // in the device's firmware (it will be re-enabled after a device restart)
+        //     await (await esm.require(KillEepromWrite)).enable();
+        // }
         return new NetMDFactoryUSBService(factoryInstance, this.mutex, esm);
     }
 }
