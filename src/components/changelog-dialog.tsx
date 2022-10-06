@@ -72,6 +72,7 @@ export const ChangelogDialog = (props: {}) => {
                 <li>Reverted version 1.3.1</li>
                 <li>Made Type-R ripping a lot more stable, removed Type-R warnings, re-enabled exploit-based song recognition for Type-R devices</li>
                 <li>Fixed external encoders requiring root path in URL (Issue <Link href="https://github.com/asivery/webminidisc/issues/11">#11</Link>)</li>
+                <li>Fixed stripping SCMS information (Issue <Link href="https://github.com/cybercase/webminidisc/issues/110">#110</Link>)</li>
             </ul>
 
             <h2 className={classes.header}>Version 1.3.1</h2>

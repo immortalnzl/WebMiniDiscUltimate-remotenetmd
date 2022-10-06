@@ -265,11 +265,14 @@ export function enableFactoryRippingModeInMainUi() {
 
 export function stripSCMS() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        const toc = getState().factory.toc!;
+        const toc = JSON.parse(JSON.stringify(getState().factory.toc));
         for (let track = 0; track < toc?.nTracks; track++) {
             updateFlagAllFragmentsOfTrack(toc, track, ModeFlag.F_SCMS_DIG_COPY | ModeFlag.F_SCMS_UNRESTRICTED, true);
         }
-        dispatch(factoryActions.setModified(true));
+        dispatch(batchActions([
+            factoryActions.setModified(true),
+            factoryActions.setToc(toc)
+        ]));
     };
 }
 

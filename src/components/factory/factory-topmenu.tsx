@@ -92,7 +92,8 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
 
     const handleSubmenuClose = useCallback(() => {
         setSubmenuAnchorEl(null);
-    }, [setSubmenuAnchorEl]);
+        handleMenuClose();
+    }, [setSubmenuAnchorEl, handleMenuClose]);
 
     const handleExit = useCallback(() => {
         dispatch(appActions.setMainView('MAIN'));
@@ -179,13 +180,13 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
 
     const handleArchiveDisc = useCallback(() => {
         dispatch(archiveDisc());
-        handleMenuClose();
-    }, [dispatch, handleMenuClose]);
+        handleSubmenuClose();
+    }, [dispatch, handleSubmenuClose]);
 
     const handleStripSCMS = useCallback(() => {
         dispatch(stripSCMS());
-        handleMenuClose();
-    }, [dispatch, handleMenuClose]);
+        handleSubmenuClose();
+    }, [dispatch, handleSubmenuClose]);
 
     const handleToggleSPUploadSpeedup = useCallback(() => {
         dispatch(toggleSPUploadSpeedup());
