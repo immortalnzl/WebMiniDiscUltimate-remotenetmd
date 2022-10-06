@@ -4846,6 +4846,11 @@
     "jest-message-util" "^24.9.0"
     "jest-regex-util" "^24.9.0"
 
+"expr-eval@^2.0.2":
+  "integrity" "sha512-4EMSHGOPSwAfBiibw3ndnP0AvjDWLsMvGOvWEZ2F96IGk0bIVdjQisOHxReSkE13mHcfbuCiXw+G4y0zv6N8Eg=="
+  "resolved" "https://registry.npmjs.org/expr-eval/-/expr-eval-2.0.2.tgz"
+  "version" "2.0.2"
+
 "express@^4.17.1":
   "integrity" "sha512-mHJ9O79RqluphRrcw2X/GTh3k9tVv8YcoyY4Kkh4WDMUYKRZUq0h1o0w2rrrxBqM7VoeUVqgb27xlEMXTnYt4g=="
   "resolved" "https://registry.npmjs.org/express/-/express-4.17.1.tgz"
@@ -7900,11 +7905,12 @@
   "resolved" "https://registry.npmjs.org/neo-async/-/neo-async-2.6.1.tgz"
   "version" "2.6.1"
 
-"netmd-exploits@^0.4.0":
-  "integrity" "sha512-crIu8QBdhjhHfKzstO+VPIYoNYP31FPNzJPzDFfk877R+zCJijQzKQgVcQDtjh7nS9efF9GftWABz/NoXeLoXQ=="
-  "resolved" "https://registry.npmjs.org/netmd-exploits/-/netmd-exploits-0.4.0.tgz"
-  "version" "0.4.0"
+"netmd-exploits@^0.4.2":
+  "integrity" "sha512-SIT8qvT7TBIGt38r/tEktf8uV87Vu0et3B6A3lIr5Q8CceSSUzsqNFD46DjwA+0PdwMyx9TKilp49PE+Ogkj2A=="
+  "resolved" "https://registry.npmjs.org/netmd-exploits/-/netmd-exploits-0.4.2.tgz"
+  "version" "0.4.2"
   dependencies:
+    "expr-eval" "^2.0.2"
     "jsbi" "^4.3.0"
     "netmd-js" "^4.1.0"
     "netmd-tocmanip" "^0.1.4"

@@ -990,6 +990,7 @@ export function recognizeTracks(indices: number[], mode: 'exploits' | 'line-in',
                         window.alert(
                             'Cannot enable homebrew mode ripping in main UI.\nThis device is not supported yet.\nStay tuned for future updates.'
                         );
+                        dispatch(songRecognitionProgressDialogActions.setVisible(false));
                         return;
                     }
                     // Download the track

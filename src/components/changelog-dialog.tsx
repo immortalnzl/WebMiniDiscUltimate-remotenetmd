@@ -67,6 +67,19 @@ export const ChangelogDialog = (props: {}) => {
 
     const content = (
         <React.Fragment>
+            <h2 className={classes.header}>Version 1.3.2</h2>
+            <ul>
+                <li>Reverted version 1.3.1</li>
+                <li>Made Type-R ripping a lot more stable, removed Type-R warnings, re-enabled exploit-based song recognition for Type-R devices</li>
+                <li>Fixed external encoders requiring root path in URL (Issue <Link href="https://github.com/asivery/webminidisc/issues/11">#11</Link>)</li>
+            </ul>
+
+            <h2 className={classes.header}>Version 1.3.1</h2>
+            <ul>
+                <li>Disabled EEPROM writing routines when entering the homebrew mode for Type-R units</li>
+                <li>[Temporary] Disabled exploits-based track recognition for Type-R units</li>
+            </ul>
+
             <h2 className={classes.header}>Version 1.3.0</h2>
             <ul className={classes.list}>
                 <li>Renamed 'Factory Mode' to 'Homebrew Mode'</li>

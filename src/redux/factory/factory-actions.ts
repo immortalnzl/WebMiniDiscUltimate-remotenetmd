@@ -13,15 +13,6 @@ import { parseTOC, getTitleByTrackNumber, reconstructTOC, updateFlagAllFragments
 async function loadFactoryMode() {
     if (serviceRegistry.netmdFactoryService === undefined) {
         serviceRegistry.netmdFactoryService = (await serviceRegistry.netmdService!.factory()) as NetMDFactoryService;
-        const firmwareVersion = await serviceRegistry.netmdFactoryService!.getDeviceFirmware();
-        if (firmwareVersion.startsWith('R'))
-            window.alert(
-                `
-The device you are using right now is a Type-R device.
-If you decide to rip ATRAC via USB with it, please take out and reinsert the batteries after ripping the selected tracks from disc.
-During the transfer of ATRAC data, Type-R devices are in an unstable state. To restore them back to their normal mode of operation, they need to be reset.
-            `.trim()
-            );
     }
 }
 
@@ -213,7 +204,7 @@ export function exploitDownloadTracks(trackIndexes: number[]) {
                     factoryProgressDialogActions.setProgress({
                         current: -1,
                         total: 0,
-                        additionalInfo: 'Rewriting firmware...',
+                        additionalInfo: 'Uploading code...',
                     }),
                 ])
             );

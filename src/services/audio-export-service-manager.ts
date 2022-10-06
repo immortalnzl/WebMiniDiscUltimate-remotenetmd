@@ -26,8 +26,8 @@ export const AudioServices: AudioServicePrototype[] = [
                 defaultValue: 'https://atrac.minidisc.wiki/',
                 validator: content => {
                     try {
-                        const asURL = new URL(content);
-                        return asURL.pathname === '/';
+                        new URL(content);
+                        return true;
                     } catch (e) {
                         return false;
                     }

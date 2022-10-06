@@ -88,7 +88,9 @@ export class RemoteAtracExportService implements AudioExportService {
             const payload = new FormData();
             payload.append('file', new Blob([data.buffer]), this.originalFileName);
             const encodingURL = new URL(this.address);
-            encodingURL.pathname = '/transcode';
+            if(!encodingURL.pathname.endsWith('/'))
+                encodingURL.pathname += '/';
+            encodingURL.pathname += 'transcode';
             encodingURL.searchParams.set('type', format);
             if (loudnessTarget !== undefined) encodingURL.searchParams.set('loudnessTarget', loudnessTarget.toString());
             if (enableReplayGain !== undefined) encodingURL.searchParams.set('applyReplaygain', enableReplayGain.toString());
