@@ -7905,10 +7905,10 @@
   "resolved" "https://registry.npmjs.org/neo-async/-/neo-async-2.6.1.tgz"
   "version" "2.6.1"
 
-"netmd-exploits@^0.4.2":
-  "integrity" "sha512-SIT8qvT7TBIGt38r/tEktf8uV87Vu0et3B6A3lIr5Q8CceSSUzsqNFD46DjwA+0PdwMyx9TKilp49PE+Ogkj2A=="
-  "resolved" "https://registry.npmjs.org/netmd-exploits/-/netmd-exploits-0.4.2.tgz"
-  "version" "0.4.2"
+"netmd-exploits@^0.4.3":
+  "integrity" "sha512-z94cwQQoRokDTLn5cmM61xypcDb+GqmBqm5kvuOn7uP+k6aWhDRqcFpbMAsIngD5irx1a2l9iHHX4ZvmPo865w=="
+  "resolved" "https://registry.npmjs.org/netmd-exploits/-/netmd-exploits-0.4.3.tgz"
+  "version" "0.4.3"
   dependencies:
     "expr-eval" "^2.0.2"
     "jsbi" "^4.3.0"
