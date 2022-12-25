@@ -13,6 +13,8 @@ Requires *Chrome* or any other browser that supports both **WASM** and **WebUSB*
 ### macOS
 _it just works ®_ ... no need to download or install any software.
 
+For macOS developers, see [this](#development-on-macos)
+
 ### Linux
 Follow the instructions here [https://github.com/glaubitz/linux-minidisc/tree/master/netmd/etc](https://github.com/glaubitz/linux-minidisc/tree/master/netmd/etc) to grant your user access to the device. If you skip this step you'll likely get an *Access denied* message when trying to connect.
 
@@ -33,9 +35,11 @@ In addition to the standard NetMD features that Web MiniDisc provides, Web MiniD
 - The ability to connect to NetMD units available on the local network with the help of [Remote NetMD](https://github.com/asivery/remote-netmd-server)
 - Downloading tracks from the player via standard NetMD commands (Sony MZ-RH1 only)
 - Improved handling of pre-encoded ATRAC3 tracks
+- Song Recognition
+- The ability to use an external ATRAC3 encoder for better audio quality when using LP modes
 
 *The following features depend on Factory mode commands. See [netmd-exploits](https://github.com/asivery/netmd-exploits/) for a list of supported devices*
-- Downloading tracks from any NetMD Type-S player
+- Downloading tracks from any Sony (or Aiwa) NetMD device
 - Firmware and RAM dumping 
 - TOC manipulation
 - Tetris
@@ -43,16 +47,36 @@ In addition to the standard NetMD features that Web MiniDisc provides, Web MiniD
 -----
 ## Development
 
-Development discussion and coordination happens through the [MiniDisc.wiki Discord](https://discord.gg/Vm29q3nuUk) in the #development channel
+Development discussion and coordination happens through the [MiniDisc.wiki Discord](https://minidisc.wiki/discord) in the #research channel
 
 ### How to build
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app), so you can run:
+- `npm i` to install the required node modules (`--legacy-peer-deps` might be required for newer node.js versions)
 - `npm start` to start the development server
 - `npm build` to build for production
 
 WASM modules are provided in the `public/` directory. However, if you wish to build those binaries yourself, instructions are provided in the `extra/` directory.
 
+-----
+### Development on macOS
+
+#### Install Xcode Build Tools CLI & Homebrew
+In macOS Terminal run:
+- `xcode-select install` - to install XCode Command Line Tools
+- `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"` - to install Homebrew
+
+After homebrew is finished installing,
+
+#### Install gcc & libvips
+
+In macOS Terminal: `brew install --build-from-source gcc`, wait for it to finish then run `brew install vips` (this command may install gcc again from an available pre-built binary, if one exists for your current macOS version, this is normal behaviour as gcc is needed for vips to work).
+
+#### Proceeding with installation
+
+With the above prerequisites done, you can continue the build process as described in the [How to Build](#how-to-build) section
+
+-----
 ### How to Contribute
 If there's a feature you'd like to see implemented in Web MiniDisc Pro, feel free to submit a pull request.
 
