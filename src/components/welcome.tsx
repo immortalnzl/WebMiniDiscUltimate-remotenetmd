@@ -10,26 +10,28 @@ import FormControl from '@material-ui/core/FormControl';
 import FormHelperText from '@material-ui/core/FormHelperText';
 import Box from '@material-ui/core/Box';
 import Link from '@material-ui/core/Link';
+import IconButton from '@material-ui/core/IconButton';
 
-import { AboutDialog } from './about-dialog';
+import DeleteIcon from '@material-ui/icons/Delete';
+import AddIcon from '@material-ui/icons/Add';
+import OpenInNewIcon from '@material-ui/icons/OpenInNew';
+
 import { TopMenu } from './topmenu';
 import ChromeIconPath from '../images/chrome-icon.svg';
 import { W95Welcome } from './win95/welcome';
-import OpenInNewIcon from '@material-ui/icons/OpenInNew';
 
 import SplitButton, { OptionType } from './split-button';
-import { createService, getConnectButtonName, getSimpleServices, Services } from '../services/service-manager';
+import { createService, getConnectButtonName, getServiceSpec, getSimpleServices, Services } from '../services/interface-service-manager';
+
 import { OtherDeviceDialog } from './other-device-dialog';
+import { SettingsDialog } from './settings-dialog';
+import { ChangelogDialog } from './changelog-dialog';
+import { AboutDialog } from './about-dialog';
 
 import { actions as otherDialogActions } from '../redux/other-device-feature';
 import { actions as appActions } from '../redux/app-feature';
 import { batchActions } from 'redux-batched-actions';
-import DeleteIcon from '@material-ui/icons/Delete';
-import AddIcon from '@material-ui/icons/Add';
-import { IconButton } from '@material-ui/core';
-import { ChangelogDialog } from './changelog-dialog';
 import { initializeParameters } from '../custom-parameters';
-import { EncoderSetupDialog } from './encoder-setup-dialog';
 
 const useStyles = makeStyles(theme => ({
     main: {
@@ -123,6 +125,7 @@ export const Welcome = (props: {}) => {
             pairingFailed,
             pairingMessage,
             createService: () => createService(availableServices[lastSelectedService])!,
+            spec: getServiceSpec(availableServices[lastSelectedService])!,
             connectName: getConnectButtonName(availableServices[lastSelectedService]),
         };
         return <W95Welcome {...p}></W95Welcome>;
@@ -133,7 +136,7 @@ export const Welcome = (props: {}) => {
         switchTo: true,
         handler: () => {
             dispatch(appActions.setLastSelectedService(i));
-            dispatch(pair(createService(availableServices[i])!));
+            dispatch(pair(createService(availableServices[i])!, getServiceSpec(availableServices[i])!));
         },
         id: i,
     }));
@@ -213,11 +216,7 @@ export const Welcome = (props: {}) => {
                         </div>
                         <div>
                             <Typography component="h2" variant="subtitle1" align="center" className={classes.spacing}>
-                                <Link
-                                    rel="noopener noreferrer"
-                                    target="_blank"
-                                    href="https://github.com/cybercase/webminidisc/wiki/Support-and-FAQ"
-                                >
+                                <Link rel="noopener noreferrer" target="_blank" href="https://www.minidisc.wiki/guides/webminidisc">
                                     <span style={{ verticalAlign: 'middle' }}>Support and FAQ</span>{' '}
                                     <OpenInNewIcon style={{ verticalAlign: 'middle' }} fontSize="inherit" />
                                 </Link>
@@ -267,10 +266,10 @@ export const Welcome = (props: {}) => {
                     </React.Fragment>
                 )}
             </Box>
+            <SettingsDialog />
             <AboutDialog />
             <ChangelogDialog />
             <OtherDeviceDialog />
-            <EncoderSetupDialog />
         </React.Fragment>
     );
 };

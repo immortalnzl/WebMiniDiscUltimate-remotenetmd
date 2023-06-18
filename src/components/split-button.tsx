@@ -90,7 +90,7 @@ export default function SplitButton(props: SplitButtonProps) {
                                 <MenuList id="split-button-menu" style={{ width: '100%' }}>
                                     {options.map((option, index) => (
                                         <MenuItem
-                                            key={option.name}
+                                            key={`${index}-connect-button`}
                                             selected={index === selectedIndex}
                                             onClick={event => handleMenuItemClick(event, index)}
                                         >

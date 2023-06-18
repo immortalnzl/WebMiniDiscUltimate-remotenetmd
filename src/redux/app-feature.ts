@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { enableBatching } from 'redux-batched-actions';
 import { CustomParameters } from '../custom-parameters';
-import { filterOutCorrupted, getSimpleServices, ServiceConstructionInfo } from '../services/service-manager';
+import { filterOutCorrupted, getSimpleServices, ServiceConstructionInfo } from '../services/interface-service-manager';
 import { savePreference, loadPreference } from '../utils';
 
 export type Views = 'WELCOME' | 'MAIN' | 'FACTORY';
@@ -12,9 +12,10 @@ export interface AppState {
     pairingFailed: boolean;
     pairingMessage: string;
     browserSupported: boolean;
-    darkMode: boolean;
+    colorTheme: 'dark' | 'light' | 'system';
     vintageMode: boolean;
     aboutDialogVisible: boolean;
+    settingsDialogVisible: boolean;
     changelogDialogVisible: boolean;
     notifyWhenFinished: boolean;
     hasNotificationSupport: boolean;
@@ -24,6 +25,12 @@ export interface AppState {
     factoryModeRippingInMainUi: boolean;
     audioExportService: number;
     audioExportServiceConfig: CustomParameters;
+    pageFullHeight: boolean;
+    pageFullWidth: boolean;
+    archiveDiscCreateZip: boolean;
+    factoryModeUseSlowerExploit: boolean;
+    factoryModeShortcuts: boolean;
+    factoryModeNERAWDownload: boolean;
 }
 
 export const buildInitialState = (): AppState => {
@@ -33,10 +40,11 @@ export const buildInitialState = (): AppState => {
         pairingFailed: false,
         pairingMessage: ``,
         browserSupported: true,
-        darkMode: loadPreference('darkMode', true),
+        colorTheme: loadPreference('colorTheme', 'system'),
         vintageMode: loadPreference('vintageMode', false),
         changelogDialogVisible: false,
         aboutDialogVisible: false,
+        settingsDialogVisible: false,
         notifyWhenFinished: loadPreference('notifyWhenFinished', false),
         hasNotificationSupport: true,
         fullWidthSupport: loadPreference('fullWidthSupport', false),
@@ -46,6 +54,12 @@ export const buildInitialState = (): AppState => {
         // it should not be stored in the preferences, and should default to false.
         audioExportService: loadPreference('audioExportService', 0),
         audioExportServiceConfig: loadPreference('audioExportServiceConfig', {}),
+        pageFullHeight: loadPreference('pageFullHeight', false),
+        pageFullWidth: loadPreference('pageFullWidth', false),
+        archiveDiscCreateZip: loadPreference('archiveDiscCreateZip', false),
+        factoryModeUseSlowerExploit: loadPreference('factoryModeUseSlowerExploit', false),
+        factoryModeShortcuts: loadPreference('factoryModeShortcuts', false),
+        factoryModeNERAWDownload: loadPreference('factoryModeNERAWDownload', false),
     };
 };
 
@@ -71,9 +85,9 @@ export const slice = createSlice({
         setBrowserSupported: (state, action: PayloadAction<boolean>) => {
             state.browserSupported = action.payload;
         },
-        setDarkMode: (state, action: PayloadAction<boolean>) => {
-            state.darkMode = action.payload;
-            savePreference('darkMode', state.darkMode);
+        setDarkMode: (state, action: PayloadAction<'dark' | 'light' | 'system'>) => {
+            state.colorTheme = action.payload;
+            savePreference('colorTheme', state.colorTheme);
         },
         setNotifyWhenFinished: (state, action: PayloadAction<boolean>) => {
             state.notifyWhenFinished = action.payload;
@@ -88,6 +102,9 @@ export const slice = createSlice({
         },
         showAboutDialog: (state, action: PayloadAction<boolean>) => {
             state.aboutDialogVisible = action.payload;
+        },
+        showSettingsDialog: (state, action: PayloadAction<boolean>) => {
+            state.settingsDialogVisible = action.payload;
         },
         showChangelogDialog: (state, action: PayloadAction<boolean>) => {
             state.changelogDialogVisible = action.payload;
@@ -118,6 +135,30 @@ export const slice = createSlice({
         setAudioExportServiceConfig: (state, action: PayloadAction<CustomParameters>) => {
             state.audioExportServiceConfig = action.payload;
             savePreference('audioExportServiceConfig', state.audioExportServiceConfig);
+        },
+        setPageFullHeight: (state, action: PayloadAction<boolean>) => {
+            state.pageFullHeight = action.payload;
+            savePreference('pageFullHeight', action.payload);
+        },
+        setPageFullWidth: (state, action: PayloadAction<boolean>) => {
+            state.pageFullWidth = action.payload;
+            savePreference('pageFullWidth', action.payload);
+        },
+        setArchiveDiscCreateZip: (state, action: PayloadAction<boolean>) => {
+            state.archiveDiscCreateZip = action.payload;
+            savePreference('archiveDiscCreateZip', action.payload);
+        },
+        setFactoryModeUseSlowerExploit: (state, action: PayloadAction<boolean>) => {
+            state.factoryModeUseSlowerExploit = action.payload;
+            savePreference('factoryModeUseSlowerExploit', action.payload);
+        },
+        setFactoryModeShortcuts: (state, action: PayloadAction<boolean>) => {
+            state.factoryModeShortcuts = action.payload;
+            savePreference('factoryModeShortcuts', action.payload);
+        },
+        setFactoryModeNERAWDownload: (state, action: PayloadAction<boolean>) => {
+            state.factoryModeNERAWDownload = action.payload;
+            savePreference('factoryModeNERAWDownload', action.payload);
         },
     },
 });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { List, ListItem, Checkbox, Divider } from 'react95';
 import { Views } from '../../redux/app-feature';
-import { Capability } from '../../services/netmd';
+import { Capability } from '../../services/interfaces/netmd';
 
 export const W95TopMenu = (props: {
     mainView: Views;

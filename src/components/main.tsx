@@ -12,15 +12,23 @@ import {
     DroppableProvided,
     DroppableStateSnapshot,
 } from 'react-beautiful-dnd';
-import { listContent, deleteTracks, moveTrack, groupTracks, deleteGroups, dragDropTrack, ejectDisc } from '../redux/actions';
-import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
+import { listContent, deleteTracks, moveTrack, groupTracks, deleteGroups, dragDropTrack, ejectDisc, flushDevice } from '../redux/actions';
+import { actions as renameDialogActions, RenameType } from '../redux/rename-dialog-feature';
 import { actions as convertDialogActions } from '../redux/convert-dialog-feature';
 import { actions as dumpDialogActions } from '../redux/dump-dialog-feature';
 
-import { DeviceStatus, formatTimeFromFrames, Track } from 'netmd-js';
+import { DeviceStatus } from 'netmd-js';
 import { control } from '../redux/actions';
 
-import { belowDesktop, forAnyDesktop, getGroupedTracks, getSortedTracks, isSequential, useShallowEqualSelector } from '../utils';
+import {
+    belowDesktop,
+    forAnyDesktop,
+    formatTimeFromSeconds,
+    getGroupedTracks,
+    getSortedTracks,
+    isSequential,
+    useShallowEqualSelector,
+} from '../utils';
 
 import { lighten, makeStyles } from '@material-ui/core/styles';
 import { alpha } from '@material-ui/core/styles/colorManipulator';
@@ -33,19 +41,21 @@ import EditIcon from '@material-ui/icons/Edit';
 import Backdrop from '@material-ui/core/Backdrop';
 import CreateNewFolderIcon from '@material-ui/icons/CreateNewFolder';
 import EjectIcon from '@material-ui/icons/Eject';
+import DoneIcon from '@material-ui/icons/Done';
 
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
+import LinearProgress from '@material-ui/core/LinearProgress';
 
 import IconButton from '@material-ui/core/IconButton';
 import Toolbar from '@material-ui/core/Toolbar';
 import Tooltip from '@material-ui/core/Tooltip';
 import { batchActions } from 'redux-batched-actions';
 
-import { GroupRow, TrackRow } from './main-rows';
+import { GroupRow, leftInNondefaultCodecs, TrackRow } from './main-rows';
 import { RenameDialog } from './rename-dialog';
 import { UploadDialog } from './upload-dialog';
 import { RecordDialog } from './record-dialog';
@@ -60,12 +70,13 @@ import Button from '@material-ui/core/Button';
 import { W95Main } from './win95/main';
 import { useMemo } from 'react';
 import { ChangelogDialog } from './changelog-dialog';
-import { Capability } from '../services/netmd';
-import { LinearProgress } from '@material-ui/core';
+import { Capability, Track } from '../services/interfaces/netmd';
 import { FactoryModeNoticeDialog } from './factory/factory-notice-dialog';
 import { FactoryModeProgressDialog } from './factory/factory-progress-dialog';
 import { SongRecognitionDialog } from './song-recognition-dialog';
 import { SongRecognitionProgressDialog } from './song-recognition-progress-dialog';
+import { SettingsDialog } from './settings-dialog';
+import { FactoryModeBadSectorDialog } from './factory/factory-bad-sector-dialog';
 
 const useStyles = makeStyles(theme => ({
     add: {
@@ -137,6 +148,9 @@ const useStyles = makeStyles(theme => ({
         width: 20,
         padding: `${theme.spacing(0.5)}px 0 0 0`,
     },
+    fixedTable: {
+        tableLayout: 'fixed',
+    },
 }));
 
 function getTrackStatus(track: Track, deviceStatus: DeviceStatus | null): 'playing' | 'paused' | 'none' {
@@ -156,6 +170,8 @@ function getTrackStatus(track: Track, deviceStatus: DeviceStatus | null): 'playi
 export const Main = (props: {}) => {
     let dispatch = useDispatch();
     const disc = useShallowEqualSelector(state => state.main.disc);
+    const usesHimdTracks = useShallowEqualSelector(state => state.main.usesHimdTracks);
+    const flushable = useShallowEqualSelector(state => state.main.flushable);
     const deviceName = useShallowEqualSelector(state => state.main.deviceName);
     const deviceStatus = useShallowEqualSelector(state => state.main.deviceStatus);
     const deviceCapabilities = useShallowEqualSelector(state => state.main.deviceCapabilities);
@@ -167,6 +183,8 @@ export const Main = (props: {}) => {
     const [uploadedFiles, setUploadedFiles] = React.useState<File[]>([]);
     const [lastClicked, setLastClicked] = useState(-1);
     const [moveMenuAnchorEl, setMoveMenuAnchorEl] = React.useState<null | HTMLElement>(null);
+
+    const isCapable = useCallback((capability: Capability) => deviceCapabilities.includes(capability), [deviceCapabilities]);
 
     const handleShowMoveMenu = useCallback(
         (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -208,6 +226,7 @@ export const Main = (props: {}) => {
 
     useEffect(() => {
         setSelected([]); // Reset selection if disc changes
+        setSelectedGroups([]);
     }, [disc]);
 
     const onDrop = useCallback(
@@ -224,7 +243,7 @@ export const Main = (props: {}) => {
 
     const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
         onDrop,
-        accept: [`audio/*`, `video/mp4`, `video/webm`, `.oma`, `.at3`],
+        accept: [`audio/*`, `video/mp4`, `video/webm`, `.oma`, `.at3`, `.aea`],
         noClick: true,
     });
 
@@ -291,11 +310,15 @@ export const Main = (props: {}) => {
             dispatch(
                 batchActions([
                     renameDialogActions.setVisible(true),
-                    renameDialogActions.setGroupIndex(null),
+                    renameDialogActions.setHimdTitle(track.title),
+                    renameDialogActions.setHimdAlbum(track.album ?? ''),
+                    renameDialogActions.setHimdArtist(track.artist ?? ''),
                     renameDialogActions.setCurrentName(track.title),
                     renameDialogActions.setCurrentFullWidthName(track.fullWidthTitle),
                     renameDialogActions.setIndex(track.index),
-                    renameDialogActions.setOfConvert(false),
+                    renameDialogActions.setRenameType(
+                        track.album !== undefined || track.album !== undefined ? RenameType.HIMD : RenameType.TRACK
+                    ),
                 ])
             );
         },
@@ -312,11 +335,10 @@ export const Main = (props: {}) => {
             dispatch(
                 batchActions([
                     renameDialogActions.setVisible(true),
-                    renameDialogActions.setGroupIndex(index),
+                    renameDialogActions.setIndex(index),
                     renameDialogActions.setCurrentName(group.title ?? ''),
                     renameDialogActions.setCurrentFullWidthName(group.fullWidthTitle ?? ''),
-                    renameDialogActions.setIndex(-1),
-                    renameDialogActions.setOfConvert(false),
+                    renameDialogActions.setRenameType(RenameType.GROUP),
                 ])
             );
         },
@@ -347,6 +369,7 @@ export const Main = (props: {}) => {
 
     const handleDeleteGroup = useCallback(
         (event: React.MouseEvent, index: number) => {
+            event.stopPropagation();
             dispatch(deleteGroups([index]));
         },
         [dispatch]
@@ -367,20 +390,27 @@ export const Main = (props: {}) => {
         [dispatch]
     );
 
+    const handleFlush = useCallback(
+        (event: React.MouseEvent) => {
+            dispatch(flushDevice());
+        },
+        [dispatch]
+    );
+
     const handleRenameDisc = useCallback(
         (event: React.MouseEvent) => {
+            if (!isCapable(Capability.metadataEdit)) return;
             dispatch(
                 batchActions([
                     renameDialogActions.setVisible(true),
                     renameDialogActions.setCurrentName(disc!.title),
-                    renameDialogActions.setGroupIndex(null),
                     renameDialogActions.setCurrentFullWidthName(disc!.fullWidthTitle),
                     renameDialogActions.setIndex(-1),
-                    renameDialogActions.setOfConvert(false),
+                    renameDialogActions.setRenameType(RenameType.DISC),
                 ])
             );
         },
-        [dispatch, disc]
+        [dispatch, isCapable, disc]
     );
 
     const handleTogglePlayPauseTrack = useCallback(
@@ -406,10 +436,9 @@ export const Main = (props: {}) => {
             isSequential(selected.sort((a, b) => a - b))
         );
     }, [tracks, selected]);
+
     const selectedCount = selected.length;
     const selectedGroupsCount = selectedGroups.length;
-
-    const isCapable = (capability: Capability) => deviceCapabilities.includes(capability);
 
     if (vintageMode) {
         const p = {
@@ -457,7 +486,7 @@ export const Main = (props: {}) => {
                     {deviceName || `Loading...`}
                 </Typography>
                 <span>
-                    {isCapable(Capability.discEject) ? (
+                    {isCapable(Capability.discEject) && (
                         <IconButton
                             aria-label="actions"
                             aria-controls="actions-menu"
@@ -467,21 +496,26 @@ export const Main = (props: {}) => {
                         >
                             <EjectIcon />
                         </IconButton>
-                    ) : null}
-                    <TopMenu />
+                    )}
+
+                    {flushable && (
+                        <Tooltip title="Commit changes">
+                            <IconButton aria-label="actions" aria-controls="actions-menu" aria-haspopup="true" onClick={handleFlush}>
+                                <DoneIcon />
+                            </IconButton>
+                        </Tooltip>
+                    )}
+
+                    <TopMenu tracksSelected={selected} />
                 </span>
             </Box>
             <Typography component="h2" variant="body2">
                 {disc !== null ? (
                     <React.Fragment>
-                        <span>{`${formatTimeFromFrames(disc.left, false)} left of ${formatTimeFromFrames(disc.total, false)} `}</span>
+                        <span>{`${formatTimeFromSeconds(disc.left)} left of ${formatTimeFromSeconds(disc.total)} `}</span>
                         <Tooltip
                             title={
-                                <React.Fragment>
-                                    <span>{`${formatTimeFromFrames(disc.left * 2, false)} left in LP2 Mode`}</span>
-                                    <br />
-                                    <span>{`${formatTimeFromFrames(disc.left * 4, false)} left in LP4 Mode`}</span>
-                                </React.Fragment>
+                                leftInNondefaultCodecs(disc.left)
                             }
                             arrow
                         >
@@ -537,69 +571,85 @@ export const Main = (props: {}) => {
 
                 {selectedCount > 0 ? (
                     <Tooltip title="Delete">
-                        <IconButton aria-label="delete" disabled={!isCapable(Capability.metadataEdit)} onClick={handleDeleteSelected}>
-                            <DeleteIcon />
-                        </IconButton>
+                        <span>
+                            <IconButton aria-label="delete" disabled={!isCapable(Capability.metadataEdit)} onClick={handleDeleteSelected}>
+                                <DeleteIcon />
+                            </IconButton>
+                        </span>
                     </Tooltip>
                 ) : null}
 
                 {selectedCount > 0 ? (
                     <Tooltip title={canGroup ? 'Group' : ''}>
-                        <IconButton
-                            aria-label="group"
-                            disabled={!canGroup || !isCapable(Capability.metadataEdit)}
-                            onClick={handleGroupTracks}
-                        >
-                            <CreateNewFolderIcon />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                aria-label="group"
+                                disabled={!canGroup || !isCapable(Capability.metadataEdit)}
+                                onClick={handleGroupTracks}
+                            >
+                                <CreateNewFolderIcon />
+                            </IconButton>
+                        </span>
                     </Tooltip>
                 ) : null}
 
                 {selectedCount > 0 ? (
                     <Tooltip title="Rename">
-                        <IconButton
-                            aria-label="rename"
-                            disabled={selectedCount !== 1 || !isCapable(Capability.metadataEdit)}
-                            onClick={handleRenameActionClick}
-                        >
-                            <EditIcon />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                aria-label="rename"
+                                disabled={selectedCount !== 1 || !isCapable(Capability.metadataEdit)}
+                                onClick={handleRenameActionClick}
+                            >
+                                <EditIcon />
+                            </IconButton>
+                        </span>
                     </Tooltip>
                 ) : null}
 
                 {selectedGroupsCount > 0 ? (
                     <Tooltip title="Ungroup">
-                        <IconButton
-                            aria-label="ungroup"
-                            disabled={!isCapable(Capability.metadataEdit)}
-                            onClick={handleDeleteSelectedGroups}
-                        >
-                            <DeleteIcon />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                aria-label="ungroup"
+                                disabled={!isCapable(Capability.metadataEdit)}
+                                onClick={handleDeleteSelectedGroups}
+                            >
+                                <DeleteIcon />
+                            </IconButton>
+                        </span>
                     </Tooltip>
                 ) : null}
 
                 {selectedGroupsCount > 0 ? (
                     <Tooltip title="Rename Group">
-                        <IconButton
-                            aria-label="rename group"
-                            disabled={!isCapable(Capability.metadataEdit) || selectedGroupsCount !== 1}
-                            onClick={e => handleRenameGroup(e, selectedGroups[0])}
-                        >
-                            <EditIcon />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                aria-label="rename group"
+                                disabled={!isCapable(Capability.metadataEdit) || selectedGroupsCount !== 1}
+                                onClick={e => handleRenameGroup(e, selectedGroups[0])}
+                            >
+                                <EditIcon />
+                            </IconButton>
+                        </span>
                     </Tooltip>
                 ) : null}
             </Toolbar>
             {isCapable(Capability.contentList) ? (
                 <Box className={classes.main} {...getRootProps()} id="main">
                     <input {...getInputProps()} />
-                    <Table size="small">
+                    <Table size="small" className={classes.fixedTable}>
                         <TableHead>
                             <TableRow>
                                 <TableCell className={classes.dragHandleEmpty}></TableCell>
                                 <TableCell className={classes.indexCell}>#</TableCell>
                                 <TableCell>Title</TableCell>
+                                {usesHimdTracks && (
+                                    <>
+                                        <TableCell>Album</TableCell>
+                                        <TableCell>Artist</TableCell>
+                                    </>
+                                )}
                                 <TableCell align="right">Duration</TableCell>
                             </TableRow>
                         </TableHead>
@@ -607,8 +657,8 @@ export const Main = (props: {}) => {
                             <TableBody>
                                 {groupedTracks.map((group, index) => (
                                     <TableRow key={`${index}`}>
-                                        <TableCell colSpan={4} style={{ padding: '0' }}>
-                                            <Table size="small">
+                                        <TableCell colSpan={4 + (usesHimdTracks ? 2 : 0)} style={{ padding: '0' }}>
+                                            <Table size="small" className={classes.fixedTable}>
                                                 <Droppable droppableId={`${index}`} key={`${index}`}>
                                                     {(provided: DroppableProvided, snapshot: DroppableStateSnapshot) => (
                                                         <TableBody
@@ -618,6 +668,7 @@ export const Main = (props: {}) => {
                                                         >
                                                             {group.title !== null && (
                                                                 <GroupRow
+                                                                    usesHimdTracks={usesHimdTracks}
                                                                     group={group}
                                                                     onRename={handleRenameGroup}
                                                                     onDelete={handleDeleteGroup}
@@ -639,6 +690,7 @@ export const Main = (props: {}) => {
                                                                     {(provided: DraggableProvided) => (
                                                                         <TrackRow
                                                                             track={t}
+                                                                            isHimdTrack={usesHimdTracks}
                                                                             draggableProvided={provided}
                                                                             inGroup={group.title !== null}
                                                                             isSelected={selected.includes(t.index)}
@@ -681,16 +733,18 @@ export const Main = (props: {}) => {
             <ConvertDialog files={uploadedFiles} />
             <RecordDialog />
             <FactoryModeProgressDialog />
+            <FactoryModeBadSectorDialog />
             <DumpDialog
                 trackIndexes={selected}
                 isCapableOfDownload={isCapable(Capability.trackDownload) || factoryModeRippingInMainUi}
                 isExploitDownload={factoryModeRippingInMainUi}
             />
-            <SongRecognitionDialog trackIndexes={selected} />
+            <SongRecognitionDialog />
             <SongRecognitionProgressDialog />
             <FactoryModeNoticeDialog />
             <AboutDialog />
             <ChangelogDialog />
+            <SettingsDialog />
             <PanicDialog />
         </React.Fragment>
     );

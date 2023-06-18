@@ -14,7 +14,7 @@ import { useDispatch } from 'react-redux';
 
 import CDPlayerIconUrl from '../../images/win95/cdplayer.png';
 import { WindowCloseIcon } from './common';
-import { Capability } from '../../services/netmd';
+import { Capability } from '../../services/interfaces/netmd';
 
 const GlobalStyles = createGlobalStyle`
 ${styleReset}

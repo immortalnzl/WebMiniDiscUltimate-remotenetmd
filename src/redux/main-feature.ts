@@ -1,13 +1,15 @@
-import { Disc, DeviceStatus } from 'netmd-js';
+import { DeviceStatus } from 'netmd-js';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { enableBatching } from 'redux-batched-actions';
-import { Capability } from '../services/netmd';
+import { Capability, Disc } from '../services/interfaces/netmd';
 
 export interface MainState {
     disc: Disc | null;
     deviceName: string;
     deviceStatus: DeviceStatus | null;
     deviceCapabilities: Capability[];
+    flushable: boolean;
+    usesHimdTracks: boolean;
 }
 
 const initialState: MainState = {
@@ -15,6 +17,8 @@ const initialState: MainState = {
     deviceName: '',
     deviceStatus: null,
     deviceCapabilities: [Capability.contentList], // Prevent the UI from collapsing when loading.
+    flushable: false,
+    usesHimdTracks: false,
 };
 
 export const slice = createSlice({
@@ -32,6 +36,12 @@ export const slice = createSlice({
         },
         setDeviceCapabilities: (state, action: PayloadAction<Capability[]>) => {
             state.deviceCapabilities = action.payload;
+        },
+        setFlushable: (state, action: PayloadAction<boolean>) => {
+            state.flushable = action.payload;
+        },
+        setUsesHimdTracks: (state, action: PayloadAction<boolean>) => {
+            state.usesHimdTracks = action.payload;
         },
     },
 });

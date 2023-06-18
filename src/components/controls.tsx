@@ -20,7 +20,7 @@ import { ReactComponent as MDIcon1 } from '../images/md1.svg';
 import { ReactComponent as MDIcon2 } from '../images/md2.svg';
 import { ReactComponent as MDIcon3 } from '../images/md3.svg';
 import { W95Controls } from './win95/controls';
-import { Capability } from '../services/netmd';
+import { Capability } from '../services/interfaces/netmd';
 
 const frames = [MDIcon0, MDIcon1, MDIcon2, MDIcon3];
 

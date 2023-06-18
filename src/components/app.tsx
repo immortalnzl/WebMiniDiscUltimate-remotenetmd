@@ -1,5 +1,5 @@
-import React from 'react';
-import { belowDesktop, forAnyDesktop, forWideDesktop, useShallowEqualSelector } from '../utils';
+import React, { useMemo } from 'react';
+import { belowDesktop, forAnyDesktop, forWideDesktop, useShallowEqualSelector, useThemeDetector } from '../utils';
 
 import CssBaseline from '@material-ui/core/CssBaseline';
 import Backdrop from '@material-ui/core/Backdrop';
@@ -14,67 +14,83 @@ import Typography from '@material-ui/core/Typography';
 import Link from '@material-ui/core/Link';
 import Box from '@material-ui/core/Box';
 import { W95App } from './win95/app';
-import { Capability } from '../services/netmd';
+import { Capability } from '../services/interfaces/netmd';
 import Toc from './factory/factory';
+import clsx from 'clsx';
 
-const useStyles = (props: { showsList: boolean }) =>
-    makeStyles(theme => ({
-        layout: {
-            width: 'auto',
-            height: '100%',
-            [forAnyDesktop(theme)]: {
-                width: 600,
-                marginLeft: 'auto',
-                marginRight: 'auto',
-            },
-            [forWideDesktop(theme)]: {
-                width: 700,
-            },
+const useStyles = makeStyles(theme => ({
+    layout: {
+        width: 'auto',
+        height: '100%',
+        [forAnyDesktop(theme)]: {
+            width: 600,
+            marginLeft: 'auto',
+            marginRight: 'auto',
         },
+        [forWideDesktop(theme)]: {
+            width: 700,
+        },
+    },
 
-        paper: {
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column',
-            padding: theme.spacing(2),
-            height: 'calc(100% - 20px)',
-            [forAnyDesktop(theme)]: {
-                marginTop: theme.spacing(2),
-                marginBottom: theme.spacing(1),
-                padding: theme.spacing(3),
-                height: props.showsList ? 600 : 200,
-            },
-            [forWideDesktop(theme)]: {
-                height: props.showsList ? 700 : 250,
-            },
+    paper: {
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: theme.spacing(2),
+        height: 'calc(100% - 20px)',
+        [forAnyDesktop(theme)]: {
+            marginTop: theme.spacing(2),
+            marginBottom: theme.spacing(1),
+            padding: theme.spacing(3),
+            height: 200,
         },
-        bottomBar: {
-            display: 'flex',
-            alignItems: 'center',
-            [belowDesktop(theme)]: {
-                flexWrap: 'wrap',
-            },
-            marginLeft: -theme.spacing(2),
+        [forWideDesktop(theme)]: {
+            height: 250,
         },
-        copyrightTypography: {
-            textAlign: 'center',
+    },
+    paperShowsList: {
+        [forAnyDesktop(theme)]: {
+            height: 600,
         },
-        backdrop: {
-            zIndex: theme.zIndex.drawer + 1,
-            color: '#fff',
+        [forWideDesktop(theme)]: {
+            height: 700,
         },
-        minidiscLogo: {
-            width: 48,
+    },
+    paperFullHeight: {
+        height: 'calc(100% - 20px)',
+    },
+    layoutFullWidth: {
+        [forAnyDesktop(theme)]: {
+            width: '90%',
         },
-        controlsContainer: {
-            flex: '0 0 auto',
-            width: '100%',
-            paddingRight: theme.spacing(8),
-            [belowDesktop(theme)]: {
-                paddingLeft: 0,
-            },
+    },
+    bottomBar: {
+        display: 'flex',
+        alignItems: 'center',
+        [belowDesktop(theme)]: {
+            flexWrap: 'wrap',
         },
-    }));
+        marginLeft: -theme.spacing(2),
+    },
+    copyrightTypography: {
+        textAlign: 'center',
+    },
+    backdrop: {
+        zIndex: theme.zIndex.drawer + 1,
+        color: '#fff',
+    },
+    minidiscLogo: {
+        width: 48,
+    },
+    controlsContainer: {
+        flex: '0 0 auto',
+        width: '100%',
+        paddingRight: theme.spacing(8),
+        [belowDesktop(theme)]: {
+            paddingLeft: 0,
+        },
+    },
+}));
 
 const darkTheme = createTheme({
     palette: {
@@ -95,9 +111,21 @@ const lightTheme = createTheme({
 });
 
 const App = () => {
-    const { mainView, loading, darkMode, vintageMode } = useShallowEqualSelector(state => state.appState);
+    const { mainView, loading, colorTheme, vintageMode, pageFullHeight, pageFullWidth } = useShallowEqualSelector(state => state.appState);
     const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
-    const classes = useStyles({ showsList: mainView === 'WELCOME' || deviceCapabilities.includes(Capability.contentList) })();
+    const classes = useStyles();
+    const systemTheme = useThemeDetector();
+
+    const darkMode = useMemo(() => {
+        switch (colorTheme) {
+            case 'light':
+                return false;
+            case 'dark':
+                return true;
+            case 'system':
+                return systemTheme;
+        }
+    }, [systemTheme, colorTheme]);
 
     if (vintageMode) {
         return <W95App />;
@@ -108,8 +136,13 @@ const App = () => {
             <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
                 <CssBaseline />
 
-                <main className={classes.layout}>
-                    <Paper className={classes.paper}>
+                <main className={clsx(classes.layout, { [classes.layoutFullWidth]: pageFullWidth })}>
+                    <Paper
+                        className={clsx(classes.paper, {
+                            [classes.paperShowsList]: deviceCapabilities.includes(Capability.contentList),
+                            [classes.paperFullHeight]: pageFullHeight,
+                        })}
+                    >
                         {mainView === 'WELCOME' ? <Welcome /> : null}
                         {mainView === 'MAIN' ? <Main /> : null}
                         {mainView === 'FACTORY' ? <Toc /> : null}

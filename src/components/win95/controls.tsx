@@ -8,7 +8,7 @@ import SkipNextIcon from '@material-ui/icons/SkipNext';
 import SkipPreviousIcon from '@material-ui/icons/SkipPrevious';
 import PauseIcon from '@material-ui/icons/Pause';
 import { makeStyles } from '@material-ui/core/styles';
-import { Capability } from '../../services/netmd';
+import { Capability } from '../../services/interfaces/netmd';
 
 const useStyles = makeStyles(theme => ({
     container: {

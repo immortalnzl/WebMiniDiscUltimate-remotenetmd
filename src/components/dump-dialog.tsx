@@ -69,18 +69,22 @@ export const DumpDialog = ({
         [setInputDeviceId, isCapableOfDownload]
     );
 
-    const handleStartTransfer = useCallback(() => {
-        if (isCapableOfDownload) {
-            if (isExploitDownload) {
-                dispatch(exploitDownloadTracks(trackIndexes));
-            } else {
-                dispatch(downloadTracks(trackIndexes));
-            }
-        } else {
-            dispatch(recordTracks(trackIndexes, inputDeviceId));
-        }
+    const handleStartRecord = useCallback(() => {
+        dispatch(recordTracks(trackIndexes, inputDeviceId));
         handleClose();
-    }, [trackIndexes, inputDeviceId, dispatch, handleClose, isCapableOfDownload, isExploitDownload]);
+    }, [dispatch, handleClose, inputDeviceId, trackIndexes]);
+
+    const handleStartTransfer = useCallback(
+        (convertToWav: boolean = false) => {
+            if (isExploitDownload) {
+                dispatch(exploitDownloadTracks(trackIndexes, convertToWav));
+            } else {
+                dispatch(downloadTracks(trackIndexes, convertToWav));
+            }
+            handleClose();
+        },
+        [trackIndexes, dispatch, handleClose, isExploitDownload]
+    );
 
     const vintageMode = useShallowEqualSelector(state => state.appState.vintageMode);
 
@@ -109,7 +113,7 @@ export const DumpDialog = ({
             <DialogTitle id="dump-dialog-slide-title">{isCapableOfDownload ? 'Download' : 'Record'} Selected Tracks</DialogTitle>
             <DialogContent>
                 <Typography component="p" variant="h2" className={classes.head}>
-                    {`💻 ⬅ 💽`}
+                    {`💽 ⮕ 💻`}
                 </Typography>
                 {isCapableOfDownload ? (
                     <React.Fragment>
@@ -134,9 +138,16 @@ export const DumpDialog = ({
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleClose}>Cancel</Button>
-                <Button onClick={handleStartTransfer} disabled={inputDeviceId === '' && !isCapableOfDownload}>
-                    Start {isCapableOfDownload ? 'Download' : 'Record'}
-                </Button>
+                {isCapableOfDownload ? (
+                    <>
+                        <Button onClick={() => handleStartTransfer(true)}>Download and convert</Button>
+                        <Button onClick={() => handleStartTransfer(false)}>Download</Button>
+                    </>
+                ) : (
+                    <Button onClick={handleStartRecord} disabled={inputDeviceId === ''}>
+                        Start Record
+                    </Button>
+                )}
             </DialogActions>
         </Dialog>
     );

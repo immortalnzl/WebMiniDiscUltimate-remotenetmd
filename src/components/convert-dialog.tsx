@@ -8,10 +8,11 @@ import {
     secondsToNormal,
     getATRACWAVEncoding,
     getATRACOMAEncoding,
+    getChannelsFromAEA,
 } from '../utils';
 
-import { actions as convertDialogActions, TitleFormatType, UploadFormat } from '../redux/convert-dialog-feature';
-import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
+import { actions as convertDialogActions, ForcedEncodingFormat, TitleFormatType } from '../redux/convert-dialog-feature';
+import { actions as renameDialogActions, RenameType } from '../redux/rename-dialog-feature';
 import { actions as appActions } from '../redux/app-feature';
 import { convertAndUpload } from '../redux/actions';
 
@@ -54,10 +55,16 @@ import { useDropzone } from 'react-dropzone';
 import Backdrop from '@material-ui/core/Backdrop';
 import { W95ConvertDialog } from './win95/convert-dialog';
 import { batchActions } from 'redux-batched-actions';
-import { Disc, getCellsForTitle, getRemainingCharactersForTitles, Track } from 'netmd-js';
-import { sanitizeFullWidthTitle, sanitizeHalfWidthTitle } from 'netmd-js/dist/utils';
+import { Codec, CodecFamily, Disc } from '../services/interfaces/netmd';
+import serviceRegistry from '../services/registry';
 import clsx from 'clsx';
-import { Link } from '@material-ui/core';
+import Link from '@material-ui/core/Link';
+import Table from '@material-ui/core/Table';
+import TableBody from '@material-ui/core/TableBody';
+import TableCell from '@material-ui/core/TableCell';
+import TableHead from '@material-ui/core/TableHead';
+import TableRow from '@material-ui/core/TableRow';
+import { leftInNondefaultCodecs } from './main-rows';
 
 const Transition = React.forwardRef(function Transition(
     props: TransitionProps & { children?: React.ReactElement<any, any> },
@@ -65,6 +72,18 @@ const Transition = React.forwardRef(function Transition(
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
+
+function TooltipOrDefault(params: { children: any; title: any; arrow: boolean; tooltipEnabled: boolean }) {
+    if (!params.tooltipEnabled) {
+        return params.children;
+    } else {
+        return (
+            <Tooltip title={params.title} arrow={params.arrow}>
+                {params.children}
+            </Tooltip>
+        );
+    }
+}
 
 const useStyles = makeStyles(theme => ({
     container: {
@@ -81,6 +100,9 @@ const useStyles = makeStyles(theme => ({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'stretch',
+    },
+    himdDialog: {
+        maxWidth: 800,
     },
     formatAndTitle: {
         display: 'flex',
@@ -135,6 +157,9 @@ const useStyles = makeStyles(theme => ({
     nameNotFit: {
         color: theme.palette.warning.main,
     },
+    warningMediocreEncoder: {
+        color: theme.palette.warning.main,
+    },
     durationNotFit: {
         color: theme.palette.error.main,
     },
@@ -167,7 +192,46 @@ const useStyles = makeStyles(theme => ({
     advancedOption: {
         width: '100%',
     },
+    fixedTable: {
+        tableLayout: 'fixed',
+    },
+    selectCheckboxTableCell: {
+        width: 20,
+    },
+    toggleButtonWarning: {
+        color: `${theme.palette.warning.main} !important`,
+    },
+    forcedEncodingLabel: {
+        color: theme.palette.warning.main,
+    },
 }));
+
+type FileWithMetadata = {
+    file: File;
+    title: string;
+    album: string;
+    artist: string;
+    duration: number;
+    forcedEncoding: ForcedEncodingFormat;
+    bytesToSkip: number;
+};
+
+function createForcedEncodingText(selectedCodec: Codec, file: { forcedEncoding: ForcedEncodingFormat }) {
+    const remapTable: { [name: string]: string } = {
+        SPS: 'Stereo SP - Homebrew!',
+        SPM: 'Mono SP - Homebrew!',
+        // MP3 is not a forced encoding for minidisc specs that do not support it natively.
+        'AT3@66kbps': 'LP4',
+        'AT3@105kbps': 'LP2',
+        'AT3@132kbps': 'LP2',
+    };
+    if (!file.forcedEncoding) return '';
+    let fullCodecName = file.forcedEncoding.codec + (file.forcedEncoding?.bitrate ? `@${file.forcedEncoding.bitrate!}kbps` : '');
+    if (file.forcedEncoding.codec === 'MP3' && selectedCodec.codec !== 'MP3') {
+        return '';
+    }
+    return remapTable[fullCodecName] ?? fullCodecName;
+}
 
 export const ConvertDialog = (props: { files: File[] }) => {
     const dispatch = useDispatch();
@@ -176,16 +240,8 @@ export const ConvertDialog = (props: { files: File[] }) => {
     let { visible, format, titleFormat, titles } = useShallowEqualSelector(state => state.convertDialog);
     let { fullWidthSupport } = useShallowEqualSelector(state => state.appState);
     let { disc } = useShallowEqualSelector(state => state.main);
+    const minidiscSpec = serviceRegistry.netmdSpec!;
 
-    type FileWithMetadata = {
-        file: File;
-        title: string;
-        album: string;
-        artist: string;
-        duration: number;
-        forcedEncoding: UploadFormat | null;
-        bytesToSkip: number;
-    };
     const [files, setFiles] = useState<FileWithMetadata[]>([]);
     const [selectedTrackIndex, setSelectedTrack] = useState(-1);
     const [availableCharacters, setAvailableCharacters] = useState<{ halfWidth: number; fullWidth: number }>({
@@ -220,30 +276,70 @@ export const ConvertDialog = (props: { files: File[] }) => {
         );
     }, [files]);
 
-    const loadMetadataFromFiles = async (files: File[]): Promise<FileWithMetadata[]> => {
-        setLoadingMetadata(true);
-        let titledFiles = [];
-        for (let file of files) {
-            let metadata = await getMetadataFromFile(file);
-            let forcedEncoding: null | 'ILLEGAL' | { format: 'LP2' | 'LP4'; headerLength: number } = await getATRACWAVEncoding(file);
-            if (forcedEncoding === null) {
-                forcedEncoding = await getATRACOMAEncoding(file);
-            }
+    const thisSpecFormat = useMemo(() => format[minidiscSpec.specName] ?? { codec: '' }, [minidiscSpec, format]);
 
-            if (forcedEncoding === 'ILLEGAL') {
-                window.alert(`Cannot transfer file ${file.name}.`);
-            } else {
-                titledFiles.push({
-                    file,
-                    ...metadata,
-                    forcedEncoding: forcedEncoding?.format ?? null,
-                    bytesToSkip: forcedEncoding?.headerLength ?? 0,
-                });
+    const loadMetadataFromFiles = useMemo(
+        () => async (files: File[]): Promise<FileWithMetadata[]> => {
+            setLoadingMetadata(true);
+            let titledFiles = [];
+            for (let file of files) {
+                let metadata = await getMetadataFromFile(file);
+                let forcedEncoding: null | 'ILLEGAL' | { format: ForcedEncodingFormat; headerLength: number } = await getATRACWAVEncoding(
+                    file
+                );
+                if (file.name.toLowerCase().endsWith('.aea')) {
+                    let channels = await getChannelsFromAEA(file);
+                    if (channels === 1 || channels === 2) {
+                        forcedEncoding = {
+                            format: { codec: channels === 1 ? 'SPM' : 'SPS' },
+                            headerLength: 2048,
+                        };
+                        metadata.duration = (((file.size - 2048) / 212) * 11.6) / 1000 / channels;
+                    }
+                } else if (file.name.toLowerCase().endsWith('.mp3')) {
+                    // FIXME: Check by file magic instead
+                    forcedEncoding = {
+                        format: { codec: 'MP3', bitrate: metadata.bitrate },
+                        headerLength: 0,
+                    };
+                }
+                if (forcedEncoding === null) {
+                    forcedEncoding = await getATRACOMAEncoding(file);
+                }
+
+                if (forcedEncoding !== null && forcedEncoding !== 'ILLEGAL') {
+                    // There's an encoding forced by either the SP upload functionality or OMA
+                    let asCodec: CodecFamily;
+                    if (['SPS', 'SPM'].includes(forcedEncoding.format!.codec)) asCodec = 'SP';
+                    else asCodec = forcedEncoding.format!.codec as CodecFamily;
+                    const isIllegalForThisFormat = () => !minidiscSpec.availableFormats.some(e => e.codec === asCodec);
+                    if (isIllegalForThisFormat()) {
+                        // HACK - replace LP2 / LP4 with AT3 with custom bitrate
+                        if (asCodec === 'AT3') {
+                            if (forcedEncoding.format!.bitrate === 66) asCodec = 'LP4';
+                            else if (forcedEncoding.format!.bitrate === 132) asCodec = 'LP2';
+                        }
+                        // If it's still invalid, do not force an encoding
+                        if (isIllegalForThisFormat()) forcedEncoding = null;
+                    }
+                }
+
+                if (forcedEncoding === 'ILLEGAL') {
+                    window.alert(`Cannot transfer file ${file.name}.`);
+                } else {
+                    titledFiles.push({
+                        file,
+                        ...metadata,
+                        forcedEncoding: forcedEncoding?.format ?? null,
+                        bytesToSkip: forcedEncoding?.headerLength ?? 0,
+                    });
+                }
             }
-        }
-        setLoadingMetadata(false);
-        return titledFiles;
-    };
+            setLoadingMetadata(false);
+            return titledFiles;
+        },
+        [minidiscSpec.availableFormats]
+    );
 
     const refreshTitledFiles = useCallback(
         (files: FileWithMetadata[], format: TitleFormatType) => {
@@ -277,21 +373,23 @@ export const ConvertDialog = (props: { files: File[] }) => {
                                 break;
                             }
                         }
-                        const halfWidth = sanitizeHalfWidthTitle(rawTitle);
-                        const fullWidth = sanitizeFullWidthTitle(rawTitle);
-                        const halfAsFull = sanitizeFullWidthTitle(halfWidth);
+                        const halfWidth = minidiscSpec.sanitizeHalfWidthTitle(rawTitle);
+                        const fullWidth = minidiscSpec.sanitizeFullWidthTitle(rawTitle);
+                        const halfAsFull = minidiscSpec.sanitizeFullWidthTitle(halfWidth);
                         return {
                             title: halfWidth,
-                            fullWidthTitle: fullWidthSupport && fullWidth !== halfAsFull ? fullWidth : '', // If there are no differences between half and full width, skip the full width
+                            fullWidthTitle: fullWidthSupport && minidiscSpec.fullWidthSupport && fullWidth !== halfAsFull ? fullWidth : '', // If there are no differences between half and full width, skip the full width
                             duration: file.duration,
-                            forcedEncoding: file.forcedEncoding as 'LP2' | 'LP4' | null,
+                            forcedEncoding: file.forcedEncoding,
                             bytesToSkip: file.bytesToSkip,
+                            album: file.album,
+                            artist: file.artist,
                         };
                     })
                 )
             );
         },
-        [fullWidthSupport, dispatch]
+        [fullWidthSupport, dispatch, minidiscSpec]
     );
 
     const renameTrackManually = useCallback(
@@ -300,15 +398,20 @@ export const ConvertDialog = (props: { files: File[] }) => {
             dispatch(
                 batchActions([
                     renameDialogActions.setVisible(true),
-                    renameDialogActions.setGroupIndex(null),
                     renameDialogActions.setCurrentName(track.title),
                     renameDialogActions.setCurrentFullWidthName(track.fullWidthTitle),
                     renameDialogActions.setIndex(index),
-                    renameDialogActions.setOfConvert(true),
+                    renameDialogActions.setRenameType(
+                        minidiscSpec.titleType === 'MD' ? RenameType.TRACK_CONVERT_DIALOG : RenameType.TRACK_CONVERT_DIALOG_HIMD
+                    ),
+
+                    renameDialogActions.setHimdAlbum(track.album ?? ''),
+                    renameDialogActions.setHimdArtist(track.artist ?? ''),
+                    renameDialogActions.setHimdTitle(track.title ?? ''),
                 ])
             );
         },
-        [titles, dispatch]
+        [titles, dispatch, minidiscSpec]
     );
 
     // Track reordering
@@ -345,13 +448,45 @@ export const ConvertDialog = (props: { files: File[] }) => {
     }, [dispatch]);
 
     const handleChangeFormat = useCallback(
-        (ev, newFormat) => {
+        (ev, newFormat: string | null) => {
             if (newFormat === null) {
                 return;
             }
-            dispatch(convertDialogActions.setFormat(newFormat));
+            const formatDeclaration = minidiscSpec.availableFormats.find(e => e.codec === newFormat)!;
+            if (formatDeclaration.availableBitrates) {
+                dispatch(
+                    convertDialogActions.updateFormatForSpec({
+                        codec: {
+                            codec: formatDeclaration.codec,
+                            bitrate: formatDeclaration.defaultBitrate ?? Math.max(...formatDeclaration.availableBitrates),
+                        },
+                        spec: minidiscSpec.specName,
+                    })
+                );
+            } else {
+                dispatch(
+                    convertDialogActions.updateFormatForSpec({
+                        codec: {
+                            codec: formatDeclaration.codec,
+                        },
+                        spec: minidiscSpec.specName,
+                    })
+                );
+            }
         },
-        [dispatch]
+        [dispatch, minidiscSpec.specName, minidiscSpec.availableFormats]
+    );
+
+    const handleChangeBitrate = useCallback(
+        (ev: any) => {
+            dispatch(
+                convertDialogActions.updateFormatForSpec({
+                    spec: minidiscSpec.specName,
+                    codec: { codec: thisSpecFormat.codec, bitrate: ev.target.value },
+                })
+            );
+        },
+        [dispatch, thisSpecFormat, minidiscSpec.specName]
     );
 
     const handleChangeTitleFormat = useCallback(
@@ -390,22 +525,6 @@ export const ConvertDialog = (props: { files: File[] }) => {
         dispatch(appActions.setFullWidthSupport(!fullWidthSupport));
     }, [dispatch, fullWidthSupport]);
 
-    const handleConvert = useCallback(() => {
-        handleClose();
-        setEnableReplayGain(false);
-        setEnableNormalization(false);
-        dispatch(
-            convertAndUpload(
-                titles.map((n, i) => ({ ...n, file: files[i].file })),
-                format,
-                {
-                    loudnessTarget: enableNormalization ? normalizationTarget : undefined,
-                    enableReplayGain,
-                }
-            )
-        );
-    }, [dispatch, handleClose, titles, format, files, normalizationTarget, enableNormalization, enableReplayGain]);
-
     // Dialog init on new files
     useEffect(() => {
         const newFiles = Array.from(props.files);
@@ -421,15 +540,17 @@ export const ConvertDialog = (props: { files: File[] }) => {
         setAvailableSeconds(1);
         setBeforeConversionAvailableCharacters({ halfWidth: 1, fullWidth: 1 });
         setBeforeConversionAvailableSeconds(1);
-    }, [props.files]);
+        dispatch(
+            convertDialogActions.updateFormatForSpec({
+                spec: minidiscSpec.specName,
+                codec: minidiscSpec.defaultFormat,
+                unlessUnset: true,
+            })
+        );
+    }, [props.files, loadMetadataFromFiles, dispatch, minidiscSpec.defaultFormat, minidiscSpec.specName]);
 
     useEffect(() => {
         if (!disc) return;
-        const durationMultiplier = {
-            SP: 1,
-            LP2: 2,
-            LP4: 4,
-        }[format];
 
         let testedDisc = JSON.parse(JSON.stringify(disc)) as Disc;
         let ungrouped = testedDisc.groups.find(n => n.title === null);
@@ -446,28 +567,56 @@ export const ConvertDialog = (props: { files: File[] }) => {
             ungrouped.tracks.push({
                 title: track.title,
                 fullWidthTitle: track.fullWidthTitle,
-            } as Track);
+                channel: 1,
+                duration: 0,
+                index: 0,
+                encoding: { codec: 'SP' },
+                protected: null as any,
+            });
         }
-        setAvailableCharacters(getRemainingCharactersForTitles(testedDisc));
-        let secondsLeft = (disc.left / 512) * durationMultiplier;
-        let totalTracksDuration = titles.reduce((a, b) => a + b.duration, 0);
-        setAvailableSeconds(secondsLeft - totalTracksDuration);
-        setAvailableSPSeconds(disc.left / 512 - totalTracksDuration / durationMultiplier);
-        setBeforeConversionAvailableSeconds(secondsLeft);
-        setBeforeConversionAvailableCharacters(getRemainingCharactersForTitles(disc));
-    }, [disc, setAvailableCharacters, titles, format]);
+        setAvailableCharacters(minidiscSpec.getRemainingCharactersForTitles(testedDisc));
+        let totalTracksDurationInStandard = titles.reduce((total, b) => {
+            if (!b.forcedEncoding || (b.forcedEncoding.codec === 'MP3' && thisSpecFormat.codec !== 'MP3')) {
+                // MP3 forcedEncoding only suggests the target bitrate when the user selects 'MP3' as the recording format
+                // MP3 can never be 'forced', like LP2 can f.ex.
+                return total + minidiscSpec.translateToDefaultMeasuringModeFrom(thisSpecFormat, b.duration);
+            }
+            let duration = b.duration;
+            let forcedEncodingCodec: Codec['codec'];
+            if (b.forcedEncoding.codec === 'SPS') {
+                forcedEncodingCodec = 'SP';
+            } else if (b.forcedEncoding.codec === 'SPM') {
+                duration /= 2;
+                forcedEncodingCodec = 'SP';
+            } else {
+                forcedEncodingCodec = b.forcedEncoding.codec;
+            }
+            let codec: Codec = {
+                bitrate: b.forcedEncoding.bitrate,
+                codec: forcedEncodingCodec,
+            };
+            return total + minidiscSpec.translateToDefaultMeasuringModeFrom(codec, duration);
+        }, 0);
+        let secondsLeftInChosenFormat = minidiscSpec.translateDefaultMeasuringModeTo(thisSpecFormat, disc.left);
+        setAvailableSeconds(
+            secondsLeftInChosenFormat - minidiscSpec.translateDefaultMeasuringModeTo(thisSpecFormat, totalTracksDurationInStandard)
+        );
+        setAvailableSPSeconds(disc.left - totalTracksDurationInStandard);
+        setBeforeConversionAvailableSeconds(secondsLeftInChosenFormat);
+        setBeforeConversionAvailableCharacters(minidiscSpec.getRemainingCharactersForTitles(disc));
+    }, [disc, setAvailableCharacters, titles, thisSpecFormat, minidiscSpec]);
 
     // Reload titles when files changed
     useEffect(() => {
-        refreshTitledFiles(files, titleFormat);
-    }, [refreshTitledFiles, files, titleFormat]);
+        refreshTitledFiles(files, minidiscSpec.titleType === 'MD' ? titleFormat : 'title');
+    }, [refreshTitledFiles, files, titleFormat, minidiscSpec]);
 
     const handleRenameSelectedTrack = useCallback(() => {
         renameTrackManually(selectedTrackIndex);
     }, [selectedTrackIndex, renameTrackManually]);
 
     // scroll selected track into view
-    const selectedTrackRef = useRef<HTMLDivElement | null>(null);
+    const selectedTrackRef = useRef<any | null>(null);
     useEffect(() => {
         selectedTrackRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }, [selectedTrackRef, selectedTrackIndex]);
@@ -479,9 +628,15 @@ export const ConvertDialog = (props: { files: File[] }) => {
             const isSelected = selectedTrackIndex === i;
             const ref = isSelected ? selectedTrackRef : null;
             currentSeconds -= file.duration;
-            const { halfWidth, fullWidth } = getCellsForTitle(file as any);
-            currentHalfWidthTextLeft -= halfWidth * 7;
-            currentFullWidthTextLeft -= fullWidth * 7;
+            const { halfWidth, fullWidth } = minidiscSpec.getCharactersForTitle({
+                ...file,
+                channel: 0,
+                encoding: { codec: 'SP' },
+                index: 0,
+                protected: null as any,
+            });
+            currentHalfWidthTextLeft -= halfWidth;
+            currentFullWidthTextLeft -= fullWidth;
             return (
                 <ListItem
                     key={`${i}`}
@@ -503,7 +658,18 @@ export const ConvertDialog = (props: { files: File[] }) => {
                                 : undefined
                         }
                         primary={`${file.fullWidthTitle && file.fullWidthTitle + ' / '}${file.title}`}
-                        secondary={`${secondsToNormal(file.duration)} ${file.forcedEncoding ? `(${file.forcedEncoding})` : ''}`}
+                        secondary={
+                            <span>
+                                {secondsToNormal(file.duration)}
+                                {file.forcedEncoding && (
+                                    <Tooltip title="Forced format - this file will be uploaded as-is. Recording mode will be disregarded for it">
+                                        <span className={classes.forcedEncodingLabel}>
+                                            &nbsp;{createForcedEncodingText(thisSpecFormat, file)}
+                                        </span>
+                                    </Tooltip>
+                                )}
+                            </span>
+                        }
                     />
                 </ListItem>
             );
@@ -518,6 +684,66 @@ export const ConvertDialog = (props: { files: File[] }) => {
         beforeConversionAvailableSeconds,
         classes.durationNotFit,
         classes.nameNotFit,
+        classes.forcedEncodingLabel,
+        thisSpecFormat,
+        minidiscSpec,
+    ]);
+
+    const renderHiMDTracks = useCallback(() => {
+        let currentSeconds = beforeConversionAvailableSeconds;
+        let { halfWidth: currentHalfWidthTextLeft, fullWidth: currentFullWidthTextLeft } = beforeConversionAvailableCharacters;
+        return titles.map((file, i) => {
+            const isSelected = selectedTrackIndex === i;
+            const ref = isSelected ? selectedTrackRef : null;
+            currentSeconds -= file.duration;
+            const { halfWidth, fullWidth } = minidiscSpec.getCharactersForTitle(file as any);
+            currentHalfWidthTextLeft -= halfWidth;
+            currentFullWidthTextLeft -= fullWidth;
+            return (
+                <TableRow
+                    key={`${i}`}
+                    onDoubleClick={() => renameTrackManually(i)}
+                    onClick={() => setSelectedTrack(i)}
+                    ref={ref}
+                    className={
+                        currentSeconds <= 0
+                            ? classes.durationNotFit
+                            : currentHalfWidthTextLeft < 0 || currentFullWidthTextLeft < 0
+                            ? classes.nameNotFit
+                            : undefined
+                    }
+                >
+                    <TableCell className={classes.selectCheckboxTableCell}>
+                        <Radio checked={isSelected} value={`track-${i}`} size="small" />
+                    </TableCell>
+                    <TableCell>{file.title}</TableCell>
+                    <TableCell>{file.album}</TableCell>
+                    <TableCell>{file.artist}</TableCell>
+                    <TableCell>
+                        {secondsToNormal(file.duration)}
+                        {file.forcedEncoding && (
+                            <Tooltip title="Forced format - this file will be uploaded as-is. Recording mode will be disregarded for it">
+                                <span className={classes.forcedEncodingLabel}>&nbsp;{createForcedEncodingText(thisSpecFormat, file)}</span>
+                            </Tooltip>
+                        )}
+                    </TableCell>
+                </TableRow>
+            );
+        });
+    }, [
+        titles,
+        selectedTrackIndex,
+        setSelectedTrack,
+        selectedTrackRef,
+        renameTrackManually,
+        beforeConversionAvailableCharacters,
+        beforeConversionAvailableSeconds,
+        classes.durationNotFit,
+        classes.nameNotFit,
+        classes.selectCheckboxTableCell,
+        classes.forcedEncodingLabel,
+        minidiscSpec,
+        thisSpecFormat,
     ]);
 
     // Add/Remove tracks
@@ -533,11 +759,11 @@ export const ConvertDialog = (props: { files: File[] }) => {
                     .catch(console.error);
             }
         },
-        [setFiles]
+        [setFiles, loadMetadataFromFiles]
     );
     const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
         onDrop,
-        accept: [`audio/*`, `video/mp4`, `video/webm`, `.oma`, `.at3`],
+        accept: [`audio/*`, `video/mp4`, `video/webm`, `.oma`, `.at3`, `.aea`],
         noClick: true,
     });
     const disableRemove = selectedTrackIndex < 0 || selectedTrackIndex >= files.length;
@@ -556,11 +782,38 @@ export const ConvertDialog = (props: { files: File[] }) => {
         }
     }, [files, dialogVisible, handleClose]);
 
+    const handleConvert = useCallback(() => {
+        handleClose();
+        setEnableReplayGain(false);
+        setEnableNormalization(false);
+        dispatch(
+            convertAndUpload(
+                titles.map((n, i) => ({
+                    ...n,
+                    file: files[i].file,
+                    artist: n.artist ?? '',
+                    album: n.album ?? '',
+                    // Exception: If an MP3 file was selected, do not 'force' upload it - treat it merely as a suggestion for the bitrate
+                    forcedEncoding: n.forcedEncoding?.codec === 'MP3' && thisSpecFormat.codec !== 'MP3' ? null : n.forcedEncoding,
+                })),
+                thisSpecFormat,
+                {
+                    loudnessTarget: enableNormalization ? normalizationTarget : undefined,
+                    enableReplayGain,
+                }
+            )
+        );
+    }, [dispatch, handleClose, titles, thisSpecFormat, files, normalizationTarget, enableNormalization, enableReplayGain]);
+
+    const isSelectedMediocre = serviceRegistry.audioExportService!.getSupport(thisSpecFormat.codec) === 'mediocre';
+    const isSelectedUnsupported = serviceRegistry.audioExportService!.getSupport(thisSpecFormat.codec) === 'unsupported';
+    const formatsSupport = minidiscSpec.availableFormats.map(e => serviceRegistry.audioExportService!.getSupport(e.codec));
+
     const vintageMode = useShallowEqualSelector(state => state.appState.vintageMode);
     if (vintageMode) {
         const p = {
             visible,
-            format,
+            format: thisSpecFormat,
             titleFormat,
 
             titles,
@@ -607,6 +860,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
             TransitionComponent={Transition as any}
             aria-labelledby="convert-dialog-slide-title"
             aria-describedby="convert-dialog-slide-description"
+            classes={{ paper: clsx({ [classes.himdDialog]: minidiscSpec.titleType === 'HiMD' }) }}
         >
             <DialogTitle id="convert-dialog-slide-title">Upload Settings</DialogTitle>
             <DialogContent className={classes.dialogContent}>
@@ -615,34 +869,65 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         <Typography component="label" variant="caption" color="textSecondary">
                             Recording Mode
                         </Typography>
-                        <ToggleButtonGroup value={format} exclusive onChange={handleChangeFormat} size="small">
-                            <ToggleButton className={classes.toggleButton} value="SP">
-                                SP
-                            </ToggleButton>
-                            <ToggleButton className={classes.toggleButton} value="LP2">
-                                LP2
-                            </ToggleButton>
-                            <ToggleButton className={classes.toggleButton} value="LP4">
-                                LP4
-                            </ToggleButton>
+                        <ToggleButtonGroup value={thisSpecFormat.codec} exclusive onChange={handleChangeFormat} size="small">
+                            {minidiscSpec.availableFormats.map((e, idx) => (
+                                <ToggleButton
+                                    disabled={formatsSupport[idx] === 'unsupported'}
+                                    classes={{
+                                        root: clsx(classes.toggleButton, {
+                                            [classes.toggleButtonWarning]: formatsSupport[idx] === 'mediocre',
+                                        }),
+                                    }}
+                                    key={`k-uploadformat-${e.codec}`}
+                                    value={e.codec}
+                                >
+                                    {e.codec}
+                                </ToggleButton>
+                            ))}
                         </ToggleButtonGroup>
                     </FormControl>
+
                     <div className={classes.rightBlock}>
-                        <FormControl className={classes.formControl}>
-                            <Typography component="label" variant="caption" color="textSecondary">
-                                Track title
-                            </Typography>
-                            <FormControl className={classes.titleFormControl}>
-                                <Select value={titleFormat} color="secondary" input={<Input />} onChange={handleChangeTitleFormat}>
-                                    <MenuItem value={`filename`}>Filename</MenuItem>
-                                    <MenuItem value={`title`}>Title</MenuItem>
-                                    <MenuItem value={`album-title`}>Album - Title</MenuItem>
-                                    <MenuItem value={`artist-title`}>Artist - Title</MenuItem>
-                                    <MenuItem value={`title-artist`}>Title - Artist</MenuItem>
-                                    <MenuItem value={`artist-album-title`}>Artist - Album - Title</MenuItem>
-                                </Select>
+                        {minidiscSpec.titleType === 'MD' && (
+                            <FormControl className={classes.formControl}>
+                                <Typography component="label" variant="caption" color="textSecondary">
+                                    Track title
+                                </Typography>
+                                <FormControl className={classes.titleFormControl}>
+                                    <Select value={titleFormat} color="secondary" input={<Input />} onChange={handleChangeTitleFormat}>
+                                        <MenuItem value={`filename`}>Filename</MenuItem>
+                                        <MenuItem value={`title`}>Title</MenuItem>
+                                        <MenuItem value={`album-title`}>Album - Title</MenuItem>
+                                        <MenuItem value={`artist-title`}>Artist - Title</MenuItem>
+                                        <MenuItem value={`title-artist`}>Title - Artist</MenuItem>
+                                        <MenuItem value={`artist-album-title`}>Artist - Album - Title</MenuItem>
+                                    </Select>
+                                </FormControl>
                             </FormControl>
-                        </FormControl>
+                        )}
+                        {thisSpecFormat.bitrate !== undefined && (
+                            <FormControl className={classes.formControl}>
+                                <Typography component="label" variant="caption" color="textSecondary">
+                                    Bitrate
+                                </Typography>
+                                <FormControl className={classes.titleFormControl}>
+                                    <Select
+                                        value={thisSpecFormat.bitrate}
+                                        color="secondary"
+                                        input={<Input />}
+                                        onChange={handleChangeBitrate}
+                                    >
+                                        {minidiscSpec.availableFormats
+                                            .find(e => e.codec === format[minidiscSpec.specName].codec)!
+                                            .availableBitrates!.map(e => (
+                                                <MenuItem value={e} key={`bitratesel-${e}`}>
+                                                    {e} Kbps
+                                                </MenuItem>
+                                            ))}
+                                    </Select>
+                                </FormControl>
+                            </FormControl>
+                        )}
                     </div>
                 </div>
                 <div></div>
@@ -668,23 +953,29 @@ export const ConvertDialog = (props: { files: File[] }) => {
                 >
                     Warning: You have used up all the available space on the disc.
                 </Typography>
+                <Typography
+                    component="h3"
+                    className={classes.warningMediocreEncoder}
+                    hidden={!isSelectedMediocre}
+                    style={{ marginTop: '1em' }}
+                    align="center"
+                >
+                    Warning: You are using a mediocre encoder. The resulting audio is not going to be perfect.
+                </Typography>
                 <span className={classes.durationsSpan}>
                     <Typography component="h3" align="center" hidden={loadingMetadata}>
                         Total:{' '}
-                        <Tooltip
+                        <TooltipOrDefault
+                            tooltipEnabled={minidiscSpec.availableFormats.length > 1}
                             title={
-                                <React.Fragment>
-                                    <span>{`${secondsToNormal(((disc?.left ?? 0) / 512 - availableSPSeconds) * 2)} in LP2 Mode`}</span>
-                                    <br />
-                                    <span>{`${secondsToNormal(((disc?.left ?? 0) / 512 - availableSPSeconds) * 4)} in LP4 Mode`}</span>
-                                </React.Fragment>
+                                leftInNondefaultCodecs((disc?.left ?? 0) - availableSPSeconds)
                             }
                             arrow
                         >
-                            <span className={classes.timeTooltip}>
-                                {secondsToNormal((disc?.left ?? 0) / 512 - availableSPSeconds)} SP time{' '}
+                            <span className={clsx({ [classes.timeTooltip]: minidiscSpec.availableFormats.length > 1 })}>
+                                {secondsToNormal((disc?.left ?? 0) - availableSPSeconds)} {minidiscSpec.defaultFormat.codec} time{' '}
                             </span>
-                        </Tooltip>
+                        </TooltipOrDefault>
                     </Typography>
                     <Typography
                         component="h3"
@@ -693,21 +984,39 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         className={clsx({ [classes.durationNotFit]: availableSPSeconds <= 0 })}
                     >
                         Remaining:{' '}
-                        <Tooltip
+                        <TooltipOrDefault
+                            tooltipEnabled={minidiscSpec.availableFormats.length > 1}
                             title={
                                 <React.Fragment>
-                                    <span>{`${secondsToNormal(availableSPSeconds * 2)} in LP2 Mode`}</span>
-                                    <br />
-                                    <span>{`${secondsToNormal(availableSPSeconds * 4)} in LP4 Mode`}</span>
+                                    {minidiscSpec.availableFormats.map(e =>
+                                        e.codec === minidiscSpec.defaultFormat.codec ? null : (
+                                            <React.Fragment key={`totalrem-${e.codec}`}>
+                                                <span>{`${secondsToNormal(
+                                                    minidiscSpec.translateDefaultMeasuringModeTo(
+                                                        {
+                                                            codec: e.codec,
+                                                            bitrate: e.availableBitrates
+                                                                ? e.defaultBitrate ?? Math.max(...e.availableBitrates)
+                                                                : undefined,
+                                                        },
+                                                        availableSPSeconds
+                                                    )
+                                                )} in ${e.codec} Mode`}</span>
+                                                <br />
+                                            </React.Fragment>
+                                        )
+                                    )}
                                 </React.Fragment>
                             }
                             arrow
                         >
-                            <span className={classes.timeTooltip}>{secondsToNormal(availableSPSeconds)} SP time </span>
-                        </Tooltip>
+                            <span className={clsx({ [classes.timeTooltip]: minidiscSpec.availableFormats.length > 1 })}>
+                                {secondsToNormal(availableSPSeconds)} {minidiscSpec.defaultFormat.codec} time
+                            </span>
+                        </TooltipOrDefault>
                     </Typography>
                 </span>
-                {!fullWidthSupport && fullWidthCharactersUsed ? (
+                {!fullWidthSupport && minidiscSpec.fullWidthSupport && fullWidthCharactersUsed ? (
                     <Typography color="error" component="p">
                         You seem to be trying to enter full-width text into the half-width slot.{' '}
                         <Link onClick={handleToggleFullWidthSupport} color="error" underline="always" style={{ cursor: 'pointer' }}>
@@ -741,11 +1050,26 @@ export const ConvertDialog = (props: { files: File[] }) => {
                                 <ExpandLessIcon />
                             </IconButton>
                         </Toolbar>
-                        <AccordionDetails className={classes.tracksOrderAccordionDetail}>
-                            <List dense={true} disablePadding={false} className={classes.trackList}>
-                                {renderTracks()}
-                            </List>
-                        </AccordionDetails>
+                        {minidiscSpec.titleType === 'MD' ? (
+                            <AccordionDetails className={classes.tracksOrderAccordionDetail}>
+                                <List dense={true} disablePadding={false} className={classes.trackList}>
+                                    {renderTracks()}
+                                </List>
+                            </AccordionDetails>
+                        ) : (
+                            <Table size="small" className={classes.fixedTable}>
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell className={classes.selectCheckboxTableCell}></TableCell>
+                                        <TableCell>Title</TableCell>
+                                        <TableCell>Album</TableCell>
+                                        <TableCell>Artist</TableCell>
+                                        <TableCell>Duration</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>{renderHiMDTracks()}</TableBody>
+                            </Table>
+                        )}
                         <Backdrop className={classes.backdrop} open={isDragActive}>
                             Drop your Music to add it to the queue
                         </Backdrop>
@@ -757,11 +1081,13 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         Advanced Options
                     </AccordionSummary>
                     <AccordionDetails className={classes.advancedOptionsAccordionContents}>
-                        <FormControlLabel
-                            label={`Enable full width titles support`}
-                            className={classes.advancedOption}
-                            control={<Checkbox checked={fullWidthSupport} onChange={handleToggleFullWidthSupport} />}
-                        />
+                        {minidiscSpec.fullWidthSupport && (
+                            <FormControlLabel
+                                label={`Enable full width titles support`}
+                                className={classes.advancedOption}
+                                control={<Checkbox checked={fullWidthSupport} onChange={handleToggleFullWidthSupport} />}
+                            />
+                        )}
 
                         <FormControlLabel
                             label={`Use ReplayGain`}
@@ -774,12 +1100,12 @@ export const ConvertDialog = (props: { files: File[] }) => {
                             control={<Checkbox checked={enableNormalization} onChange={handleToggleNormalization} />}
                         />
                         <Slider
-                            min={-70}
-                            max={-5}
-                            step={0.2}
+                            min={-12}
+                            max={0}
+                            step={0.1}
                             marks={[
-                                { value: -70, label: '-70dB' },
-                                { value: -5, label: '-5dB' },
+                                { value: -12, label: '-12dB' },
+                                { value: 0, label: '0dB' },
                             ]}
                             className={classes.advancedOption}
                             value={normalizationTarget}
@@ -797,7 +1123,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                 <Button onClick={handleClose} disabled={loadingMetadata}>
                     Cancel
                 </Button>
-                <Button onClick={handleConvert} disabled={loadingMetadata || availableSeconds < 0}>
+                <Button onClick={handleConvert} disabled={loadingMetadata || availableSeconds < 0 || isSelectedUnsupported}>
                     Ok
                 </Button>
             </DialogActions>

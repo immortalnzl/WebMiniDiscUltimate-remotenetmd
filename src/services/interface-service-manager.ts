@@ -1,11 +1,13 @@
 import React, { ReactHTMLElement } from 'react';
 import { CustomParameterInfo, CustomParameters } from '../custom-parameters';
-import { NetMDService, NetMDUSBService } from './netmd';
-// import { NetMDMockService } from './netmd-mock';
-import { NetMDRemoteService } from './remote-netmd';
+import { HiMDFullService, HiMDRestrictedService, HiMDSpec } from './interfaces/himd';
+import { DefaultMinidiscSpec, MinidiscSpec, NetMDService, NetMDUSBService } from './interfaces/netmd';
+import { NetMDMockService } from './interfaces/netmd-mock';
+import { NetMDRemoteService } from './interfaces/remote-netmd';
 
 interface ServicePrototype {
     create: (parameters?: CustomParameters) => NetMDService;
+    spec: MinidiscSpec;
     getConnectName: (parameters?: CustomParameters) => string;
     name: string;
     customParameters?: CustomParameterInfo[];
@@ -22,6 +24,19 @@ export const Services: ServicePrototype[] = [
         name: 'USB NetMD',
         getConnectName: () => 'Connect',
         create: () => window.native?.interface ?? new NetMDUSBService({ debug: true }),
+        spec: new DefaultMinidiscSpec(),
+    },
+    {
+        name: 'HiMD (Restricted)',
+        getConnectName: () => 'Connect to HiMD (Restricted)',
+        create: () => new HiMDRestrictedService({ debug: true }),
+        spec: new HiMDSpec(false),
+    },
+    {
+        name: 'HiMD (Full)',
+        getConnectName: () => 'Connect to HiMD (Full)',
+        create: () => window.native?.himdFullInterface ?? new HiMDFullService({ debug: true }),
+        spec: new HiMDSpec(true),
     },
     {
         name: 'Remote NetMD',
@@ -33,6 +48,7 @@ export const Services: ServicePrototype[] = [
             React.createElement('a', { href: 'https://github.com/asivery/remote-netmd-server' }, 'Remote NetMD')
         ),
         create: parameters => new NetMDRemoteService({ debug: true, ...parameters } as any),
+        spec: new DefaultMinidiscSpec(),
         customParameters: [
             {
                 userFriendlyName: 'Server Address',
@@ -52,16 +68,22 @@ export const Services: ServicePrototype[] = [
                 varName: 'friendlyName',
                 type: 'string',
             },
+            /*{
+                userFriendlyName: 'Use chunked transfers for LP (needs a fast network)',
+                varName: 'useChunkedTransfersForLP',
+                type: 'boolean',
+            },*/
         ],
     },
-    /*{
-        name: "MockMD",
-        getConnectName: () => "Connect to MockMD",
-        description: React.createElement("p", null, "Test NetMD interface. It does nothing"),
-        create: (parameters) => {
+    {
+        name: 'MockMD',
+        getConnectName: () => 'Connect to MockMD',
+        description: React.createElement('p', null, 'Test NetMD interface. It does nothing'),
+        create: parameters => {
             console.log(`Given parameters: ${JSON.stringify(parameters)}`);
             return new NetMDMockService(parameters);
         },
+        spec: new DefaultMinidiscSpec(),
         customParameters: [
             {
                 userFriendlyName: 'Test Number',
@@ -119,9 +141,9 @@ export const Services: ServicePrototype[] = [
                 type: 'boolean',
                 varName: 'capabilityFactoryMode',
                 defaultValue: true,
-            }
-        ]
-    },*/
+            },
+        ],
+    },
 ];
 
 export function getSimpleServices() {
@@ -155,6 +177,10 @@ export function filterOutCorrupted(savedCustomServices: ServiceConstructionInfo[
 
 export function createService(info: ServiceConstructionInfo) {
     return getPrototypeByName(info.name)?.create(info.parameters);
+}
+
+export function getServiceSpec(info: ServiceConstructionInfo) {
+    return getPrototypeByName(info.name)?.spec;
 }
 
 export function getConnectButtonName(service: ServiceConstructionInfo) {

@@ -3,7 +3,6 @@ import { useDispatch } from 'react-redux';
 import { useShallowEqualSelector } from '../utils';
 
 import { actions as appActions } from '../redux/app-feature';
-import { actions as encoderDialogActions } from '../redux/encoder-setup-dialog-feature';
 
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
@@ -11,11 +10,10 @@ import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import Slide from '@material-ui/core/Slide';
 import Button from '@material-ui/core/Button';
+import Link from '@material-ui/core/Link';
 import { makeStyles } from '@material-ui/core/styles';
 import { TransitionProps } from '@material-ui/core/transitions';
 import { W95ChangelogDialog } from './win95/changelog-dialog';
-import { Link } from '@material-ui/core';
-import { batchActions } from 'redux-batched-actions';
 
 const Transition = React.forwardRef(function Transition(
     props: TransitionProps & { children?: React.ReactElement<any, any> },
@@ -62,17 +60,60 @@ export const ChangelogDialog = (props: {}) => {
     }, [dispatch]);
 
     const handleOpenEncoderSettings = useCallback(() => {
-        dispatch(batchActions([encoderDialogActions.setVisible(true), appActions.setMainView('WELCOME')]));
+        dispatch(appActions.showSettingsDialog(true));
     }, [dispatch]);
 
     const content = (
         <React.Fragment>
+            <h2 className={classes.header}>Version 1.4.0</h2>
+            <ul>
+                <li>
+                    Added full HiMD support
+                    <ul>
+                        <li>Added support for HiMD metadata editing</li>
+                        <li>Added support for HiMD ATRAC3 / ATRAC3+ / LPCM / MP3 download</li>
+                        <li>Added support for HiMD MP3 upload</li>
+                    </ul>
+                </li>
+                <li>
+                    Updated to netmd-exploits 0.5.1
+                    <ul>
+                        <li>Added the ability to download ATRAC data from standard MDs using HiMD portables</li>
+                        <li>Added the ability to upload AEA files back to MDs on supported devices</li>
+                        <li>Fixed Tetris on normal Sony portables</li>
+                        <li>(Hopefully) Fixed the L/R channel mismatch bug</li>
+                    </ul>
+                </li>
+                <li>Added homebrew mode shortcuts in the main UI</li>
+                <li>Added progress indicator in tab title for uploading</li>
+                <li>Added an option to archive discs as ZIPs</li>
+                <li>Added an option to auto-convert ripped tracks to WAV</li>
+                <li>Added an option to strip TrProtect from all files via the homebrew mode</li>
+                <li>Added CSV export as part of the archive disc command</li>
+                <li>Added full width title to the upload progress dialog</li>
+                <li>Added a warning for when a mediocre encoder is used</li>
+                <li>Added an option to rename tracks in the song recognition dialog</li>
+                <li>Merged all settings into one dialog</li>
+                <li>Fixed timestamps table in homebrew mode</li>
+                <li>Fixed CSV export missing the first group if all tracks are grouped</li>
+                <li>Fixed disc title editing being available even if disc was write protected</li>
+                <li>Fixed incorrect order when uploading pre-encoded LP2 and LP4 tracks</li>
+                <li>Fixed original title of a song not displaying in the song recognition dialog, if it was sanitized away</li>
+            </ul>
             <h2 className={classes.header}>Version 1.3.2</h2>
             <ul>
                 <li>Reverted version 1.3.1</li>
-                <li>Made Type-R ripping a lot more stable, removed Type-R warnings, re-enabled exploit-based song recognition for Type-R devices</li>
-                <li>Fixed external encoders requiring root path in URL (Issue <Link href="https://github.com/asivery/webminidisc/issues/11">#11</Link>)</li>
-                <li>Fixed stripping SCMS information (Issue <Link href="https://github.com/cybercase/webminidisc/issues/110">#110</Link>)</li>
+                <li>
+                    Made Type-R ripping a lot more stable, removed Type-R warnings, re-enabled exploit-based song recognition for Type-R
+                    devices
+                </li>
+                <li>
+                    Fixed external encoders requiring root path in URL (Issue{' '}
+                    <Link href="https://github.com/asivery/webminidisc/issues/11">#11</Link>)
+                </li>
+                <li>
+                    Fixed stripping SCMS information (Issue <Link href="https://github.com/cybercase/webminidisc/issues/110">#110</Link>)
+                </li>
             </ul>
 
             <h2 className={classes.header}>Version 1.3.1</h2>

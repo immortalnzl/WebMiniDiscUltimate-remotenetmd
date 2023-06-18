@@ -10,10 +10,9 @@ import MoreVertIcon from '@material-ui/icons/MoreVert';
 
 import { wipeDisc, listContent, selfTest, exportCSV, importCSV, openRecognizeTrackDialog } from '../redux/actions';
 import { actions as appActions } from '../redux/app-feature';
-import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
+import { actions as renameDialogActions, RenameType } from '../redux/rename-dialog-feature';
 import { actions as factoryNoticeDialogActions } from '../redux/factory/factory-notice-dialog-feature';
-import { actions as encoderSetupDialogActions } from '../redux/encoder-setup-dialog-feature';
-import { useShallowEqualSelector } from '../utils';
+import { dispatchQueue, useShallowEqualSelector } from '../utils';
 import Link from '@material-ui/core/Link';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
@@ -33,13 +32,28 @@ import MusicNoteIcon from '@material-ui/icons/MusicNote';
 import Win95Icon from '../images/win95/win95.png';
 import HelpIcon from '@material-ui/icons/Help';
 import SettingsIcon from '@material-ui/icons/Settings';
-import MusicNote from '@material-ui/icons/MusicNote';
 import GetAppIcon from '@material-ui/icons/GetApp';
 import PublishIcon from '@material-ui/icons/Publish';
+import ArchiveIcon from '@material-ui/icons/Archive';
+import LockOpenIcon from '@material-ui/icons/LockOpen';
+import SecurityIcon from '@material-ui/icons/Security';
+import MenuOpenIcon from '@material-ui/icons/MenuOpen';
+import ArrowUpwardIcon from '@material-ui/icons/ArrowUpward';
+import CodeIcon from '@material-ui/icons/Code';
 
 import { W95TopMenu } from './win95/topmenu';
-import { Capability } from '../services/netmd';
-import { enableFactoryRippingModeInMainUi } from '../redux/factory/factory-actions';
+import { Capability, ExploitCapability } from '../services/interfaces/netmd';
+
+import {
+    archiveDisc,
+    enableFactoryRippingModeInMainUi,
+    enterHiMDUnrestrictedMode,
+    initializeFactoryMode,
+    readToc,
+    stripSCMS,
+    stripTrProtect,
+    writeModifiedTOC,
+} from '../redux/factory/factory-actions';
 
 const useStyles = makeStyles(theme => ({
     listItemIcon: {
@@ -51,19 +65,11 @@ const useStyles = makeStyles(theme => ({
     },
 }));
 
-export const TopMenu = function(props: { onClick?: () => void }) {
+export const TopMenu = function(props: { tracksSelected?: number[]; onClick?: () => void }) {
     const classes = useStyles();
     const dispatch = useDispatch();
 
-    let {
-        mainView,
-        darkMode,
-        vintageMode,
-        fullWidthSupport,
-        factoryModeRippingInMainUi,
-        audioExportService,
-        audioExportServiceConfig,
-    } = useShallowEqualSelector(state => state.appState);
+    let { mainView, vintageMode, factoryModeRippingInMainUi, factoryModeShortcuts } = useShallowEqualSelector(state => state.appState);
     const { deviceCapabilities, disc } = useShallowEqualSelector(state => state.main);
     let discTitle = useShallowEqualSelector(state => state.main.disc?.title ?? ``);
     let fullWidthDiscTitle = useShallowEqualSelector(state => state.main.disc?.fullWidthTitle ?? ``);
@@ -72,8 +78,10 @@ export const TopMenu = function(props: { onClick?: () => void }) {
     const helpLinkRef = React.useRef<null | HTMLAnchorElement>(null);
     const hiddenFileInputRef = React.useRef<null | HTMLInputElement>(null);
     const [menuAnchorEl, setMenuAnchorEl] = React.useState<null | HTMLElement>(null);
+    const [shortcutsAnchorEl, setShortcutsAnchorEl] = React.useState<null | HTMLElement>(null);
     const [isShiftDown, setIsShiftDown] = React.useState(false);
     const menuOpen = Boolean(menuAnchorEl);
+    const shortcutsOpen = Boolean(shortcutsAnchorEl);
 
     const isCapable = (capability: Capability) => deviceCapabilities.includes(capability);
 
@@ -85,26 +93,36 @@ export const TopMenu = function(props: { onClick?: () => void }) {
         [setMenuAnchorEl, setIsShiftDown]
     );
 
-    const handleDarkMode = useCallback(() => {
-        dispatch(appActions.setDarkMode(!darkMode));
-    }, [dispatch, darkMode]);
+    const handleShortcutsOpen = useCallback(
+        (event: React.MouseEvent<HTMLElement>) => {
+            dispatch(initializeFactoryMode());
+            setShortcutsAnchorEl(event.currentTarget);
+        },
+        [setShortcutsAnchorEl, dispatch]
+    );
 
     const handleVintageMode = useCallback(() => {
         dispatch(appActions.setVintageMode(!vintageMode));
     }, [dispatch, vintageMode]);
 
+    const handleShortcutsClose = useCallback(() => {
+        setShortcutsAnchorEl(null);
+    }, [setShortcutsAnchorEl]);
+
     const handleMenuClose = useCallback(() => {
         setMenuAnchorEl(null);
-    }, [setMenuAnchorEl]);
+        handleShortcutsClose();
+    }, [setMenuAnchorEl, handleShortcutsClose]);
+
+    const handleShowSettings = useCallback(() => {
+        dispatch(appActions.showSettingsDialog(true));
+        handleMenuClose();
+    }, [dispatch, handleMenuClose]);
 
     const handleWipeDisc = useCallback(() => {
         dispatch(wipeDisc());
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
-
-    const handleAllowFullWidth = useCallback(() => {
-        dispatch(appActions.setFullWidthSupport(!fullWidthSupport));
-    }, [dispatch, fullWidthSupport]);
 
     const handleRefresh = useCallback(() => {
         dispatch(listContent(true));
@@ -116,10 +134,9 @@ export const TopMenu = function(props: { onClick?: () => void }) {
             batchActions([
                 renameDialogActions.setVisible(true),
                 renameDialogActions.setCurrentName(discTitle),
-                renameDialogActions.setGroupIndex(null),
                 renameDialogActions.setCurrentFullWidthName(fullWidthDiscTitle),
                 renameDialogActions.setIndex(-1),
-                renameDialogActions.setOfConvert(false),
+                renameDialogActions.setRenameType(RenameType.DISC),
             ])
         );
         handleMenuClose();
@@ -139,17 +156,6 @@ export const TopMenu = function(props: { onClick?: () => void }) {
         dispatch(appActions.showAboutDialog(true));
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
-
-    const handleEncoderSetup = useCallback(() => {
-        dispatch(
-            batchActions([
-                encoderSetupDialogActions.setCustomParameters({ ...audioExportServiceConfig }),
-                encoderSetupDialogActions.setSelectedServiceIndex(audioExportService),
-                encoderSetupDialogActions.setVisible(true),
-            ])
-        );
-        handleMenuClose();
-    }, [dispatch, handleMenuClose, audioExportService, audioExportServiceConfig]);
 
     const handleShowChangelog = useCallback(() => {
         dispatch(appActions.showChangelogDialog(true));
@@ -208,16 +214,98 @@ export const TopMenu = function(props: { onClick?: () => void }) {
         (event: any) => {
             const file = event.target.files[0];
             dispatch(importCSV(file));
+            event.target.value = '';
         },
         [dispatch]
     );
 
     const handleOpenSongRecognition = useCallback(() => {
-        dispatch(openRecognizeTrackDialog());
+        dispatch(openRecognizeTrackDialog(props.tracksSelected ?? []));
+        handleMenuClose();
+    }, [dispatch, handleMenuClose, props.tracksSelected]);
+
+    const menuItems = [],
+        shortcutsItems = [];
+
+    // BEGIN HOMEBREW / MAINUI BRIDGE
+
+    const { exploitCapabilities, firmwareVersion } = useShallowEqualSelector(state => state.factory);
+
+    const isExploitCapable = (expl: ExploitCapability) => exploitCapabilities.includes(expl);
+
+    const handleArchiveDisc = useCallback(async () => {
+        handleMenuClose();
+        dispatch(dispatchQueue(readToc(), archiveDisc()));
+    }, [dispatch, handleMenuClose]);
+
+    const handleStripSCMS = useCallback(() => {
+        dispatch(dispatchQueue(readToc(), stripSCMS(), writeModifiedTOC()));
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
-    const menuItems = [];
+    const handleAllUnprotect = useCallback(() => {
+        dispatch(dispatchQueue(readToc(), stripTrProtect(), writeModifiedTOC()));
+        handleMenuClose();
+    }, [dispatch, handleMenuClose]);
+
+    const handleEnterHiMDUnrestrictedMode = useCallback(() => {
+        dispatch(enterHiMDUnrestrictedMode());
+        handleMenuClose();
+    }, [dispatch, handleMenuClose]);
+
+    const noDisc = disc === null;
+
+    shortcutsItems.push(
+        <MenuItem
+            key="short-archive-disc"
+            onClick={handleArchiveDisc}
+            disabled={!(isExploitCapable(ExploitCapability.downloadAtrac) || isCapable(Capability.trackDownload)) || noDisc}
+        >
+            <ListItemIcon className={classes.listItemIcon}>
+                <ArchiveIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Archive Disc</ListItemText>
+        </MenuItem>
+    );
+    shortcutsItems.push(
+        <MenuItem key="short-kill-scms" onClick={handleStripSCMS} disabled={!isExploitCapable(ExploitCapability.flushUTOC) || noDisc}>
+            <ListItemIcon className={classes.listItemIcon}>
+                <LockOpenIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Strip SCMS Information</ListItemText>
+        </MenuItem>
+    );
+    shortcutsItems.push(
+        <MenuItem
+            key="short-kill-trprotect"
+            onClick={handleAllUnprotect}
+            disabled={!isExploitCapable(ExploitCapability.flushUTOC) || noDisc}
+        >
+            <ListItemIcon className={classes.listItemIcon}>
+                <SecurityIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Un-Protect all tracks</ListItemText>
+        </MenuItem>
+    );
+
+    if (firmwareVersion.startsWith('H') && !window.native?.himdFullInterface) {
+        // HIMD
+        shortcutsItems.push(
+            <MenuItem
+                key="short-himdFullMode"
+                onClick={handleEnterHiMDUnrestrictedMode}
+                disabled={!isExploitCapable(ExploitCapability.himdFullMode)}
+            >
+                <ListItemIcon className={classes.listItemIcon}>
+                    <ArrowUpwardIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Switch to HiMD unrestricted mode</ListItemText>
+            </MenuItem>
+        );
+    }
+
+    // END HOMEBREW / MAINUI BRIDGE
+
     if (mainView === 'MAIN' && disc !== null) {
         menuItems.push(
             <MenuItem key="update" onClick={handleRefresh}>
@@ -227,16 +315,28 @@ export const TopMenu = function(props: { onClick?: () => void }) {
                 <ListItemText>Reload TOC</ListItemText>
             </MenuItem>
         );
-        if (isCapable(Capability.factoryMode)) {
+    }
+    if (isCapable(Capability.factoryMode) && mainView === 'MAIN') {
+        if (factoryModeShortcuts) {
             menuItems.push(
-                <MenuItem key="factoryEntry" onClick={handleEnterFactoryMode}>
+                <MenuItem key="factoryEntryShortcuts" onClick={handleShortcutsOpen}>
                     <ListItemIcon className={classes.listItemIcon}>
-                        <SettingsIcon fontSize="small" />
+                        <MenuOpenIcon fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText>Enter Homebrew Mode</ListItemText>
+                    <ListItemText>Homebrew Mode Shortcuts</ListItemText>
                 </MenuItem>
             );
         }
+        menuItems.push(
+            <MenuItem key="factoryEntry" onClick={handleEnterFactoryMode}>
+                <ListItemIcon className={classes.listItemIcon}>
+                    <CodeIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Enter Homebrew Mode</ListItemText>
+            </MenuItem>
+        );
+    }
+    if (mainView === 'MAIN' && disc !== null) {
         menuItems.push(
             <MenuItem key="title" onClick={handleRenameDisc} disabled={!isCapable(Capability.metadataEdit)}>
                 <ListItemIcon className={classes.listItemIcon}>
@@ -268,7 +368,7 @@ export const TopMenu = function(props: { onClick?: () => void }) {
         );
 
         menuItems.push(
-            <MenuItem key="import-csv" onClick={handleImportCSV}>
+            <MenuItem key="import-csv" onClick={handleImportCSV} disabled={!isCapable(Capability.metadataEdit)}>
                 <ListItemIcon className={classes.listItemIcon}>
                     <PublishIcon fontSize="small" />
                 </ListItemIcon>
@@ -285,31 +385,7 @@ export const TopMenu = function(props: { onClick?: () => void }) {
             </MenuItem>
         );
 
-        menuItems.push(
-            <MenuItem key="exit" onClick={handleExit}>
-                <ListItemIcon className={classes.listItemIcon}>
-                    <ExitToAppIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Exit</ListItemText>
-            </MenuItem>
-        );
         menuItems.push(<Divider key="action-divider" />);
-        menuItems.push(
-            <MenuItem key="allowFullWidth" onClick={handleAllowFullWidth}>
-                <ListItemIcon className={classes.listItemIcon}>
-                    {fullWidthSupport ? <ToggleOnIcon fontSize="small" /> : <ToggleOffIcon fontSize="small" />}
-                </ListItemIcon>
-                <ListItemText>
-                    {fullWidthSupport ? `Disable ` : `Enable `}
-                    <Tooltip
-                        title="This advanced feature enables the use of Hiragana and Kanji alphabets. More about this in Support and FAQ."
-                        arrow
-                    >
-                        <span className={classes.toolTippedText}>Full-Width Title Editing</span>
-                    </Tooltip>
-                </ListItemText>
-            </MenuItem>
-        );
         if (isCapable(Capability.factoryMode)) {
             menuItems.push(
                 <MenuItem key="factoryUnify" onClick={handleToggleFactoryModeRippingInMainUi}>
@@ -330,12 +406,20 @@ export const TopMenu = function(props: { onClick?: () => void }) {
         }
     }
     menuItems.push(
-        <MenuItem key="darkMode" onClick={handleDarkMode}>
+        <MenuItem key="exit" onClick={handleExit}>
             <ListItemIcon className={classes.listItemIcon}>
-                {/* <Switch name="darkModeSwitch" inputProps={{ 'aria-label': 'Dark Mode switch' }} size="small" /> */}
-                {darkMode ? <ToggleOnIcon fontSize="small" /> : <ToggleOffIcon fontSize="small" />}
+                <ExitToAppIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>Dark Mode</ListItemText>
+            <ListItemText>Exit</ListItemText>
+        </MenuItem>
+    );
+
+    menuItems.push(
+        <MenuItem key="settings" onClick={handleShowSettings}>
+            <ListItemIcon className={classes.listItemIcon}>
+                <SettingsIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Settings</ListItemText>
         </MenuItem>
     );
     if (mainView === 'MAIN') {
@@ -358,19 +442,7 @@ export const TopMenu = function(props: { onClick?: () => void }) {
                 </MenuItem>
             );
         }
-    }
-    if (mainView === 'MAIN') {
         menuItems.push(<Divider key="feature-divider" />);
-    }
-    if (mainView === 'WELCOME') {
-        menuItems.push(
-            <MenuItem key="encoderSetup" onClick={handleEncoderSetup}>
-                <ListItemIcon className={classes.listItemIcon}>
-                    <MusicNote fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Encoder Setup</ListItemText>
-            </MenuItem>
-        );
     }
     menuItems.push(
         <MenuItem key="about" onClick={handleShowAbout}>
@@ -448,7 +520,25 @@ export const TopMenu = function(props: { onClick?: () => void }) {
             <Menu id="actions-menu" anchorEl={menuAnchorEl} keepMounted open={menuOpen} onClose={handleMenuClose}>
                 {menuItems}
             </Menu>
-            <input type="file" ref={hiddenFileInputRef} style={{ display: 'none' }} onChange={handleCSVImportFromFile} />
+            <Menu
+                id="factory-actions-submenu"
+                anchorEl={shortcutsAnchorEl}
+                keepMounted
+                open={shortcutsOpen}
+                onClose={handleShortcutsClose}
+                anchorOrigin={{
+                    vertical: 'top',
+                    horizontal: 'left',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                }}
+            >
+                {shortcutsItems}
+            </Menu>
+
+            <input type="file" accept=".csv" ref={hiddenFileInputRef} style={{ display: 'none' }} onChange={handleCSVImportFromFile} />
         </React.Fragment>
     );
 };
