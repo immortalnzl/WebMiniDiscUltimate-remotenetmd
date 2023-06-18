@@ -38,6 +38,13 @@ jobs:
       env:
         CI: false
 
+  # clears the storage account before uploading new version
+    - name: Purge blob storage
+      uses: azure/CLI@v1
+      with:
+        inlineScript: |
+            az storage blob delete-batch --account-name wmdpro --auth-mode key --account-key ${{ secrets.AZURE_STORAGEKEY_WMDFILES }} -s '$web' --pattern *
+
   # uploads the contents of the 'build/' folder to the '$web/ folder on the 'wmdpro' storage account using the key held in GH secrets
     - name: Upload to blob storage  
       uses: azure/CLI@v1
