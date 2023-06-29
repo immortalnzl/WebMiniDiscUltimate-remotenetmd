@@ -57,7 +57,7 @@ const useStyles = makeStyles(theme => ({
         },
     },
     paperFullHeight: {
-        height: 'calc(100% - 20px)',
+        height: 'calc(100% - 50px)',
     },
     layoutFullWidth: {
         [forAnyDesktop(theme)]: {
