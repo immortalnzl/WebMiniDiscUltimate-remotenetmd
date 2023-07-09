@@ -28,6 +28,7 @@ import {
     getSortedTracks,
     isSequential,
     useShallowEqualSelector,
+    acceptedTypes
 } from '../utils';
 
 import { lighten, makeStyles } from '@material-ui/core/styles';
@@ -114,13 +115,13 @@ const useStyles = makeStyles(theme => ({
     toolbarHighlight:
         theme.palette.type === 'light'
             ? {
-                  color: theme.palette.secondary.main,
-                  backgroundColor: lighten(theme.palette.secondary.light, 0.85),
-              }
+                color: theme.palette.secondary.main,
+                backgroundColor: lighten(theme.palette.secondary.light, 0.85),
+            }
             : {
-                  color: theme.palette.text.primary,
-                  backgroundColor: theme.palette.secondary.dark,
-              },
+                color: theme.palette.text.primary,
+                backgroundColor: theme.palette.secondary.dark,
+            },
     headBox: {
         display: 'flex',
         justifyContent: 'space-between',
@@ -243,7 +244,7 @@ export const Main = (props: {}) => {
 
     const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
         onDrop,
-        accept: [`audio/*`, `video/mp4`, `video/webm`, `.oma`, `.at3`, `.aea`],
+        accept: acceptedTypes,
         noClick: true,
     });
 
