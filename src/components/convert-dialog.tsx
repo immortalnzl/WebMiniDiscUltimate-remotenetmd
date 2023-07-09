@@ -9,6 +9,7 @@ import {
     getATRACWAVEncoding,
     getATRACOMAEncoding,
     getChannelsFromAEA,
+    acceptedTypes
 } from '../utils';
 
 import { actions as convertDialogActions, ForcedEncodingFormat, TitleFormatType } from '../redux/convert-dialog-feature';
@@ -763,7 +764,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
     );
     const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
         onDrop,
-        accept: [`audio/*`, `video/mp4`, `video/webm`, 'video/x-matroska', `.oma`, `.at3`, `.aea`],
+        accept: acceptedTypes,
         noClick: true,
     });
     const disableRemove = selectedTrackIndex < 0 || selectedTrackIndex >= files.length;

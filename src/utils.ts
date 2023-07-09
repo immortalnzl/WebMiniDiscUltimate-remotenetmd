@@ -11,6 +11,16 @@ import { HiMDKBPSToFrameSize } from 'himd-js';
 
 export type Promised<R> = R extends Promise<infer Q> ? Q : never;
 
+export const acceptedTypes = [
+    `audio/*`,
+    `video/mp4`,
+    `video/webm`,
+    'video/x-matroska',
+    `.oma`,
+    `.at3`,
+    `.aea`
+]
+
 export function sleep(ms: number) {
     return new Promise(resolve => {
         setTimeout(resolve, ms);
@@ -448,7 +458,7 @@ export function isSequential(numbers: number[]) {
 export function asyncMutex(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     // This is meant to be used only with classes having a "mutex" instance property
     const oldValue = descriptor.value;
-    descriptor.value = async function(...args: any) {
+    descriptor.value = async function (...args: any) {
         const mutex = (this as any).mutex as Mutex;
         const release = await mutex.acquire();
         try {
@@ -587,7 +597,7 @@ export async function convertToWAV(data: Uint8Array, track: Track): Promise<Uint
 export function dispatchQueue(
     ...entries: ((dispatch: AppDispatch, getState: () => RootState) => Promise<void>)[]
 ): (dispatch: AppDispatch, getState: () => RootState) => Promise<void> {
-    return async function(dispatch: AppDispatch, getState: () => RootState) {
+    return async function (dispatch: AppDispatch, getState: () => RootState) {
         for (let entry of entries) {
             await entry(dispatch, getState);
         }
