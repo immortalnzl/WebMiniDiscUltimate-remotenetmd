@@ -143,7 +143,7 @@ export abstract class DefaultFfmpegAudioExportService implements AudioExportServ
         const ffmpegCommand = await this.createFfmpegParams(
             parameters,
             'mp3',
-            `-map 0:a:0 -c:a libmp3lame -b:a ${parameters.format.bitrate!}`
+            `-map 0:a:0 -c:a libmp3lame -b:a ${parameters.format.bitrate!}k`
         );
         const outFileName = `${this.outFileNameNoExt}.mp3`;
         await this.ffmpegProcess.transcode(this.inFileName, outFileName, ffmpegCommand);
