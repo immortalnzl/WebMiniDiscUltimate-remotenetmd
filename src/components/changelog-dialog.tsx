@@ -65,6 +65,18 @@ export const ChangelogDialog = (props: {}) => {
 
     const content = (
         <React.Fragment>
+            <h2 className={classes.header}>Version 1.4.1</h2>
+            <ul>
+                <li>
+                    Updated to netmd-exploits 0.5.3
+                    <ul>
+                        <li>Added support for Full HiMD mode for Hn1.10A and Hn1.000</li>
+                        <li>Added support for ATRAC download for Hn1.10A and Hn1.000</li>
+                    </ul>
+                </li>
+                <li>Added support for uploading MKA files</li>
+                <li>Fixed MP3 files uploaded to HiMD always being 128kbps</li>
+            </ul>
             <h2 className={classes.header}>Version 1.4.0</h2>
             <ul>
                 <li>

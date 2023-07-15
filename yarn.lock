@@ -8080,10 +8080,10 @@ neo-async@^2.5.0, neo-async@^2.6.1:
   resolved "https://registry.npmjs.org/neo-async/-/neo-async-2.6.1.tgz"
   integrity sha512-iyam8fBuCUpWeKPGpaNMetEocMt364qkCsfL9JuhjXX6dRnguRVOfk2GZaDpPjcOKiiXCPINZC1GczQ7iTq3Zw==
 
-netmd-exploits@^0.5.2:
-  version "0.5.2"
-  resolved "https://registry.npmjs.org/netmd-exploits/-/netmd-exploits-0.5.2.tgz"
-  integrity sha512-eex3goCERFBl5PgzudtNMn3QTtJvsL47CzB71/JxF8LnrbsGJSOanZv1hyxltDdjr6/yMj/tiqLrUSLXJexplQ==
+netmd-exploits@^0.5.3:
+  version "0.5.3"
+  resolved "https://registry.npmjs.org/netmd-exploits/-/netmd-exploits-0.5.3.tgz"
+  integrity sha512-etVQQTHydN8RyJng21SNkihWpHk6CdeFIfeDOYK/XlCgoDlvnTcxpP0b3+w0lOf11f2qt9NtHNF7b1R9mMQwjQ==
   dependencies:
     browser-or-node "^2.1.1"
     expr-eval "^2.0.2"
