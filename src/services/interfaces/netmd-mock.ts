@@ -108,6 +108,7 @@ class NetMDMockService extends NetMDService {
         capabilityTrackDownload,
         capabilityDiscEject,
         capabilityFactoryMode,
+        capabilityFullWidthTitles,
     }: any) {
         super();
         if (overrideTitle) this._discTitle = overrideTitle;
@@ -119,6 +120,7 @@ class NetMDMockService extends NetMDService {
         if (capabilityTrackUpload) this.capabilities.push(Capability.trackUpload);
         if (capabilityTrackDownload) this.capabilities.push(Capability.trackDownload);
         if (capabilityFactoryMode) this.capabilities.push(Capability.factoryMode);
+        if (capabilityFullWidthTitles) this.capabilities.push(Capability.fullWidthSupport);
     }
 
     public _getGroups(): Group[] {

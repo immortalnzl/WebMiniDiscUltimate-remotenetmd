@@ -56,7 +56,7 @@ import { useDropzone } from 'react-dropzone';
 import Backdrop from '@material-ui/core/Backdrop';
 import { W95ConvertDialog } from './win95/convert-dialog';
 import { batchActions } from 'redux-batched-actions';
-import { Codec, CodecFamily, Disc } from '../services/interfaces/netmd';
+import { Capability, Codec, CodecFamily, Disc } from '../services/interfaces/netmd';
 import serviceRegistry from '../services/registry';
 import clsx from 'clsx';
 import Link from '@material-ui/core/Link';
@@ -240,7 +240,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
 
     let { visible, format, titleFormat, titles } = useShallowEqualSelector(state => state.convertDialog);
     let { fullWidthSupport } = useShallowEqualSelector(state => state.appState);
-    let { disc } = useShallowEqualSelector(state => state.main);
+    let { disc, deviceCapabilities } = useShallowEqualSelector(state => state.main);
     const minidiscSpec = serviceRegistry.netmdSpec!;
 
     const [files, setFiles] = useState<FileWithMetadata[]>([]);
@@ -276,6 +276,9 @@ export const ConvertDialog = (props: { files: File[] }) => {
                 .filter(e => e > 0).length > 0
         );
     }, [files]);
+
+    const usesHimdTitles = useMemo(() => deviceCapabilities.includes(Capability.himdTitles), [deviceCapabilities]);
+    const deviceSupportsFullWidth = useMemo(() => deviceCapabilities.includes(Capability.fullWidthSupport), [deviceCapabilities]);
 
     const thisSpecFormat = useMemo(() => format[minidiscSpec.specName] ?? { codec: '' }, [minidiscSpec, format]);
 
@@ -379,7 +382,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         const halfAsFull = minidiscSpec.sanitizeFullWidthTitle(halfWidth);
                         return {
                             title: halfWidth,
-                            fullWidthTitle: fullWidthSupport && minidiscSpec.fullWidthSupport && fullWidth !== halfAsFull ? fullWidth : '', // If there are no differences between half and full width, skip the full width
+                            fullWidthTitle: fullWidthSupport && deviceSupportsFullWidth && fullWidth !== halfAsFull ? fullWidth : '', // If there are no differences between half and full width, skip the full width
                             duration: file.duration,
                             forcedEncoding: file.forcedEncoding,
                             bytesToSkip: file.bytesToSkip,
@@ -390,7 +393,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                 )
             );
         },
-        [fullWidthSupport, dispatch, minidiscSpec]
+        [fullWidthSupport, dispatch, minidiscSpec, deviceSupportsFullWidth]
     );
 
     const renameTrackManually = useCallback(
@@ -403,7 +406,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                     renameDialogActions.setCurrentFullWidthName(track.fullWidthTitle),
                     renameDialogActions.setIndex(index),
                     renameDialogActions.setRenameType(
-                        minidiscSpec.titleType === 'MD' ? RenameType.TRACK_CONVERT_DIALOG : RenameType.TRACK_CONVERT_DIALOG_HIMD
+                        usesHimdTitles ? RenameType.TRACK_CONVERT_DIALOG_HIMD : RenameType.TRACK_CONVERT_DIALOG
                     ),
 
                     renameDialogActions.setHimdAlbum(track.album ?? ''),
@@ -412,7 +415,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                 ])
             );
         },
-        [titles, dispatch, minidiscSpec]
+        [titles, dispatch, usesHimdTitles]
     );
 
     // Track reordering
@@ -609,8 +612,8 @@ export const ConvertDialog = (props: { files: File[] }) => {
 
     // Reload titles when files changed
     useEffect(() => {
-        refreshTitledFiles(files, minidiscSpec.titleType === 'MD' ? titleFormat : 'title');
-    }, [refreshTitledFiles, files, titleFormat, minidiscSpec]);
+        refreshTitledFiles(files, usesHimdTitles ? 'title' : titleFormat);
+    }, [refreshTitledFiles, files, titleFormat, usesHimdTitles]);
 
     const handleRenameSelectedTrack = useCallback(() => {
         renameTrackManually(selectedTrackIndex);
@@ -861,7 +864,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
             TransitionComponent={Transition as any}
             aria-labelledby="convert-dialog-slide-title"
             aria-describedby="convert-dialog-slide-description"
-            classes={{ paper: clsx({ [classes.himdDialog]: minidiscSpec.titleType === 'HiMD' }) }}
+            classes={{ paper: clsx({ [classes.himdDialog]: usesHimdTitles }) }}
         >
             <DialogTitle id="convert-dialog-slide-title">Upload Settings</DialogTitle>
             <DialogContent className={classes.dialogContent}>
@@ -889,7 +892,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                     </FormControl>
 
                     <div className={classes.rightBlock}>
-                        {minidiscSpec.titleType === 'MD' && (
+                        {!usesHimdTitles && (
                             <FormControl className={classes.formControl}>
                                 <Typography component="label" variant="caption" color="textSecondary">
                                     Track title
@@ -1017,7 +1020,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         </TooltipOrDefault>
                     </Typography>
                 </span>
-                {!fullWidthSupport && minidiscSpec.fullWidthSupport && fullWidthCharactersUsed ? (
+                {!fullWidthSupport && deviceSupportsFullWidth && fullWidthCharactersUsed ? (
                     <Typography color="error" component="p">
                         You seem to be trying to enter full-width text into the half-width slot.{' '}
                         <Link onClick={handleToggleFullWidthSupport} color="error" underline="always" style={{ cursor: 'pointer' }}>
@@ -1051,7 +1054,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                                 <ExpandLessIcon />
                             </IconButton>
                         </Toolbar>
-                        {minidiscSpec.titleType === 'MD' ? (
+                        {!usesHimdTitles ? (
                             <AccordionDetails className={classes.tracksOrderAccordionDetail}>
                                 <List dense={true} disablePadding={false} className={classes.trackList}>
                                     {renderTracks()}
@@ -1082,7 +1085,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         Advanced Options
                     </AccordionSummary>
                     <AccordionDetails className={classes.advancedOptionsAccordionContents}>
-                        {minidiscSpec.fullWidthSupport && (
+                        {deviceSupportsFullWidth && (
                             <FormControlLabel
                                 label={`Enable full width titles support`}
                                 className={classes.advancedOption}

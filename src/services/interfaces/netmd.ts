@@ -66,6 +66,9 @@ export enum Capability {
     trackDownload,
     discEject,
     factoryMode,
+    himdTitles,
+    reinitializeFilesystem,
+    fullWidthSupport,
 
     requiresManualFlush,
 }
@@ -127,9 +130,7 @@ export interface Disc {
 export interface MinidiscSpec {
     readonly availableFormats: RecordingCodec[];
     readonly defaultFormat: Codec;
-    readonly titleType: 'MD' | 'HiMD';
     readonly specName: string;
-    readonly fullWidthSupport: boolean;
     sanitizeHalfWidthTitle(title: string): string;
     sanitizeFullWidthTitle(title: string): string;
     getRemainingCharactersForTitles(disc: Disc): { halfWidth: number; fullWidth: number };
@@ -150,9 +151,7 @@ export type TitleParameter = string | { title?: string; album?: string; artist?:
 export class DefaultMinidiscSpec implements MinidiscSpec {
     public readonly availableFormats: RecordingCodec[] = [{ codec: 'SP' }, { codec: 'LP2' }, { codec: 'LP4' }];
     public readonly defaultFormat = { codec: 'SP' } as const;
-    public readonly titleType = 'MD';
     public readonly specName = 'MD';
-    public readonly fullWidthSupport = true;
 
     sanitizeHalfWidthTitle(title: string): string {
         return sanitizeHalfWidthTitle(title);
@@ -402,7 +401,7 @@ export class NetMDUSBService extends NetMDService {
 
     @asyncMutex
     async getServiceCapabilities() {
-        const basic = [Capability.contentList, Capability.playbackControl];
+        const basic = [Capability.contentList, Capability.playbackControl, Capability.fullWidthSupport];
         if (this.netmdInterface?.netMd.getVendor() === 0x54c && this.netmdInterface.netMd.getProduct() === 0x0286) {
             // MZ-RH1
             basic.push(Capability.trackDownload);

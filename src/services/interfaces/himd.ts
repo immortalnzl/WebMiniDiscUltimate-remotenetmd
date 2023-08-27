@@ -57,9 +57,7 @@ export class HiMDSpec implements MinidiscSpec {
           ]
         : [{ codec: 'MP3', availableBitrates: [320, 256, 192, 128, 96, 64], defaultBitrate: 192 }];
     public readonly defaultFormat: Codec = this.unrestricted ? { codec: 'A3+', bitrate: 256 } : { codec: 'MP3', bitrate: 192 };
-    public readonly titleType = 'HiMD';
     public readonly specName: string;
-    public readonly fullWidthSupport = false;
 
     getRemainingCharactersForTitles(disc: Disc): { halfWidth: number; fullWidth: number } {
         // FIXME

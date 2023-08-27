@@ -171,7 +171,6 @@ function getTrackStatus(track: Track, deviceStatus: DeviceStatus | null): 'playi
 export const Main = (props: {}) => {
     let dispatch = useDispatch();
     const disc = useShallowEqualSelector(state => state.main.disc);
-    const usesHimdTracks = useShallowEqualSelector(state => state.main.usesHimdTracks);
     const flushable = useShallowEqualSelector(state => state.main.flushable);
     const deviceName = useShallowEqualSelector(state => state.main.deviceName);
     const deviceStatus = useShallowEqualSelector(state => state.main.deviceStatus);
@@ -440,6 +439,7 @@ export const Main = (props: {}) => {
 
     const selectedCount = selected.length;
     const selectedGroupsCount = selectedGroups.length;
+    const usesHimdTracks = isCapable(Capability.himdTitles);
 
     if (vintageMode) {
         const p = {

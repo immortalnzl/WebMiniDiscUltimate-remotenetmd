@@ -9,7 +9,6 @@ export interface MainState {
     deviceStatus: DeviceStatus | null;
     deviceCapabilities: Capability[];
     flushable: boolean;
-    usesHimdTracks: boolean;
 }
 
 const initialState: MainState = {
@@ -18,7 +17,6 @@ const initialState: MainState = {
     deviceStatus: null,
     deviceCapabilities: [Capability.contentList], // Prevent the UI from collapsing when loading.
     flushable: false,
-    usesHimdTracks: false,
 };
 
 export const slice = createSlice({
@@ -39,9 +37,6 @@ export const slice = createSlice({
         },
         setFlushable: (state, action: PayloadAction<boolean>) => {
             state.flushable = action.payload;
-        },
-        setUsesHimdTracks: (state, action: PayloadAction<boolean>) => {
-            state.usesHimdTracks = action.payload;
         },
     },
 });

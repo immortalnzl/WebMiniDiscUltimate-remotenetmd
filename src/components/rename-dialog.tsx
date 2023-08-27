@@ -27,6 +27,7 @@ import Typography from '@material-ui/core/Typography';
 import { TransitionProps } from '@material-ui/core/transitions';
 import { W95RenameDialog } from './win95/rename-dialog';
 import { batchActions } from 'redux-batched-actions';
+import { Capability } from '../services/interfaces/netmd';
 
 const Transition = React.forwardRef(function Transition(
     props: TransitionProps & { children?: React.ReactElement<any, any> },
@@ -60,6 +61,8 @@ export const RenameDialog = (props: {}) => {
     const { fullWidthTitle, himdAlbum, himdArtist, himdTitle, index, renameType, title, visible } = useShallowEqualSelector(
         state => state.renameDialog
     );
+    const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
+    
     let allowFullWidth = useShallowEqualSelector(state => state.appState.fullWidthSupport);
 
     const what = nameMap[renameType];
@@ -231,7 +234,7 @@ export const RenameDialog = (props: {}) => {
             <DialogTitle id="rename-dialog-title">Rename {what}</DialogTitle>
             <DialogContent>
                 {!allowFullWidth &&
-                minidiscSpec.fullWidthSupport &&
+                deviceCapabilities.includes(Capability.fullWidthSupport) &&
                 title
                     .split('')
                     .map(n => n.charCodeAt(0))
@@ -294,7 +297,7 @@ export const RenameDialog = (props: {}) => {
                             onKeyDown={handleEnterKeyEvent}
                             onChange={handleChange}
                         />
-                        {allowFullWidth && minidiscSpec.fullWidthSupport && (
+                        {allowFullWidth && deviceCapabilities.includes(Capability.fullWidthSupport) && (
                             <TextField
                                 id="fullWidthTitle"
                                 label={`Full-Width ${what} Name`}

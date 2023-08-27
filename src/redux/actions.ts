@@ -321,14 +321,12 @@ export function listContent(dropCache: boolean = false) {
                 }
             }
         }
-        const usesHimdTracks = serviceRegistry.netmdSpec!.titleType === 'HiMD';
         dispatch(
             batchActions([
                 mainActions.setDisc(disc),
                 mainActions.setDeviceName(deviceName),
                 mainActions.setDeviceStatus(deviceStatus),
                 mainActions.setDeviceCapabilities(deviceCapabilities),
-                mainActions.setUsesHimdTracks(usesHimdTracks),
                 appStateActions.setLoading(false),
             ])
         );
@@ -898,6 +896,7 @@ export function exportCSV(callback: (blob: Blob, name: string) => void = downloa
 export function importCSV(file: File) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         const text = new TextDecoder('utf-8').decode(await file.arrayBuffer());
+        const usesHiMDTitles = getState().main.deviceCapabilities.includes(Capability.himdTitles);
         const records = text
             .split('\n')
             .map(e => e.trim())
@@ -1001,7 +1000,7 @@ export function importCSV(file: File) {
                 }
             }
 
-            if (serviceRegistry.netmdSpec!.titleType === 'HiMD') {
+            if (usesHiMDTitles) {
                 await serviceRegistry.netmdService!.renameTrack(index - 1, { title: name, album, artist });
             } else {
                 await serviceRegistry.netmdService!.renameTrack(index - 1, name, fwName);
@@ -1431,6 +1430,7 @@ export function convertAndUpload(
         };
 
         let disc = getState().main.disc;
+        let usesHiMDTitles = getState().main.deviceCapabilities.includes(Capability.himdTitles);
         let useFullWidth = getState().appState.fullWidthSupport;
         let {
             halfWidth: availableHalfWidthCharacters,
@@ -1490,7 +1490,7 @@ export function convertAndUpload(
                     // SPS / SPM was filtered out before
                     let formatOverride: Codec = (file.forcedEncoding as Codec | null) ?? format;
                     await netmdService?.upload(
-                        netmdSpec!.titleType === 'MD' ? halfWidthTitle : { title, artist: file.artist, album: file.album },
+                        usesHiMDTitles ? { title, artist: file.artist, album: file.album } : halfWidthTitle,
                         fullWidthTitle,
                         data,
                         formatOverride,
