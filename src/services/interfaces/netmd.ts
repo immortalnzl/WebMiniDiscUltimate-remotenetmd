@@ -54,6 +54,7 @@ import {
     CachedSectorControlDownload,
     ConsoleLogger,
 } from 'netmd-exploits';
+import netmdExploits from 'netmd-exploits';
 import { HiMDCodecName } from 'himd-js';
 
 const Worker = require('worker-loader!netmd-js/dist/web-encrypt-worker.js'); // eslint-disable-line import/no-webpack-loader-syntax
@@ -804,6 +805,7 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
 
         if ((window as any).interface) {
             Object.defineProperty(window, 'exploitStateManager', { value: this.exploitStateManager, configurable: true });
+            Object.defineProperty(window, 'exploits', { value: netmdExploits, configurable: true });
         }
 
         return capabilities;
