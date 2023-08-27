@@ -12,9 +12,9 @@ import Box from '@material-ui/core/Box';
 import Link from '@material-ui/core/Link';
 import IconButton from '@material-ui/core/IconButton';
 
-import DeleteIcon from '@material-ui/icons/Delete';
-import AddIcon from '@material-ui/icons/Add';
-import OpenInNewIcon from '@material-ui/icons/OpenInNew';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 import { TopMenu } from './topmenu';
 import ChromeIconPath from '../images/chrome-icon.svg';

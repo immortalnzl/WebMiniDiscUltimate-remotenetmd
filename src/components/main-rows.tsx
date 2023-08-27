@@ -8,12 +8,12 @@ import Tooltip from '@material-ui/core/Tooltip';
 
 import * as BadgeImpl from '@material-ui/core/Badge/Badge';
 
-import DragIndicator from '@material-ui/icons/DragIndicator';
-import PlayArrowIcon from '@material-ui/icons/PlayArrow';
-import PauseIcon from '@material-ui/icons/Pause';
+import DragIndicator from '@mui/icons-material/DragIndicator';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import PauseIcon from '@mui/icons-material/Pause';
 import IconButton from '@material-ui/core/IconButton';
-import FolderIcon from '@material-ui/icons/Folder';
-import DeleteIcon from '@material-ui/icons/Delete';
+import FolderIcon from '@mui/icons-material/Folder';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 import { DraggableProvided } from 'react-beautiful-dnd';
 import { Capability, Track, Group } from '../services/interfaces/netmd';
@@ -268,7 +268,7 @@ export function GroupRow({ group, usesHimdTracks, onRename, onDelete, isCapable,
         >
             <TableCell className={classes.dragHandleEmpty}></TableCell>
             <TableCell className={classes.indexCell}>
-                <FolderIcon className={clsx(classes.controlButtonInTrackCommon, classes.groupFolderIcon)} />
+                <FolderIcon className={clsx(classes.controlButtonInTrackCommon, classes.groupFolderIcon)} fontSize="inherit"/>
                 <IconButton
                     aria-label="delete"
                     className={clsx(classes.controlButtonInTrackCommon, classes.deleteGroupButton)}

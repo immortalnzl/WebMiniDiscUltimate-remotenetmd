@@ -13,9 +13,9 @@ import { actions as factoryActions } from '../../redux/factory/factory-feature';
 import { FactoryModeEditDialog } from './factory-fragment-mode-edit-dialog';
 import { batchActions } from 'redux-batched-actions';
 import { ExploitCapability } from '../../services/interfaces/netmd';
-import DoneIcon from '@material-ui/icons/Done';
-import CloseIcon from '@material-ui/icons/Close';
-import GetAppIcon from '@material-ui/icons/GetApp';
+import DoneIcon from '@mui/icons-material/Done';
+import CloseIcon from '@mui/icons-material/Close';
+import GetAppIcon from '@mui/icons-material/GetApp';
 import {
     DisplayableBlock,
     DiscAddressInput,

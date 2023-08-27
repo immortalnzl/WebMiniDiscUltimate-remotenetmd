@@ -5,7 +5,7 @@ import IconButton from '@material-ui/core/IconButton';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
 import Divider from '@material-ui/core/Divider';
-import MoreVertIcon from '@material-ui/icons/MoreVert';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 
 import {
     downloadRam,
@@ -29,22 +29,22 @@ import ListItemText from '@material-ui/core/ListItemText';
 import Tooltip from '@material-ui/core/Tooltip';
 import { makeStyles } from '@material-ui/core/styles';
 
-import RefreshIcon from '@material-ui/icons/Refresh';
-import GitHubIcon from '@material-ui/icons/GitHub';
-import ExitToAppIcon from '@material-ui/icons/ExitToApp';
-import ToggleOffIcon from '@material-ui/icons/ToggleOff';
-import ToggleOnIcon from '@material-ui/icons/ToggleOn';
-import HelpIcon from '@material-ui/icons/Help';
-import MemoryIcon from '@material-ui/icons/Memory';
-import CodeIcon from '@material-ui/icons/Code';
-import GetAppIcon from '@material-ui/icons/GetApp';
-import PublishIcon from '@material-ui/icons/Publish';
-import GamesIcon from '@material-ui/icons/Games';
-import SecurityIcon from '@material-ui/icons/Security';
-import NoEncryptionIcon from '@material-ui/icons/NoEncryption';
-import ArchiveIcon from '@material-ui/icons/Archive';
-import LockOpenIcon from '@material-ui/icons/LockOpen';
-import SettingsIcon from '@material-ui/icons/Settings';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import GitHubIcon from '@mui/icons-material/GitHub';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import ToggleOffIcon from '@mui/icons-material/ToggleOff';
+import ToggleOnIcon from '@mui/icons-material/ToggleOn';
+import HelpIcon from '@mui/icons-material/Help';
+import MemoryIcon from '@mui/icons-material/Memory';
+import CodeIcon from '@mui/icons-material/Code';
+import GetAppIcon from '@mui/icons-material/GetApp';
+import PublishIcon from '@mui/icons-material/Publish';
+import GamesIcon from '@mui/icons-material/Games';
+import SecurityIcon from '@mui/icons-material/Security';
+import NoEncryptionIcon from '@mui/icons-material/NoEncryption';
+import ArchiveIcon from '@mui/icons-material/Archive';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 import { Capability, ExploitCapability } from '../../services/interfaces/netmd';
 
