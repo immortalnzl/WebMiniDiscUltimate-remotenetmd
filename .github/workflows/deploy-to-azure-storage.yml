@@ -43,7 +43,7 @@ jobs:
       uses: azure/CLI@v1
       with:
         inlineScript: |
-            az storage blob delete-batch --account-name wmdpro --auth-mode key --account-key ${{ secrets.AZURE_STORAGEKEY_WMDFILES }} -s '$web' --pattern *
+            az storage blob delete-batch --account-name wmdpro --auth-mode key --account-key ${{ secrets.AZURE_STORAGEKEY_WMDFILES }} -s '$web'
 
   # uploads the contents of the 'build/' folder to the '$web/ folder on the 'wmdpro' storage account using the key held in GH secrets
     - name: Upload to blob storage  
