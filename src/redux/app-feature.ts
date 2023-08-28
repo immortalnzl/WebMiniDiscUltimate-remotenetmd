@@ -15,6 +15,8 @@ export interface AppState {
     colorTheme: 'dark' | 'light' | 'system';
     vintageMode: boolean;
     aboutDialogVisible: boolean;
+    discProtectedDialogVisible: boolean;
+    discProtectedDialogDisabled: boolean;
     settingsDialogVisible: boolean;
     changelogDialogVisible: boolean;
     notifyWhenFinished: boolean;
@@ -44,6 +46,8 @@ export const buildInitialState = (): AppState => {
         vintageMode: loadPreference('vintageMode', false),
         changelogDialogVisible: false,
         aboutDialogVisible: false,
+        discProtectedDialogVisible: false,
+        discProtectedDialogDisabled: loadPreference('discProtectedDialogDisabled', false),
         settingsDialogVisible: false,
         notifyWhenFinished: loadPreference('notifyWhenFinished', false),
         hasNotificationSupport: true,
@@ -102,6 +106,13 @@ export const slice = createSlice({
         },
         showAboutDialog: (state, action: PayloadAction<boolean>) => {
             state.aboutDialogVisible = action.payload;
+        },
+        showDiscProtectedDialog: (state, action: PayloadAction<boolean>) => {
+            state.discProtectedDialogVisible = action.payload;
+        },
+        disableDiscProtectedDialog: (state, action: PayloadAction<boolean>) => {
+            state.discProtectedDialogDisabled = action.payload;
+            savePreference('discProtectedDialogDisabled', action.payload);
         },
         showSettingsDialog: (state, action: PayloadAction<boolean>) => {
             state.settingsDialogVisible = action.payload;

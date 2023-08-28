@@ -16,6 +16,7 @@ import { listContent, deleteTracks, moveTrack, groupTracks, deleteGroups, dragDr
 import { actions as renameDialogActions, RenameType } from '../redux/rename-dialog-feature';
 import { actions as convertDialogActions } from '../redux/convert-dialog-feature';
 import { actions as dumpDialogActions } from '../redux/dump-dialog-feature';
+import { actions as appStateActions } from '../redux/app-feature';
 
 import { DeviceStatus } from 'netmd-js';
 import { control } from '../redux/actions';
@@ -78,6 +79,7 @@ import { SongRecognitionDialog } from './song-recognition-dialog';
 import { SongRecognitionProgressDialog } from './song-recognition-progress-dialog';
 import { SettingsDialog } from './settings-dialog';
 import { FactoryModeBadSectorDialog } from './factory/factory-bad-sector-dialog';
+import { DiscProtectedDialog } from './disc-protected-dialog';
 
 const useStyles = makeStyles(theme => ({
     add: {
@@ -228,6 +230,19 @@ export const Main = (props: {}) => {
         setSelected([]); // Reset selection if disc changes
         setSelectedGroups([]);
     }, [disc]);
+
+    const [wasLastDiscNull, setWasLastDiscNull] = useState<boolean>(false);
+    const discProtectedDialogDisabled = useShallowEqualSelector(state => state.appState.discProtectedDialogDisabled);
+    useEffect(() => {
+        if(disc === null && !wasLastDiscNull){
+            setWasLastDiscNull(true);
+        }else if(disc !== null && wasLastDiscNull && disc.writeProtected && disc.writable){
+            setWasLastDiscNull(false);
+            if(!discProtectedDialogDisabled){
+                dispatch(appStateActions.showDiscProtectedDialog(true));
+            }
+        }
+    }, [dispatch, disc, wasLastDiscNull, discProtectedDialogDisabled, setWasLastDiscNull]);
 
     const onDrop = useCallback(
         (acceptedFiles: File[], rejectedFiles: File[]) => {
@@ -728,6 +743,7 @@ export const Main = (props: {}) => {
                 </Fab>
             ) : null}
 
+            <DiscProtectedDialog />
             <UploadDialog />
             <RenameDialog />
             <ErrorDialog />

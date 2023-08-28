@@ -132,7 +132,7 @@ export const SettingsDialog = (props: {}) => {
 
     // Functionality properties
     const { fullWidthSupport } = useShallowEqualSelector(state => state.appState);
-    const { archiveDiscCreateZip, factoryModeUseSlowerExploit, factoryModeShortcuts, factoryModeNERAWDownload } = useShallowEqualSelector(
+    const { archiveDiscCreateZip, factoryModeUseSlowerExploit, factoryModeShortcuts, factoryModeNERAWDownload, discProtectedDialogDisabled } = useShallowEqualSelector(
         state => state.appState
     );
 
@@ -203,6 +203,9 @@ export const SettingsDialog = (props: {}) => {
     const handleToggleFullWidth = useCallback(() => {
         dispatch(appActions.setFullWidthSupport(!fullWidthSupport));
     }, [dispatch, fullWidthSupport]);
+    const handleToggleDiscProtectedDialogDisabled = useCallback(() => {
+        dispatch(appActions.disableDiscProtectedDialog(!discProtectedDialogDisabled));
+    }, [dispatch, discProtectedDialogDisabled]);
     const handleToggleArchiveDiscCreateZip = useCallback(() => {
         dispatch(appActions.setArchiveDiscCreateZip(!archiveDiscCreateZip));
     }, [dispatch, archiveDiscCreateZip]);
@@ -276,6 +279,9 @@ export const SettingsDialog = (props: {}) => {
                     tooltip="This advanced feature enables the use of Hiragana and Kanji alphabets. More about this in Support and FAQ."
                 >
                     <Switch checked={fullWidthSupport} onChange={handleToggleFullWidth} />
+                </SimpleField>
+                <SimpleField name="Enable disc-protected warning dialog" classes={classes} formControl={true}>
+                    <Switch checked={!discProtectedDialogDisabled} onChange={handleToggleDiscProtectedDialogDisabled} />
                 </SimpleField>
                 <SimpleField
                     name="Create a ZIP file when using 'Archive Disc'"
