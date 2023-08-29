@@ -236,6 +236,7 @@ export const Main = (props: {}) => {
     useEffect(() => {
         if(disc === null && !wasLastDiscNull){
             setWasLastDiscNull(true);
+            dispatch(appStateActions.showDiscProtectedDialog(false));
         }else if(disc !== null && wasLastDiscNull && disc.writeProtected && disc.writable){
             setWasLastDiscNull(false);
             if(!discProtectedDialogDisabled){
