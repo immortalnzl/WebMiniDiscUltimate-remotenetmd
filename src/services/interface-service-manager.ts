@@ -2,7 +2,7 @@ import React, { ReactHTMLElement } from 'react';
 import { CustomParameterInfo, CustomParameters } from '../custom-parameters';
 import { HiMDFullService, HiMDRestrictedService, HiMDSpec } from './interfaces/himd';
 import { DefaultMinidiscSpec, MinidiscSpec, NetMDService, NetMDUSBService } from './interfaces/netmd';
-import { NetMDMockService } from './interfaces/netmd-mock';
+// import { NetMDMockService } from './interfaces/netmd-mock';
 import { NetMDRemoteService } from './interfaces/remote-netmd';
 
 interface ServicePrototype {
@@ -75,75 +75,75 @@ export const Services: ServicePrototype[] = [
             },*/
         ],
     },
-    {
-        name: 'MockMD',
-        getConnectName: () => 'Connect to MockMD',
-        description: React.createElement('p', null, 'Test NetMD interface. It does nothing'),
-        create: parameters => {
-            console.log(`Given parameters: ${JSON.stringify(parameters)}`);
-            return new NetMDMockService(parameters);
-        },
-        spec: new DefaultMinidiscSpec(),
-        customParameters: [
-            {
-                userFriendlyName: 'Test Number',
-                type: 'number',
-                varName: 'number',
-            },
-            {
-                userFriendlyName: 'Override disc title',
-                type: 'string',
-                varName: 'overrideTitle',
-            },
-            {
-                userFriendlyName: 'Override full-width disc title',
-                type: 'string',
-                varName: 'overrideFWTitle',
-            },
-            {
-                userFriendlyName: 'capabilityContentList',
-                type: 'boolean',
-                varName: 'capabilityContentList',
-                defaultValue: true,
-            },
-            {
-                userFriendlyName: 'capabilityPlaybackControl',
-                type: 'boolean',
-                varName: 'capabilityPlaybackControl',
-                defaultValue: true,
-            },
-            {
-                userFriendlyName: 'capabilityMetadataEdit',
-                type: 'boolean',
-                varName: 'capabilityMetadataEdit',
-                defaultValue: true,
-            },
-            {
-                userFriendlyName: 'capabilityTrackUpload',
-                type: 'boolean',
-                varName: 'capabilityTrackUpload',
-                defaultValue: true,
-            },
-            {
-                userFriendlyName: 'capabilityTrackDownload',
-                type: 'boolean',
-                varName: 'capabilityTrackDownload',
-                defaultValue: true,
-            },
-            {
-                userFriendlyName: 'capabilityDiscEject',
-                type: 'boolean',
-                varName: 'capabilityDiscEject',
-                defaultValue: true,
-            },
-            {
-                userFriendlyName: 'capabilityFactoryMode',
-                type: 'boolean',
-                varName: 'capabilityFactoryMode',
-                defaultValue: true,
-            },
-        ],
-    },
+    // {
+    //     name: 'MockMD',
+    //     getConnectName: () => 'Connect to MockMD',
+    //     description: React.createElement('p', null, 'Test NetMD interface. It does nothing'),
+    //     create: parameters => {
+    //         console.log(`Given parameters: ${JSON.stringify(parameters)}`);
+    //         return new NetMDMockService(parameters);
+    //     },
+    //     spec: new DefaultMinidiscSpec(),
+    //     customParameters: [
+    //         {
+    //             userFriendlyName: 'Test Number',
+    //             type: 'number',
+    //             varName: 'number',
+    //         },
+    //         {
+    //             userFriendlyName: 'Override disc title',
+    //             type: 'string',
+    //             varName: 'overrideTitle',
+    //         },
+    //         {
+    //             userFriendlyName: 'Override full-width disc title',
+    //             type: 'string',
+    //             varName: 'overrideFWTitle',
+    //         },
+    //         {
+    //             userFriendlyName: 'capabilityContentList',
+    //             type: 'boolean',
+    //             varName: 'capabilityContentList',
+    //             defaultValue: true,
+    //         },
+    //         {
+    //             userFriendlyName: 'capabilityPlaybackControl',
+    //             type: 'boolean',
+    //             varName: 'capabilityPlaybackControl',
+    //             defaultValue: true,
+    //         },
+    //         {
+    //             userFriendlyName: 'capabilityMetadataEdit',
+    //             type: 'boolean',
+    //             varName: 'capabilityMetadataEdit',
+    //             defaultValue: true,
+    //         },
+    //         {
+    //             userFriendlyName: 'capabilityTrackUpload',
+    //             type: 'boolean',
+    //             varName: 'capabilityTrackUpload',
+    //             defaultValue: true,
+    //         },
+    //         {
+    //             userFriendlyName: 'capabilityTrackDownload',
+    //             type: 'boolean',
+    //             varName: 'capabilityTrackDownload',
+    //             defaultValue: true,
+    //         },
+    //         {
+    //             userFriendlyName: 'capabilityDiscEject',
+    //             type: 'boolean',
+    //             varName: 'capabilityDiscEject',
+    //             defaultValue: true,
+    //         },
+    //         {
+    //             userFriendlyName: 'capabilityFactoryMode',
+    //             type: 'boolean',
+    //             varName: 'capabilityFactoryMode',
+    //             defaultValue: true,
+    //         },
+    //     ],
+    // },
 ];
 
 export function getSimpleServices() {
