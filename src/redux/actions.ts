@@ -28,10 +28,10 @@ import {
 } from '../utils';
 import NotificationCompleteIconUrl from '../images/record-complete-notification-icon.png';
 import { assertNumber, getHalfWidthTitleLength } from 'netmd-js/dist/utils';
-import { Capability, NetMDService, Disc, Codec, MinidiscSpec } from '../services/interfaces/netmd';
+import { Capability, NetMDService, Disc, Codec, MinidiscSpec, ExploitCapability } from '../services/interfaces/netmd';
 import { getSimpleServices, ServiceConstructionInfo } from '../services/interface-service-manager';
 import { AudioServices } from '../services/audio-export-service-manager';
-import { checkIfAtrac1UploadPossible, checkIfAtracDownloadPossible } from './factory/factory-actions';
+import { checkFactoryCapability, initializeFactoryMode } from './factory/factory-actions';
 import { Shazam } from 'shazam-api/dist/api';
 import { ExportParams } from '../services/audio/audio-export';
 
@@ -1076,7 +1076,7 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
         );
 
         if (mode === 'exploits') {
-            if (!(await checkIfAtracDownloadPossible(dispatch))) {
+            if (!(await checkFactoryCapability(dispatch, ExploitCapability.downloadAtrac))) {
                 window.alert(
                     'Cannot enable homebrew mode ripping in main UI.\nThis device is not supported yet.\nStay tuned for future updates.'
                 );
@@ -1236,21 +1236,43 @@ export function convertAndUpload(
             if (!deviceCapabilities.includes(Capability.factoryMode)) {
                 window.alert('Sorry! Your device cannot enter the factory mode. SP upload is not possible');
                 removeSPFiles();
-            } else if (!(await checkIfAtrac1UploadPossible(dispatch))) {
-                window.alert("Sorry! Your device doesn't support the SP upload exploit.");
-                removeSPFiles();
-            } else if (
-                !window.confirm(
-                    "To upload ATRAC1 files back onto the MD, you're required to enter the homebrew mode.\nDo you want to continue?"
-                )
-            ) {
+            } else if (!window.confirm("To upload ATRAC1 files back onto the MD, you're required to enter the homebrew mode.\nDo you want to continue?")) {
                 window.alert("SP Files won't be transferred");
+                removeSPFiles();
+            } else if (!(await checkFactoryCapability(dispatch, ExploitCapability.uploadAtrac1))) {
+                window.alert("Sorry! Your device doesn't support the SP upload exploit.");
                 removeSPFiles();
             }
         }
         if (files.length === 0) return;
 
-        const { audioExportService, netmdService, netmdFactoryService, netmdSpec } = serviceRegistry;
+        const { audioExportService, netmdService, netmdSpec } = serviceRegistry;
+        let { netmdFactoryService } = serviceRegistry;
+        if(format.codec === "MONO"){
+            // SP MONO is a homebrew feature
+            if (!deviceCapabilities.includes(Capability.factoryMode)) {
+                window.alert('Sorry! Your device cannot enter the factory mode. SP MONO upload is not possible');
+                dispatch(convertDialogActions.setVisible(true));
+                return;
+            } else if (!window.confirm("To upload MONO ATRAC files onto the MD, you're required to enter the homebrew mode.\nDo you want to continue?")) {
+                window.alert("Transfer cancelled");
+                dispatch(convertDialogActions.setVisible(true));
+                return
+            } else if (!(await checkFactoryCapability(dispatch, ExploitCapability.uploadMonoSP))) {
+                window.alert("Sorry! Your device doesn't support the SP MONO upload exploit.");
+                dispatch(convertDialogActions.setVisible(true));
+                return;
+            }
+
+            // Reload the factory service from registry
+            await initializeFactoryMode()(dispatch);
+            netmdFactoryService = serviceRegistry.netmdFactoryService;
+            
+            // All good - load the exploit
+            await netmdFactoryService!.enableMonoUpload(true);
+        }
+
+        console.log(await netmdService?.getDeviceStatus());
 
         let screenWakeLock: any = null;
         if ('wakeLock' in navigator) {
@@ -1382,6 +1404,7 @@ export function convertAndUpload(
                                     };
                                     break;
                                 case 'SP':
+                                case 'MONO':
                                     audioExportFormat = {
                                         codec: 'PCM',
                                     };
@@ -1504,6 +1527,10 @@ export function convertAndUpload(
             }
         }
         await netmdService?.finalizeUpload();
+
+        if(format.codec === "MONO"){
+            netmdFactoryService!.enableMonoUpload(false);
+        }
 
         document.title = originalTitle;
 

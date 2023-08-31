@@ -42,7 +42,7 @@ export class AtracdencAudioExportService extends DefaultFfmpegAudioExportService
     }
 
     getSupport(codec: CodecFamily) {
-        if (['PCM', 'MP3', 'SP'].includes(codec)) return 'perfect';
+        if (['PCM', 'MP3', 'SP', 'MONO'].includes(codec)) return 'perfect';
         if (['LP2', 'LP4', 'AT3'].includes(codec)) return 'mediocre';
         return 'unsupported';
     }

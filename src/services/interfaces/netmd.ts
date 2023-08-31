@@ -53,6 +53,7 @@ import {
     HiMDUSBClassOverride,
     CachedSectorControlDownload,
     ConsoleLogger,
+    MonoSPUpload,
 } from 'netmd-exploits';
 import netmdExploits from 'netmd-exploits';
 import { HiMDCodecName } from 'himd-js';
@@ -83,9 +84,10 @@ export enum ExploitCapability {
     uploadAtrac1,
     himdFullMode,
     readRam,
+    uploadMonoSP,
 }
 
-export type CodecFamily = 'SP' | 'LP2' | 'LP4' | HiMDCodecName;
+export type CodecFamily = 'SP' | 'MONO' | 'LP2' | 'LP4' | HiMDCodecName;
 export interface RecordingCodec {
     codec: CodecFamily;
     availableBitrates?: number[];
@@ -150,7 +152,7 @@ export const WireformatDict: { [k: string]: Wireformat } = {
 export type TitleParameter = string | { title?: string; album?: string; artist?: string };
 
 export class DefaultMinidiscSpec implements MinidiscSpec {
-    public readonly availableFormats: RecordingCodec[] = [{ codec: 'SP' }, { codec: 'LP2' }, { codec: 'LP4' }];
+    public readonly availableFormats: RecordingCodec[] = [{ codec: 'SP' }, { codec: 'MONO' }, { codec: 'LP2' }, { codec: 'LP4' }];
     public readonly defaultFormat = { codec: 'SP' } as const;
     public readonly specName = 'MD';
 
@@ -183,6 +185,7 @@ export class DefaultMinidiscSpec implements MinidiscSpec {
         return (
             {
                 SP: 1,
+                MONO: 2,
                 LP2: 2,
                 LP4: 4,
             }[mode.codec as 'SP' | 'LP2' | 'LP4']! * defaultMeasuringModeDuration
@@ -194,6 +197,7 @@ export class DefaultMinidiscSpec implements MinidiscSpec {
             durationInMode /
             {
                 SP: 1,
+                MONO: 2,
                 LP2: 2,
                 LP4: 4,
             }[mode.codec as 'SP' | 'LP2' | 'LP4']!
@@ -289,6 +293,7 @@ export interface NetMDFactoryService {
     ): Promise<number>;
 
     enableHiMDFullMode(): Promise<void>;
+    enableMonoUpload(enable: boolean): Promise<void>;
 }
 
 // Compatibility methods. Do NOT use these unless absolutely necessary!!
@@ -689,7 +694,8 @@ export class NetMDUSBService extends NetMDService {
         _format: Codec,
         progressCallback: (progress: { written: number; encrypted: number; total: number }) => void
     ) {
-        let format = _format.codec === 'AT3' ? { codec: _format.bitrate === 66 ? 'LP4' : 'LP2' } : _format;
+        let format = _format.codec === 'AT3' ? { codec: _format.bitrate === 66 ? 'LP4' : 'LP2' } :
+                     _format.codec === 'MONO' ? { codec: 'SP' } : _format;
         if (this.currentSession === undefined) {
             throw new Error('Cannot upload without initializing a session first');
         }
@@ -714,7 +720,7 @@ export class NetMDUSBService extends NetMDService {
         await this.currentSession.downloadTrack(mdTrack, ({ writtenBytes }) => {
             written = writtenBytes;
             updateProgress();
-        });
+        }, _format.codec === 'MONO' ? DiscFormat.spMono : undefined);
 
         w.terminate();
         this.dropCachedContentList();
@@ -798,6 +804,7 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
         bind(PCMFasterUpload, ExploitCapability.spUploadSpeedup);
         bind(SPUpload, ExploitCapability.uploadAtrac1);
         bind(HiMDUSBClassOverride, ExploitCapability.himdFullMode);
+        bind(MonoSPUpload, ExploitCapability.uploadMonoSP);
         if (!this.exploitStateManager.device.isHimd) {
             // Non-HiMD devices can read the RAM using normal commands
             capabilities.push(ExploitCapability.readRam);
@@ -957,5 +964,14 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
     @asyncMutex
     async enableHiMDFullMode() {
         await this.exploitStateManager.require(HiMDUSBClassOverride);
+    }
+
+    @asyncMutex
+    async enableMonoUpload(enable: boolean){
+        if(enable){
+            await this.exploitStateManager.require(MonoSPUpload);
+        }else{
+            await this.exploitStateManager.unload(MonoSPUpload);
+        }
     }
 }

@@ -337,25 +337,17 @@ export function exploitDownloadTracks(
     };
 }
 
-export async function checkIfAtracDownloadPossible(dispatch: AppDispatch) {
+export async function checkFactoryCapability(dispatch: AppDispatch, capability: ExploitCapability){
     await serviceRegistry.netmdService!.stop();
     await initializeFactoryMode()(dispatch);
 
     const capabilities = await serviceRegistry.netmdFactoryService!.getExploitCapabilities();
-    return capabilities.includes(ExploitCapability.downloadAtrac);
-}
-
-export async function checkIfAtrac1UploadPossible(dispatch: AppDispatch) {
-    await serviceRegistry.netmdService!.stop();
-    await initializeFactoryMode()(dispatch);
-
-    const capabilities = await serviceRegistry.netmdFactoryService!.getExploitCapabilities();
-    return capabilities.includes(ExploitCapability.uploadAtrac1);
+    return capabilities.includes(capability);
 }
 
 export function enableFactoryRippingModeInMainUi() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        if (!(await checkIfAtracDownloadPossible(dispatch))) {
+        if (!(await checkFactoryCapability(dispatch, ExploitCapability.downloadAtrac))) {
             window.alert(
                 'Cannot enable homebrew mode ripping in main UI.\nThis device is not supported yet.\nStay tuned for future updates.'
             );

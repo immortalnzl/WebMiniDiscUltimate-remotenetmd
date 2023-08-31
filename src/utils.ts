@@ -515,6 +515,7 @@ export function downloadBlob(buffer: Blob, fileName: string) {
 export function getTrackExtension(track: Track) {
     const fileExtMap: { [key in typeof track.encoding.codec]: string } = {
         SP: 'aea',
+        MONO: 'aea',
         LP2: 'wav',
         LP4: 'wav',
         'A3+': 'oma',
