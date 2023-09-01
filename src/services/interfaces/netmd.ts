@@ -69,7 +69,6 @@ export enum Capability {
     discEject,
     factoryMode,
     himdTitles,
-    reinitializeFilesystem,
     fullWidthSupport,
 
     requiresManualFlush,

@@ -22,7 +22,7 @@
     "@types/styled-components": "^5.1.7",
     "@types/w3c-web-usb": "^1.0.4",
     "clsx": "^1.1.1",
-    "himd-js": "^0.1.6",
+    "himd-js": "^0.1.10",
     "husky": "^8.0.1",
     "jconv": "^0.1.5",
     "jszip": "^3.10.1",

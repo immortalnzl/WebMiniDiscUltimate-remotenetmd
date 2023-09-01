@@ -273,7 +273,14 @@ export class HiMDRestrictedService extends NetMDService {
     }
 
     async wipeDisc(): Promise<void> {
-        window.alert('Not yet available in HiMD');
+        try{
+            await this.himd!.wipe(false);
+            this.dropCachedContentList();
+        }catch(ex){
+            console.log(ex);
+            window.alert('Not yet available in HiMD');
+            return;
+        }
     }
 
     async moveTrack(src: number, dst: number, updateGroups?: boolean) {
@@ -348,6 +355,7 @@ export class HiMDRestrictedService extends NetMDService {
             Capability.requiresManualFlush,
             Capability.trackDownload,
             Capability.trackUpload,
+            Capability.himdTitles,
         ];
     }
 
@@ -428,12 +436,14 @@ export class HiMDFullService extends HiMDRestrictedService {
             Capability.trackDownload,
             Capability.playbackControl,
             Capability.trackUpload,
+            Capability.himdTitles,
         ];
     }
 
     async pair() {
         const device = await navigator.usb.requestDevice({ filters: DevicesIds });
         await device.open();
+        await device.reset();
         this.fsDriver = new UMSCHiMDFilesystem(device);
         return true;
     }
@@ -480,6 +490,10 @@ export class HiMDFullService extends HiMDRestrictedService {
             await this.session!.finalizeSession();
             this.session = null;
         }
+    }
+
+    async finalize(): Promise<void> {
+        await this.fsDriver?.driver?.close();
     }
 
     async upload(
