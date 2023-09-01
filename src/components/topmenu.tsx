@@ -40,7 +40,6 @@ import SecurityIcon from '@mui/icons-material/Security';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import CodeIcon from '@mui/icons-material/Code';
-import FolderDeleteIcon from '@mui/icons-material/FolderDelete'
 
 import { W95TopMenu } from './win95/topmenu';
 import { Capability, ExploitCapability } from '../services/interfaces/netmd';
@@ -53,6 +52,7 @@ import {
     readToc,
     stripSCMS,
     stripTrProtect,
+    toggleSPUploadSpeedup,
     writeModifiedTOC,
 } from '../redux/factory/factory-actions';
 
@@ -70,8 +70,9 @@ export const TopMenu = function(props: { tracksSelected?: number[]; onClick?: ()
     const classes = useStyles();
     const dispatch = useDispatch();
 
-    let { mainView, vintageMode, factoryModeRippingInMainUi, factoryModeShortcuts } = useShallowEqualSelector(state => state.appState);
+    const { mainView, vintageMode, factoryModeRippingInMainUi, factoryModeShortcuts } = useShallowEqualSelector(state => state.appState);
     const { deviceCapabilities, disc } = useShallowEqualSelector(state => state.main);
+    const { spUploadSpeedupActive } = useShallowEqualSelector(state => state.factory);
     let discTitle = useShallowEqualSelector(state => state.main.disc?.title ?? ``);
     let fullWidthDiscTitle = useShallowEqualSelector(state => state.main.disc?.fullWidthTitle ?? ``);
 
@@ -249,6 +250,11 @@ export const TopMenu = function(props: { tracksSelected?: number[]; onClick?: ()
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
+    const handleToggleSPUploadSpeedup = useCallback(() => {
+        dispatch(toggleSPUploadSpeedup());
+        handleMenuClose();
+    }, [dispatch, handleMenuClose]);
+
     const handleEnterHiMDUnrestrictedMode = useCallback(() => {
         dispatch(enterHiMDUnrestrictedMode());
         handleMenuClose();
@@ -288,6 +294,24 @@ export const TopMenu = function(props: { tracksSelected?: number[]; onClick?: ()
             <ListItemText>Un-Protect all tracks</ListItemText>
         </MenuItem>
     );
+    shortcutsItems.push(
+        <MenuItem
+            key="short-speedupSP"
+            onClick={handleToggleSPUploadSpeedup}
+            disabled={!isExploitCapable(ExploitCapability.spUploadSpeedup)}
+        >
+            <ListItemIcon className={classes.listItemIcon}>
+                {spUploadSpeedupActive ? <ToggleOnIcon fontSize="small" /> : <ToggleOffIcon fontSize="small" />}
+            </ListItemIcon>
+            <ListItemText>
+                {spUploadSpeedupActive ? `Disable ` : `Enable `}
+                <Tooltip title="On some devices, this can speed up SP upload" arrow>
+                    <span className={classes.toolTippedText}>SP Upload Speedup</span>
+                </Tooltip>
+            </ListItemText>
+        </MenuItem>
+    );
+
 
     if (firmwareVersion.startsWith('H') && !window.native?.himdFullInterface) {
         // HIMD

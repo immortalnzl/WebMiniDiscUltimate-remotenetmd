@@ -65,6 +65,23 @@ export const ChangelogDialog = (props: {}) => {
 
     const content = (
         <React.Fragment>
+            <h2 className={classes.header}>Version 1.4.2</h2>
+            <ul>
+                <li>
+                    Updated to netmd-exploits 0.5.4
+                    <ul>
+                        <li>Added support for SP MONO upload</li>
+                    </ul>
+                </li>
+                <li>
+                    Updated to himd-js 0.1.10
+                    <ul>
+                        <li>Added support for HiMD disc wiping</li>
+                    </ul>
+                </li>
+                <li>Added a disc-protected warning window</li>
+                <li>Added a shortcut to SP Speedup in Homebrew Shortcuts menu</li>
+            </ul>
             <h2 className={classes.header}>Version 1.4.1</h2>
             <ul>
                 <li>
@@ -139,7 +156,7 @@ export const ChangelogDialog = (props: {}) => {
                 <li>Renamed 'Factory Mode' to 'Homebrew Mode'</li>
                 <li>Added track normalization</li>
                 <li>
-                    Added the ability to use a <Link onClick={handleOpenEncoderSettings}>high quality LP encoder</Link>
+                    Added the ability to use a <Link onClick={handleOpenEncoderSettings} href="#">high quality LP encoder</Link>
                 </li>
                 <li>Added song recognition</li>
                 <li>Added CSV track list import and export</li>
