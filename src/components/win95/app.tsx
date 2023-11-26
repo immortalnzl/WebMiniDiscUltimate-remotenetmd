@@ -84,7 +84,7 @@ export const W95App = () => {
     }, [isMenuOpen, setMenuOpen]);
 
     const handleHelpClick = useCallback(() => {
-        window.open('https://github.com/cybercase/webminidisc/wiki/Support-and-FAQ', '_blank');
+        window.open('https://www.minidisc.wiki/guides/start', '_blank');
     }, []);
 
     const currentTheme = original;
