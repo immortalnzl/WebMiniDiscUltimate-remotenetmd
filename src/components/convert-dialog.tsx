@@ -964,7 +964,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                     style={{ marginTop: '1em' }}
                     align="center"
                 >
-                    Warning: You are using a mediocre encoder. The resulting audio is not going to be perfect.
+                    Warning: You are using a mediocre encoder. The resulting audio is not going to be perfect. Alternative encoders are available in the settings.
                 </Typography>
                 <span className={classes.durationsSpan}>
                     <Typography component="h3" align="center" hidden={loadingMetadata}>

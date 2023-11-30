@@ -261,6 +261,7 @@ export const SettingsDialog = (props: {}) => {
                     <Select className={classes.wider} value={colorTheme} onChange={handleThemeChange}>
                         <MenuItem value="light">Light</MenuItem>
                         <MenuItem value="dark">Dark</MenuItem>
+                        <MenuItem value="dark-blue">Dark (Blue)</MenuItem>
                         <MenuItem value="system">Device Theme</MenuItem>
                     </Select>
                 </SimpleField>

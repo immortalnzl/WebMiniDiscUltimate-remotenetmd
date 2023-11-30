@@ -92,6 +92,22 @@ const useStyles = makeStyles(theme => ({
     },
 }));
 
+const darkBlueTheme = createTheme({
+    palette: {
+        type: 'dark',
+        primary: {
+            light: '#6ec6ff',
+            main: '#2196f3',
+            dark: '#0069c0',
+            contrastText: '#fff',
+        },
+        secondary: {
+            main: '#7d83bd',
+            contrastText: '#000',
+        }
+    },
+});
+
 const darkTheme = createTheme({
     palette: {
         type: 'dark',
@@ -114,18 +130,20 @@ const App = () => {
     const { mainView, loading, colorTheme, vintageMode, pageFullHeight, pageFullWidth } = useShallowEqualSelector(state => state.appState);
     const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
     const classes = useStyles();
-    const systemTheme = useThemeDetector();
+    const systemIsDarkTheme = useThemeDetector();
 
-    const darkMode = useMemo(() => {
+    const theme = useMemo(() => {
         switch (colorTheme) {
             case 'light':
-                return false;
+                return lightTheme;
             case 'dark':
-                return true;
+                return darkTheme;
+            case 'dark-blue':
+                return darkBlueTheme;
             case 'system':
-                return systemTheme;
+                return systemIsDarkTheme ? darkTheme : lightTheme;
         }
-    }, [systemTheme, colorTheme]);
+    }, [systemIsDarkTheme, colorTheme]);
 
     if (vintageMode) {
         return <W95App />;
@@ -133,7 +151,7 @@ const App = () => {
 
     return (
         <React.Fragment>
-            <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
+            <ThemeProvider theme={theme}>
                 <CssBaseline />
 
                 <main className={clsx(classes.layout, { [classes.layoutFullWidth]: pageFullWidth })}>
