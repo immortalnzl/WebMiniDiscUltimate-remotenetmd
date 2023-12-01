@@ -1,7 +1,7 @@
 import { Mutex } from 'async-mutex';
 import { DeviceStatus, DiscFormat, TrackFlag } from 'netmd-js';
 import { Logger } from 'netmd-js/dist/logger';
-import { makeAsyncDecryptor } from 'himd-js/dist/web-crypto-worker';
+import { makeAsyncWorker } from 'himd-js/dist/web-crypto-worker';
 import {
     HiMD,
     FSAHiMDFilesystem,
@@ -41,6 +41,7 @@ import {
 } from './netmd';
 import { concatUint8Arrays } from 'netmd-js/dist/utils';
 import { recomputeGroupsAfterTrackMove } from '../../utils';
+import { CryptoProvider } from 'himd-js/dist/workers';
 
 const Worker = require('worker-loader!himd-js/dist/web-crypto-worker.js'); // eslint-disable-line import/no-webpack-loader-syntax
 
@@ -338,8 +339,9 @@ export class HiMDRestrictedService extends NetMDService {
         progressCallback: (progress: { read: number; total: number }) => void
     ): Promise<{ format: DiscFormat; data: Uint8Array } | null> {
         const trackNumber = this.himd!.trackIndexToTrackSlot(index);
-        const webWorker = await makeAsyncDecryptor(new Worker());
+        const webWorker = await makeAsyncWorker(new Worker());
         const info = dumpTrack(this.himd!, trackNumber, webWorker);
+        webWorker.close();
         const blocks: Uint8Array[] = [];
         for await (let { data, total } of info.data) {
             blocks.push(data);
@@ -417,6 +419,7 @@ export class HiMDRestrictedService extends NetMDService {
 }
 
 export class HiMDFullService extends HiMDRestrictedService {
+    protected worker: CryptoProvider | null = null;
     protected session: UMSCHiMDSession | null = null;
     protected fsDriver?: UMSCHiMDFilesystem;
     constructor(p: { debug: boolean }) {
@@ -443,7 +446,11 @@ export class HiMDFullService extends HiMDRestrictedService {
     async pair() {
         const device = await navigator.usb.requestDevice({ filters: DevicesIds });
         await device.open();
-        await device.reset();
+        try{
+            await device.reset();
+        }catch(ex){
+            console.log(ex);
+        }
         this.fsDriver = new UMSCHiMDFilesystem(device);
         return true;
     }
@@ -490,10 +497,17 @@ export class HiMDFullService extends HiMDRestrictedService {
             await this.session!.finalizeSession();
             this.session = null;
         }
+        this.worker?.close();
+        this.worker = null;
     }
 
     async finalize(): Promise<void> {
         await this.fsDriver?.driver?.close();
+    }
+
+    async prepareUpload(): Promise<void> {
+        await super.prepareUpload();
+        this.worker = await makeAsyncWorker(new Worker());
     }
 
     async upload(
@@ -545,7 +559,8 @@ export class HiMDFullService extends HiMDRestrictedService {
                         encrypted: byte,
                         total: totalBytes,
                     });
-                }
+                },
+                this.worker!
             );
         }
     }
