@@ -685,6 +685,10 @@ export class NetMDUSBService extends NetMDService {
         this.dropCachedContentList();
     }
 
+    getWorkerForUpload(): any{
+        return [new Worker(), makeGetAsyncPacketIteratorOnWorkerThread];
+    }
+
     @asyncMutex
     async upload(
         title: string,
@@ -705,9 +709,9 @@ export class NetMDUSBService extends NetMDService {
             progressCallback({ written, encrypted, total });
         }
 
-        let w = new Worker();
+        let [w, creator] = this.getWorkerForUpload();
 
-        let webWorkerAsyncPacketIterator = makeGetAsyncPacketIteratorOnWorkerThread(w, ({ encryptedBytes }) => {
+        let webWorkerAsyncPacketIterator = creator(w, ({ encryptedBytes }: { encryptedBytes: number }) => {
             encrypted = encryptedBytes;
             updateProgress();
         });
@@ -930,9 +934,9 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
             progressCallback({ written, encrypted, total });
         }
 
-        let w = new Worker();
+        let [w, creator] = this.parent.getWorkerForUpload();
 
-        let webWorkerAsyncPacketIterator = makeGetAsyncPacketIteratorOnWorkerThread(w, ({ encryptedBytes }) => {
+        let webWorkerAsyncPacketIterator = creator(w, ({ encryptedBytes }: { encryptedBytes: number }) => {
             encrypted = encryptedBytes;
             updateProgress();
         });

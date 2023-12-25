@@ -140,6 +140,9 @@ export class HiMDRestrictedService extends NetMDService {
             fullWidth: 0,
         };
     }
+    getWorker(): any[]{
+        return [new Worker(), makeAsyncWorker];
+    }
 
     async getDeviceStatus(): Promise<DeviceStatus> {
         return {
@@ -339,14 +342,16 @@ export class HiMDRestrictedService extends NetMDService {
         progressCallback: (progress: { read: number; total: number }) => void
     ): Promise<{ format: DiscFormat; data: Uint8Array } | null> {
         const trackNumber = this.himd!.trackIndexToTrackSlot(index);
-        const webWorker = await makeAsyncWorker(new Worker());
+        let [w, creator] = this.getWorker();
+        const webWorker = await creator(w);
         const info = dumpTrack(this.himd!, trackNumber, webWorker);
-        webWorker.close();
         const blocks: Uint8Array[] = [];
         for await (let { data, total } of info.data) {
             blocks.push(data);
             progressCallback({ read: blocks.length, total });
         }
+        webWorker.close();
+        w.terminate();
         return { format: DiscFormat.spStereo, data: concatUint8Arrays(...blocks) };
     }
 
@@ -414,7 +419,7 @@ export class HiMDRestrictedService extends NetMDService {
         return Promise.resolve();
     }
     getPosition(): Promise<number[] | null> {
-        throw new Error('Method not implemented.');
+        return Promise.resolve(null);
     }
 }
 
@@ -437,7 +442,6 @@ export class HiMDFullService extends HiMDRestrictedService {
             Capability.metadataEdit,
             Capability.requiresManualFlush,
             Capability.trackDownload,
-            Capability.playbackControl,
             Capability.trackUpload,
             Capability.himdTitles,
         ];
@@ -507,7 +511,8 @@ export class HiMDFullService extends HiMDRestrictedService {
 
     async prepareUpload(): Promise<void> {
         await super.prepareUpload();
-        this.worker = await makeAsyncWorker(new Worker());
+        let [w, creator] = this.getWorker();
+        this.worker = await creator(w);
     }
 
     async upload(

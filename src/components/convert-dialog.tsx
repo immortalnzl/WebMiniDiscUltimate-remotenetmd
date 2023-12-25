@@ -227,7 +227,7 @@ function createForcedEncodingText(selectedCodec: Codec, file: { forcedEncoding: 
         'AT3@132kbps': 'LP2',
     };
     if (!file.forcedEncoding) return '';
-    let fullCodecName = file.forcedEncoding.codec + (file.forcedEncoding?.bitrate ? `@${file.forcedEncoding.bitrate!}kbps` : '');
+    let fullCodecName = file.forcedEncoding.codec + (file.forcedEncoding?.bitrate ? `@${Math.round(file.forcedEncoding.bitrate!)}kbps` : '');
     if (file.forcedEncoding.codec === 'MP3' && selectedCodec.codec !== 'MP3') {
         return '';
     }
