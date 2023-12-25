@@ -128,7 +128,7 @@ export const DumpDialog = ({
                             </React.Fragment>
                         ) : (
                             <Typography component="p" variant="body2">
-                                As you are using a Sony MZ-RH1, it is possible to transfer tracks via NetMD.
+                                As your device natively supports USB audio transfer, it is possible to transfer tracks via NetMD.
                             </Typography>
                         )}
                     </React.Fragment>

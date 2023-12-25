@@ -47,7 +47,7 @@ export const W95DumpDialog = (props: {
                 <DialogWindowContent>
                     <div style={{ width: '100%', display: 'flex', alignItems: 'flex-Start', flexDirection: 'column' }}>
                         {props.isCapableOfDownload ? (
-                            <p>As you are using a Sony MZ-RH1, it is possible to download tracks via NetMD.</p>
+                            <p>As your device natively supports audio USB transfer, it is possible to download tracks via NetMD.</p>
                         ) : (
                             <React.Fragment>
                                 {props.deviceCapabilities.includes(Capability.factoryMode) && (
