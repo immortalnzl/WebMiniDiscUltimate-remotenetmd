@@ -411,7 +411,7 @@ export class NetMDUSBService extends NetMDService {
             // MZ-RH1
             basic.push(Capability.trackDownload);
         }
-        if (await this.netmdInterface?.canEjectDisc()) {
+        if (this.netmdInterface?.netMd.getVendor() === 0x54c && await this.netmdInterface?.canEjectDisc()) {
             basic.push(Capability.discEject);
         }
 
@@ -419,8 +419,7 @@ export class NetMDUSBService extends NetMDService {
         const deviceName = this.netmdInterface?.netMd.getDeviceName();
         if (
             (deviceName?.includes('Sony') &&
-                (deviceName?.includes('MZ-N') || deviceName?.includes('MZ-S1') || deviceName.includes('MZ-RH')) &&
-                !deviceName.includes('DH10') /* && deviceName !== 'Sony MZ-RH1'*/) ||
+                (deviceName?.includes('MZ-N') || deviceName?.includes('MZ-S1') || deviceName.includes('MZ-RH') || deviceName.includes('MZ-DH10P'))) ||
             (deviceName?.includes('Aiwa') && deviceName?.includes('AM-NX')) ||
             deviceName?.includes('PCGA-MDN1')
         ) {

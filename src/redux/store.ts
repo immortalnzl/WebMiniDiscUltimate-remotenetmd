@@ -54,10 +54,10 @@ let reducer = combineReducers({
 });
 
 const resetStateAction = appActions.setMainView.toString();
-const resetStatePayoload = 'WELCOME';
+const resetStatePayload = 'WELCOME';
 const resetStateReducer: typeof reducer = function(...args) {
     const action = args[1];
-    if (action.type === resetStateAction && action.payload === resetStatePayoload) {
+    if (action.type === resetStateAction && action.payload === resetStatePayload) {
         return {
             ...initialState,
             appState: buildInitialAppState(),
