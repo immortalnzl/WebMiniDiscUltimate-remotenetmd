@@ -36,7 +36,7 @@ export function readToc() {
     return async function(dispatch: AppDispatch) {
         await initializeFactoryMode()(dispatch);
         dispatch(appStateActions.setLoading(true));
-        let newToc = parseTOC(
+        const newToc = parseTOC(
             await serviceRegistry.netmdFactoryService!.readUTOCSector(0),
             await serviceRegistry.netmdFactoryService!.readUTOCSector(1),
             await serviceRegistry.netmdFactoryService!.readUTOCSector(2)
@@ -175,7 +175,7 @@ export function downloadToc(callback: (blob: Blob, name: string) => void = downl
                 factoryProgressDialogActions.setVisible(true),
             ])
         );
-        let readSlices: Uint8Array[] = [];
+        const readSlices: Uint8Array[] = [];
         for (let i = 0; i < 6; i += 1) {
             dispatch(factoryProgressDialogActions.setProgress({ current: i, total: 6 }));
             readSlices.push(await serviceRegistry.netmdFactoryService!.readUTOCSector(i));
@@ -259,7 +259,7 @@ export function exploitDownloadTracks(
             ])
         );
         await serviceRegistry.netmdFactoryService!.prepareDownload(useSlowerExploit);
-        for (let trackIndex of trackIndexes) {
+        for (const trackIndex of trackIndexes) {
             if (trackIndex >= disc.trackCount) {
                 window.alert("This track does not exist. Make sure you've read the instructions on how to use the homebrew mode.");
                 return;
@@ -424,7 +424,7 @@ export function archiveDisc() {
 
 export function toggleSPUploadSpeedup() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        let spUploadSpeedupActive = getState().factory.spUploadSpeedupActive;
+        const spUploadSpeedupActive = getState().factory.spUploadSpeedupActive;
         await serviceRegistry.netmdFactoryService!.setSPSpeedupActive(!spUploadSpeedupActive);
         dispatch(factoryActions.setSPUploadSpedUp(!spUploadSpeedupActive));
     };

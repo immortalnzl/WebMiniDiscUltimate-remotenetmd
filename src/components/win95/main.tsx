@@ -15,11 +15,12 @@ import {
     List,
     ListItem,
 } from 'react95';
-import { makeStyles } from '@material-ui/core/styles';
-import { DropzoneRootProps, DropzoneInputProps } from 'react-dropzone';
+import { makeStyles } from 'tss-react/mui';
+import { DropzoneRootProps, DropzoneInputProps, FileRejection } from 'react-dropzone';
 import { ThemeContext } from 'styled-components';
 import { Controls } from '../controls';
-import { formatTimeFromSeconds, useShallowEqualSelector } from '../../utils';
+import { formatTimeFromSeconds } from '../../utils';
+import { useShallowEqualSelector } from "../../frontend-utils";
 
 import DeleteIconUrl from '../../images/win95/delete.png';
 import MicIconUrl from '../../images/win95/mic.png';
@@ -40,7 +41,7 @@ import { PanicDialog } from '../panic-dialog';
 import { ChangelogDialog } from '../changelog-dialog';
 import { Capability, Disc } from '../../services/interfaces/netmd';
 
-const useStyles = makeStyles((theme: any) => ({
+const useStyles = makeStyles()((theme: any) => ({
     container: {
         width: '100%',
         flex: '1 1 auto',
@@ -95,7 +96,7 @@ export const W95Main = (props: {
     }[];
     uploadedFiles: File[];
     setUploadedFiles: React.Dispatch<React.SetStateAction<File[]>>;
-    onDrop: (acceptedFiles: File[], rejectedFiles: File[]) => void;
+    onDrop: (acceptedFiles: File[], rejectedFiles: FileRejection[]) => void;
     getRootProps: (props?: DropzoneRootProps | undefined) => DropzoneRootProps;
     getInputProps: (props?: DropzoneInputProps | undefined) => DropzoneInputProps;
     isDragActive: boolean;
@@ -113,7 +114,7 @@ export const W95Main = (props: {
     handleSelectTrackClick: (event: React.MouseEvent, item: number) => void;
     isCapable: (capability: Capability) => boolean;
 }) => {
-    const classes = useStyles();
+    const { classes } = useStyles();
     const themeContext = useContext(ThemeContext);
     const { mainView } = useShallowEqualSelector(state => state.appState);
 
@@ -174,7 +175,7 @@ export const W95Main = (props: {
                             <img alt="rename" src={RenameIconUrl} className={classes.toolbarIcon} />
                             Rename
                         </Button>
-                        {!!props.moveMenuAnchorEl ? (
+                        {props.moveMenuAnchorEl ? (
                             <List style={{ position: 'absolute', left: 16, top: 32, zIndex: 2 }}>
                                 {Array(props.tracks.length)
                                     .fill(null)

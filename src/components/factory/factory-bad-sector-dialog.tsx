@@ -1,25 +1,25 @@
 import React, { useCallback } from 'react';
-import { useShallowEqualSelector } from '../../utils';
+import { useShallowEqualSelector } from "../../frontend-utils";
 
 import { actions as factoryBadSectorDialogActions } from '../../redux/factory/factory-bad-sector-dialog-feature';
 
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogContentText from '@material-ui/core/DialogContentText';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import Slide from '@material-ui/core/Slide';
-import Box from '@material-ui/core/Box';
-import Button from '@material-ui/core/Button';
-import Checkbox from '@material-ui/core/Checkbox';
-import FormControl from '@material-ui/core/FormControl';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import { TransitionProps } from '@material-ui/core/transitions';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
+import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import { TransitionProps } from '@mui/material/transitions';
 import { useDispatch } from 'react-redux';
 import { BadSectorResponse, reportBadSectorReponse } from '../../redux/factory/factory-actions';
 
 const Transition = React.forwardRef(function Transition(
-    props: TransitionProps & { children?: React.ReactElement<any, any> },
+    props: SlideProps,
     ref: React.Ref<unknown>
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
@@ -28,7 +28,7 @@ const Transition = React.forwardRef(function Transition(
 export const FactoryModeBadSectorDialog = (props: {}) => {
     const dispatch = useDispatch();
 
-    let { visible, address, count, remember } = useShallowEqualSelector(state => state.factoryBadSectorDialog);
+    const { visible, address, count, remember } = useShallowEqualSelector(state => state.factoryBadSectorDialog);
 
     const handleReturnValue = useCallback(
         (data: BadSectorResponse) => {

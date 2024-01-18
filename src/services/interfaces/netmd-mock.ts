@@ -140,7 +140,7 @@ class NetMDMockService extends NetMDService {
 
     _getUsed() {
         let used = 0;
-        for (let t of this._tracks) {
+        for (const t of this._tracks) {
             used += t.duration;
         }
         return used;
@@ -183,7 +183,7 @@ class NetMDMockService extends NetMDService {
     }
 
     async renameGroup(gropuIndex: number, newName: string, newFullWidth?: string) {
-        let group = this._groupsDef.find(n => n.index === gropuIndex);
+        const group = this._groupsDef.find(n => n.index === gropuIndex);
         if (!group) {
             return;
         }
@@ -194,11 +194,11 @@ class NetMDMockService extends NetMDService {
     }
 
     async addGroup(groupBegin: number, groupLength: number, newName: string, fullWidthTitle: string = '') {
-        let ungroupedDefs = this._groupsDef.find(g => g.title === null);
+        const ungroupedDefs = this._groupsDef.find(g => g.title === null);
         if (!ungroupedDefs) {
             return; // You can only group tracks that aren't already in a different group, if there's no such tracks, there's no point to continue
         }
-        let ungroupedLengthBeforeGroup = ungroupedDefs.tracksIdx.length;
+        const ungroupedLengthBeforeGroup = ungroupedDefs.tracksIdx.length;
 
         const newGroupTracks = ungroupedDefs.tracksIdx.filter(idx => idx >= groupBegin && idx < groupBegin + groupLength);
         if (!isSequential(newGroupTracks)) {
@@ -281,7 +281,7 @@ class NetMDMockService extends NetMDService {
     async deleteTracks(indexes: number[]) {
         indexes = indexes.sort();
         indexes.reverse();
-        for (let index of indexes) {
+        for (const index of indexes) {
             this._groupsDef = recomputeGroupsAfterTrackMove(this._getDisc(), index, -1).groups.map(g => ({
                 title: g.title,
                 fullWidthTitle: g.fullWidthTitle,
@@ -297,7 +297,7 @@ class NetMDMockService extends NetMDService {
     }
 
     async moveTrack(src: number, dst: number, updateGroups?: boolean) {
-        let t = this._tracks.splice(src, 1);
+        const t = this._tracks.splice(src, 1);
         assert(t.length === 1);
         this._tracks.splice(dst, 0, t[0]);
         this._updateTrackIndexes();
@@ -342,7 +342,7 @@ class NetMDMockService extends NetMDService {
     ) {
         progressCallback({ written: 0, encrypted: 0, total: 100 });
 
-        let halfWidthTitle = sanitizeHalfWidthTitle(title);
+        const halfWidthTitle = sanitizeHalfWidthTitle(title);
         fullWidthTitle = sanitizeFullWidthTitle(fullWidthTitle);
 
         if ((data as any).buffer !== undefined) {

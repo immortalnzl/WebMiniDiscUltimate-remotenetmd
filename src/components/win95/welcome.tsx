@@ -1,12 +1,12 @@
 import React from 'react';
 import { Button, WindowContent } from 'react95';
-import { makeStyles } from '@material-ui/core/styles';
+import { makeStyles } from 'tss-react/mui';
 import { pair } from '../../redux/actions';
 import { Dispatch } from '@reduxjs/toolkit';
 import { AboutDialog } from '../about-dialog';
 import { MinidiscSpec, NetMDService } from '../../services/interfaces/netmd';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     pairingMessage: {
         color: 'red',
         marginTop: theme.spacing(1),
@@ -30,8 +30,8 @@ export interface W95WelcomeProps {
 }
 
 export const W95Welcome = (props: W95WelcomeProps) => {
-    let { dispatch, pairingFailed, pairingMessage, createService, spec, connectName } = props;
-    const classes = useStyles();
+    const { dispatch, pairingFailed, pairingMessage, createService, spec, connectName } = props;
+    const { classes } = useStyles();
     return (
         <>
             <WindowContent className={classes.windowContent}>

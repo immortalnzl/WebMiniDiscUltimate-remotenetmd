@@ -1,26 +1,26 @@
 import React, { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import { useShallowEqualSelector } from '../utils';
+import { useShallowEqualSelector } from "../frontend-utils";
 
 import { actions as songRecognitionDialogActions } from '../redux/song-recognition-progress-dialog-feature';
 
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogContentText from '@material-ui/core/DialogContentText';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import Slide from '@material-ui/core/Slide';
-import LinearProgress from '@material-ui/core/LinearProgress';
-import Box from '@material-ui/core/Box';
-import Button from '@material-ui/core/Button';
-import Step from '@material-ui/core/Step';
-import Stepper from '@material-ui/core/Stepper';
-import StepLabel from '@material-ui/core/StepLabel';
-import Typography from '@material-ui/core/Typography';
-import { makeStyles } from '@material-ui/core/styles';
-import { TransitionProps } from '@material-ui/core/transitions';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import LinearProgress from '@mui/material/LinearProgress';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Step from '@mui/material/Step';
+import Stepper from '@mui/material/Stepper';
+import StepLabel from '@mui/material/StepLabel';
+import Typography from '@mui/material/Typography';
+import { makeStyles } from 'tss-react/mui';
+import { TransitionProps } from '@mui/material/transitions';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     progressPerc: {
         marginTop: theme.spacing(1),
     },
@@ -39,17 +39,17 @@ const useStyles = makeStyles(theme => ({
 }));
 
 const Transition = React.forwardRef(function Transition(
-    props: TransitionProps & { children?: React.ReactElement<any, any> },
+    props: SlideProps,
     ref: React.Ref<unknown>
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
 export const SongRecognitionProgressDialog = (props: {}) => {
-    const classes = useStyles();
+    const { classes } = useStyles();
     const dispatch = useDispatch();
 
-    let {
+    const {
         currentStep,
         currentTrack,
         totalTracks,
@@ -64,8 +64,8 @@ export const SongRecognitionProgressDialog = (props: {}) => {
         dispatch(songRecognitionDialogActions.setCancelled(true));
     }, [dispatch]);
 
-    let tracksProgress = Math.floor((currentTrack / totalTracks) * 100);
-    let currentStepProgress = Math.floor((currentStepCurrent / currentStepTotal) * 100);
+    const tracksProgress = Math.floor((currentTrack / totalTracks) * 100);
+    const currentStepProgress = Math.floor((currentStepCurrent / currentStepTotal) * 100);
 
     return (
         <Dialog

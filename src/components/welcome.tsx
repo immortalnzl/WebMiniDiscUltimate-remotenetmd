@@ -2,15 +2,15 @@ import React, { useCallback, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { deleteService, pair } from '../redux/actions';
 
-import { useShallowEqualSelector } from '../utils';
+import { useShallowEqualSelector } from "../frontend-utils";
 
-import { makeStyles } from '@material-ui/core/styles';
-import Typography from '@material-ui/core/Typography';
-import FormControl from '@material-ui/core/FormControl';
-import FormHelperText from '@material-ui/core/FormHelperText';
-import Box from '@material-ui/core/Box';
-import Link from '@material-ui/core/Link';
-import IconButton from '@material-ui/core/IconButton';
+import { makeStyles } from 'tss-react/mui';
+import Typography from '@mui/material/Typography';
+import FormControl from '@mui/material/FormControl';
+import FormHelperText from '@mui/material/FormHelperText';
+import Box from '@mui/material/Box';
+import Link from '@mui/material/Link';
+import IconButton from '@mui/material/IconButton';
 
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -33,7 +33,7 @@ import { actions as appActions } from '../redux/app-feature';
 import { batchActions } from 'redux-batched-actions';
 import { initializeParameters } from '../custom-parameters';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     main: {
         position: 'relative',
         flex: '1 1 auto',
@@ -89,7 +89,7 @@ const useStyles = makeStyles(theme => ({
 }));
 
 export const Welcome = (props: {}) => {
-    const classes = useStyles();
+    const { classes } = useStyles();
     const dispatch = useDispatch();
     const {
         browserSupported,
@@ -106,7 +106,7 @@ export const Welcome = (props: {}) => {
     // Access denied.
 
     const deleteCustom = useCallback(
-        (event, index) => {
+        (event: React.SyntheticEvent, index: number) => {
             event.stopPropagation();
             dispatch(deleteService(index));
         },
@@ -273,3 +273,5 @@ export const Welcome = (props: {}) => {
         </React.Fragment>
     );
 };
+
+export default Welcome;

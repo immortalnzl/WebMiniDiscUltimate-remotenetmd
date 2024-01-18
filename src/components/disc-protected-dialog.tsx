@@ -1,28 +1,29 @@
 import React, { useState, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import { useShallowEqualSelector } from '../utils';
+import { useShallowEqualSelector } from "../frontend-utils";
 
 import { actions as appActions } from '../redux/app-feature';
 
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogContentText from '@material-ui/core/DialogContentText';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import Slide from '@material-ui/core/Slide';
-import Button from '@material-ui/core/Button';
-import { TransitionProps } from '@material-ui/core/transitions';
-import { ReactComponent as Warning } from '../images/md_lock.svg';
-import { Checkbox, FormControlLabel, makeStyles } from '@material-ui/core';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import Button from '@mui/material/Button';
+import Warning from '../images/md_lock.svg?react';
+import { Checkbox, FormControlLabel } from '@mui/material';
+import { makeStyles } from 'tss-react/mui';
+
 
 const Transition = React.forwardRef(function Transition(
-    props: TransitionProps & { children?: React.ReactElement<any, any> },
+    props: SlideProps,
     ref: React.Ref<unknown>
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     svg: {
         '& .text': {
             fill: theme.palette.text.primary,
@@ -35,7 +36,7 @@ const useStyles = makeStyles(theme => ({
 
 export const DiscProtectedDialog = () => {
     const dispatch = useDispatch();
-    const classes = useStyles();
+    const { classes } = useStyles();
 
     const visible = useShallowEqualSelector(state => state.appState.discProtectedDialogVisible);
     const [doNotShowAgain, setDoNotShowAgain] = useState<boolean>(false);
@@ -52,7 +53,7 @@ export const DiscProtectedDialog = () => {
             open={visible}
             maxWidth={'sm'}
             fullWidth={true}
-            TransitionComponent={Transition as any}
+            TransitionComponent={Transition}
             aria-labelledby="disc-protected-dialog-slide-title"
         >
             <DialogTitle id="disc-protected-dialog-slide-title">Write Protected Disc</DialogTitle>

@@ -1,14 +1,13 @@
 import { DefaultFfmpegAudioExportService, ExportParams } from './audio-export';
 import { AtracdencProcess } from './atracdenc-worker';
 import { CodecFamily } from '../interfaces/netmd';
-const AtracdencWorker = require('worker-loader!./atracdenc-worker'); // eslint-disable-line import/no-webpack-loader-syntax
 
 export class AtracdencAudioExportService extends DefaultFfmpegAudioExportService {
     public atracdencProcess?: AtracdencProcess;
 
     async prepare(file: File): Promise<void> {
         await super.prepare(file);
-        this.atracdencProcess = new AtracdencProcess(new AtracdencWorker());
+        this.atracdencProcess = new AtracdencProcess(new Worker(new URL('./atracdenc-worker', import.meta.url), { type: 'classic' }));
         await this.atracdencProcess.init();
     }
 
@@ -20,7 +19,7 @@ export class AtracdencAudioExportService extends DefaultFfmpegAudioExportService
         const ffmpegCommand = await this.createFfmpegParams(parameters, 'wav');
         const outFileName = `${this.outFileNameNoExt}.wav`;
         await this.ffmpegProcess.transcode(this.inFileName, outFileName, ffmpegCommand);
-        let { data } = (await this.ffmpegProcess.read(outFileName)) as { data: Uint8Array };
+        const { data } = (await this.ffmpegProcess.read(outFileName)) as { data: Uint8Array };
         let bitrate: string = `0`;
 
         switch (parameters.format.bitrate) {

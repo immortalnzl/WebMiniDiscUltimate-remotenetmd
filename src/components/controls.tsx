@@ -1,5 +1,4 @@
 import React, { useCallback, useRef, useEffect, useState, useMemo } from 'react';
-import clsx from 'clsx';
 
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
@@ -7,35 +6,25 @@ import SkipNextIcon from '@mui/icons-material/SkipNext';
 import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
 import PauseIcon from '@mui/icons-material/Pause';
 
-import IconButton from '@material-ui/core/IconButton';
-import Box from '@material-ui/core/Box';
+import IconButton from '@mui/material/IconButton';
+import Box from '@mui/material/Box';
 
-import { makeStyles } from '@material-ui/core';
-import { belowDesktop, getSortedTracks, useShallowEqualSelector } from '../utils';
+import { makeStyles } from 'tss-react/mui';
+import { getSortedTracks } from '../utils';
+import { belowDesktop, useShallowEqualSelector } from "../frontend-utils";
 import { control } from '../redux/actions';
 import { useDispatch } from 'react-redux';
 
-import { ReactComponent as MDIcon0 } from '../images/md0.svg';
-import { ReactComponent as MDIcon1 } from '../images/md1.svg';
-import { ReactComponent as MDIcon2 } from '../images/md2.svg';
-import { ReactComponent as MDIcon3 } from '../images/md3.svg';
+import MDIcon0 from '../images/md0.svg?react';
+import MDIcon1 from '../images/md1.svg?react';
+import MDIcon2 from '../images/md2.svg?react';
+import MDIcon3 from '../images/md3.svg?react';
 import { W95Controls } from './win95/controls';
 import { Capability } from '../services/interfaces/netmd';
 
 const frames = [MDIcon0, MDIcon1, MDIcon2, MDIcon3];
 
-const useStyles = makeStyles(theme => ({
-    '@keyframes scrollLeft': {
-        from: {
-            transform: `translateX(0%)`,
-        },
-        to: {},
-    },
-    '@keyframes blink': {
-        '50%': {
-            visibility: 'hidden',
-        },
-    },
+const useStyles = makeStyles()(theme => ({
     container: {
         display: 'flex',
         flex: '1 1 auto',
@@ -83,7 +72,7 @@ const useStyles = makeStyles(theme => ({
         position: 'absolute',
         width: '100%',
         whiteSpace: 'nowrap',
-        animationName: '$scrollLeft',
+        animationName: 'scrollLeft',
         animationTimingFunction: 'linear',
         animationIterationCount: '1',
         top: 15,
@@ -97,13 +86,14 @@ const useStyles = makeStyles(theme => ({
         left: 1,
     },
     lcdBlink: {
-        animationName: '$blink',
+        animationName: 'blink',
         animationTimingFunction: 'step-end',
         animationDuration: '1s',
         animationIterationCount: 'infinite',
     },
     button: {
-        // padding: 8,
+        width: 48,
+        height: 48,
     },
 }));
 
@@ -117,7 +107,7 @@ export const Controls = () => {
 
     const isCapable = (capability: Capability) => deviceCapabilities.includes(capability);
 
-    const classes = useStyles();
+    const { classes, cx } = useStyles();
     const handlePrev = useCallback(() => {
         dispatch(control('prev'));
     }, [dispatch]);
@@ -135,10 +125,10 @@ export const Controls = () => {
     }, [dispatch]);
 
     let message = ``;
-    let trackIndex = deviceStatus?.track ?? null;
-    let deviceState = deviceStatus?.state ?? null;
-    let discPresent = deviceStatus?.discPresent ?? false;
-    let paused = deviceStatus?.state === 'paused';
+    const trackIndex = deviceStatus?.track ?? null;
+    const deviceState = deviceStatus?.state ?? null;
+    const discPresent = deviceStatus?.discPresent ?? false;
+    const paused = deviceStatus?.state === 'paused';
     const tracks = useMemo(() => getSortedTracks(disc), [disc]);
     if (!discPresent) {
         message = ``;
@@ -147,7 +137,7 @@ export const Controls = () => {
     } else if (tracks.length === 0) {
         message = `BLANKDISC`;
     } else if (deviceStatus && deviceStatus.track !== null && tracks[deviceStatus.track]) {
-        let title = tracks[deviceStatus.track].fullWidthTitle || tracks[deviceStatus.track].title;
+        const title = tracks[deviceStatus.track].fullWidthTitle || tracks[deviceStatus.track].title;
         message = (deviceStatus.track + 1).toString().padStart(3, '0') + (title ? ' - ' + title : '');
     }
 
@@ -250,7 +240,7 @@ export const Controls = () => {
             <div className={classes.lcd}>
                 <div className={classes.lcdText}>
                     <span
-                        className={clsx(lcdScroll ? classes.scrollingStatusMessage : classes.statusMessage, {
+                        className={cx(lcdScroll ? classes.scrollingStatusMessage : classes.statusMessage, {
                             [classes.lcdBlink]: disc === null,
                         })}
                         ref={lcdRef}
@@ -264,9 +254,11 @@ export const Controls = () => {
                     </span>
                 </div>
                 <div className={classes.lcdDisc}>
-                    {discPresent && <DiscFrame className={clsx(classes.lcdDiscIcon, { [classes.lcdBlink]: paused })} />}
+                    {discPresent && <DiscFrame className={cx(classes.lcdDiscIcon, { [classes.lcdBlink]: paused })} />}
                 </div>
             </div>
         </Box>
     );
 };
+
+export default Controls;

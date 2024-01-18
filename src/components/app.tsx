@@ -1,24 +1,23 @@
-import React, { useMemo } from 'react';
-import { belowDesktop, forAnyDesktop, forWideDesktop, useShallowEqualSelector, useThemeDetector } from '../utils';
+import React, { useMemo, lazy, Suspense } from 'react';
+import { belowDesktop, forAnyDesktop, forWideDesktop, useShallowEqualSelector, useThemeDetector } from '../frontend-utils';
 
-import CssBaseline from '@material-ui/core/CssBaseline';
-import Backdrop from '@material-ui/core/Backdrop';
-import CircularProgress from '@material-ui/core/CircularProgress';
-import { makeStyles, createTheme, ThemeProvider } from '@material-ui/core/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import Backdrop from '@mui/material/Backdrop';
+import CircularProgress from '@mui/material/CircularProgress';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { makeStyles } from 'tss-react/mui';
 
-import { Welcome } from './welcome';
-import { Main } from './main';
-import { Controls } from './controls';
-import Paper from '@material-ui/core/Paper';
-import Typography from '@material-ui/core/Typography';
-import Link from '@material-ui/core/Link';
-import Box from '@material-ui/core/Box';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import Link from '@mui/material/Link';
+import Box from '@mui/material/Box';
 import { W95App } from './win95/app';
-import { Capability } from '../services/interfaces/netmd';
-import Toc from './factory/factory';
-import clsx from 'clsx';
 
-const useStyles = makeStyles(theme => ({
+const Toc = lazy(() => import('./factory/factory'));
+const Controls = lazy(() => import('./controls'));
+const Welcome = lazy(() => import("./welcome"));
+const Main = lazy(() => import('./main'));
+const useStyles = makeStyles()(theme => ({
     layout: {
         width: 'auto',
         height: '100%',
@@ -76,7 +75,7 @@ const useStyles = makeStyles(theme => ({
         textAlign: 'center',
     },
     backdrop: {
-        zIndex: theme.zIndex.drawer + 1,
+        zIndex: theme.zIndex.drawer + 1000,
         color: '#fff',
     },
     minidiscLogo: {
@@ -92,9 +91,42 @@ const useStyles = makeStyles(theme => ({
     },
 }));
 
-const darkBlueTheme = createTheme({
+const themeCommons = {
+    components: {
+        MuiSelect: {
+            defaultProps: { variant: 'standard'  }
+        },
+        MuiPaper: {
+            defaultProps: { elevation: 1 },
+            styleOverrides: {
+                elevation24: {
+                    backgroundImage: "none !important",
+                }
+            }
+        },
+        MuiDialog: {
+            defaultProps: {
+                PaperProps: {
+                    elevation: 0,
+                }
+            }
+        },
+        MuiMenu: {
+            defaultProps: {
+                PaperProps: {
+                    elevation: 24,
+                }
+            }
+        },
+        MuiTextField: {
+            defaultProps: { variant: 'standard' }
+        },
+    }
+} as const;
+
+const darkTheme = createTheme({
     palette: {
-        type: 'dark',
+        mode: 'dark',
         primary: {
             light: '#6ec6ff',
             main: '#2196f3',
@@ -102,62 +134,114 @@ const darkBlueTheme = createTheme({
             contrastText: '#fff',
         },
         secondary: {
-            main: '#7d83bd',
-            contrastText: '#000',
+            light: '#ff4081',
+            main: '#f50057',
+            dark: '#c51162'
+        },
+        background: {
+            default: '#303030',
+            paper: '#424242'
+        },
+        action: {
+            active: "#fff",
+            hover: "rgba(255, 255, 255, 0.08)",
+            hoverOpacity: 0.08,
+            selected: "rgba(255, 255, 255, 0.16)",
+            selectedOpacity: 0.16,
+            disabled: "rgba(255, 255, 255, 0.3)",
+            disabledBackground: "rgba(255, 255, 255, 0.12)",
+            disabledOpacity: 0.38,
+            focus: "rgba(255, 255, 255, 0.12)",
+            focusOpacity: 0.12,
+            activatedOpacity: 0.24,
         }
     },
-});
-
-const darkTheme = createTheme({
-    palette: {
-        type: 'dark',
-        primary: {
-            light: '#6ec6ff',
-            main: '#2196f3',
-            dark: '#0069c0',
-            contrastText: '#fff',
-        },
-    },
+    ...themeCommons
 });
 
 const lightTheme = createTheme({
     palette: {
-        type: 'light',
+        mode: 'light',
+        primary: {
+            light: "#7986cb",
+            main: "#3f51b5",
+            dark: "#303f9f",
+            contrastText: "#fff"
+        },
+        secondary: {
+            light: "#ff4081",
+            main: "#f50057",
+            dark: "#c51162",
+            contrastText: "#fff"
+        },
+        error: {
+            light: "#e57373",
+            main: "#f44336",
+            dark: "#d32f2f",
+            contrastText: "#fff"
+        },
+        warning: {
+            light: "#ffb74d",
+            main: "#ff9800",
+            dark: "#f57c00",
+            contrastText: "rgba(0, 0, 0, 0.87)"
+        },
+        info: {
+            light: "#64b5f6",
+            main: "#2196f3",
+            dark: "#1976d2",
+            contrastText: "#fff"
+        },
+        success: {
+            light: "#81c784",
+            main: "#4caf50",
+            dark: "#388e3c",
+            contrastText: "rgba(0, 0, 0, 0.87)"
+        },
+        text: {
+            primary: "rgba(0, 0, 0, 0.87)",
+            secondary: "rgba(0, 0, 0, 0.54)",
+            disabled: "rgba(0, 0, 0, 0.38)",
+        },
+        background: {
+            paper: "#fff",
+            default: "#fafafa"
+        },
+        action: {
+            active: "rgba(0, 0, 0, 0.54)",
+            hover: "rgba(0, 0, 0, 0.04)",
+            hoverOpacity: 0.04,
+            selected: "rgba(0, 0, 0, 0.08)",
+            selectedOpacity: 0.08,
+            disabled: "rgba(0, 0, 0, 0.26)",
+            disabledBackground: "rgba(0, 0, 0, 0.12)",
+            disabledOpacity: 0.38,
+            focus: "rgba(0, 0, 0, 0.12)",
+            focusOpacity: 0.12,
+            activatedOpacity: 0.12
+        }
     },
+    ...themeCommons
 });
 
-const App = () => {
-    const { mainView, loading, colorTheme, vintageMode, pageFullHeight, pageFullWidth } = useShallowEqualSelector(state => state.appState);
+const InternalApp = () => {
+    const { mainView, loading, pageFullHeight, pageFullWidth } = useShallowEqualSelector(state => state.appState);
     const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
-    const classes = useStyles();
-    const systemIsDarkTheme = useThemeDetector();
-
-    const theme = useMemo(() => {
-        switch (colorTheme) {
-            case 'light':
-                return lightTheme;
-            case 'dark':
-                return darkTheme;
-            case 'dark-blue':
-                return darkBlueTheme;
-            case 'system':
-                return systemIsDarkTheme ? darkTheme : lightTheme;
-        }
-    }, [systemIsDarkTheme, colorTheme]);
-
-    if (vintageMode) {
-        return <W95App />;
-    }
+    const { classes, cx } = useStyles();
 
     return (
         <React.Fragment>
-            <ThemeProvider theme={theme}>
-                <CssBaseline />
+            <CssBaseline />
 
-                <main className={clsx(classes.layout, { [classes.layoutFullWidth]: pageFullWidth })}>
+            <Suspense fallback={
+                <Backdrop open={true}>
+                    <CircularProgress color="info" />
+                </Backdrop>
+            }>
+                <main className={cx(classes.layout, { [classes.layoutFullWidth]: pageFullWidth })}>
                     <Paper
-                        className={clsx(classes.paper, {
-                            [classes.paperShowsList]: deviceCapabilities.includes(Capability.contentList),
+                        className={cx(classes.paper, {
+                            [classes.paperShowsList]: deviceCapabilities.includes(0 /*Capability.listContent*/),
                             [classes.paperFullHeight]: pageFullHeight,
                         })}
                     >
@@ -180,14 +264,40 @@ const App = () => {
                         {'.'}
                     </Typography>
                 </main>
+            </Suspense>
 
-                {loading ? (
-                    <Backdrop className={classes.backdrop} open={loading}>
-                        <CircularProgress color="inherit" />
-                    </Backdrop>
-                ) : null}
-            </ThemeProvider>
+            {loading ? (
+                <Backdrop className={classes.backdrop} open={loading}>
+                    <CircularProgress color="info" />
+                </Backdrop>
+            ) : null}
         </React.Fragment>
+    );
+}
+
+const App = () => {
+    const { colorTheme, vintageMode } = useShallowEqualSelector(state => state.appState);
+    const systemIsDarkTheme = useThemeDetector();
+
+    const theme = useMemo(() => {
+        switch (colorTheme) {
+            case 'light':
+                return lightTheme;
+            case 'dark':
+                return darkTheme;
+            case 'system':
+                return systemIsDarkTheme ? darkTheme : lightTheme;
+        }
+    }, [systemIsDarkTheme, colorTheme]);
+
+    if (vintageMode) {
+        return <W95App />;
+    }
+
+    return (
+        <ThemeProvider theme={theme}>
+            <InternalApp />
+        </ThemeProvider>
     );
 };
 

@@ -1,0 +1,25 @@
+diff --git a/node_modules/jconv/jconv.js b/node_modules/jconv/jconv.js
+index 3521108..75081c5 100644
+--- a/node_modules/jconv/jconv.js
++++ b/node_modules/jconv/jconv.js
+@@ -136,7 +137,7 @@
+ 
+ 	function ensureBuffer( buf ) {
+ 		buf = buf || new Buffer( 0 );
+-		return ( buf instanceof Buffer ) ? buf : new Buffer( buf.toString(), 'UTF8' );
++		return ( Buffer.isBuffer(buf) ) ? buf : new Buffer( buf.toString(), 'UTF8' );
+ 	}
+ 
+ 	// Unicode CharCode -> UTF8 Buffer
+diff --git a/node_modules/jconv/jconv.min.js b/node_modules/jconv/jconv.min.js
+index 7dcb833..0664460 100644
+--- a/node_modules/jconv/jconv.min.js
++++ b/node_modules/jconv/jconv.min.js
+@@ -1,6 +1,6 @@
+ (function(){function t(c){switch(c.toUpperCase()){case "WINDOWS-31J":case "CP932":case "SJIS":case "SHIFTJIS":case "SHIFT_JIS":return"SJIS";case "EUCJP":case "EUC-JP":return"EUCJP";case "JIS":case "ISO2022JP":case "ISO-2022-JP":case "ISO-2022-JP-1":return"JIS";case "UTF8":case "UTF-8":return"UTF8";case "UNICODE":case "UCS2":case "UCS-2":case "UTF16LE":case "UTF-16LE":return"UCS2";default:return""}}function q(c,k,g){128>c?k[g++]=c:(2048>c?k[g++]=192|c>>>6:(65536>c?k[g++]=224|c>>>12:(2097152>c?k[g++]=
+ 240|c>>>18:(67108864>c?k[g++]=248|c>>>24:(k[g++]=252|c/1073741824,k[g++]=128|c>>>24&63),k[g++]=128|c>>>18&63),k[g++]=128|c>>>12&63),k[g++]=128|c>>>6&63),k[g++]=128|c&63);return g}function r(c,k,g){k[g++]=c&255;k[g++]=c>>8;return g}var p={SJIS:require("./tables/SJIS"),JIS:require("./tables/JIS"),JISEXT:require("./tables/JISEXT"),SJISInverted:require("./tables/SJISInverted"),JISInverted:require("./tables/JISInverted"),JISEXTInverted:require("./tables/JISEXTInverted")},s={},n=module.exports=function(c,
+-k,g){return n.convert(c,k,g)};n.defineEncoding=function(c){s[c.name]=new function(c){this.name=c.name;this.convert=c.convert}(c)};n.convert=function(c,k,g){k=t(k);g=t(g);if(!k||!g)throw Error("Encoding not recognized.");c=c||new Buffer(0);c=c instanceof Buffer?c:new Buffer(c.toString(),"UTF8");if(k===g)return c;var h=s[k+"to"+g];if(h)return h.convert(c);k=s[k+"toUCS2"];g=s["UCS2to"+g];if(k&&g)return g.convert(k.convert(c));throw Error("Encoding not recognized.");};n.decode=function(c,k){switch(k.toUpperCase()){case "BINARY":case "BASE64":case "ASCII":case "HEX":case "UTF8":case "UTF-8":case "UNICODE":case "UCS2":case "UCS-2":case "UTF16LE":case "UTF-16LE":return c.toString(k);
++k,g){return n.convert(c,k,g)};n.defineEncoding=function(c){s[c.name]=new function(c){this.name=c.name;this.convert=c.convert}(c)};n.convert=function(c,k,g){k=t(k);g=t(g);if(!k||!g)throw Error("Encoding not recognized.");c=c||new Buffer(0);c=Buffer.isBuffer(c)?c:new Buffer(c.toString(),"UTF8");if(k===g)return c;var h=s[k+"to"+g];if(h)return h.convert(c);k=s[k+"toUCS2"];g=s["UCS2to"+g];if(k&&g)return g.convert(k.convert(c));throw Error("Encoding not recognized.");};n.decode=function(c,k){switch(k.toUpperCase()){case "BINARY":case "BASE64":case "ASCII":case "HEX":case "UTF8":case "UTF-8":case "UNICODE":case "UCS2":case "UCS-2":case "UTF16LE":case "UTF-16LE":return c.toString(k);
+ default:return n.convert(c,k,"UCS2").toString("UCS2")}};n.encode=function(c,k){switch(k.toUpperCase()){case "BASE64":case "ASCII":case "HEX":case "UTF8":case "UTF-8":return new Buffer(c,k);default:return n.convert(c,"UTF8",k)}};n.encodingExists=function(c){return t(c)?!0:!1};n.defineEncoding({name:"UCS2toUTF8",convert:function(c){for(var k=c.length,g=new Buffer(3*k),h=0,f,b=0;b<k;)f=c[b++],f=(c[b++]<<8)+f,h=q(f,g,h);return g.slice(0,h)}});n.defineEncoding({name:"UCS2toSJIS",convert:function(c){for(var k=
+ p.SJISInverted,g=k[12539],h=c.length,f=new Buffer(h),b=0,a,d=0;d<h;)a=c[d++],a=(c[d++]<<8)+a,128>a?f[b++]=a:65377<=a&&65439>=a?f[b++]=a-65216:(a=k[a]||g,f[b++]=a>>8,f[b++]=a&255);return f.slice(0,b)}});n.defineEncoding({name:"UCS2toJIS",convert:function(c){for(var k=p.JISInverted,g=p.JISEXTInverted,h=k[12539],f=c.length,b=new Buffer(3*f+4),a=0,d,e=0,l=0;l<f;)if(d=c[l++],d=(c[l++]<<8)+d,128>d)0!==e&&(e=0,b[a++]=27,b[a++]=40,b[a++]=66),b[a++]=d;else if(65377<=d&&65439>=d)1!==e&&(e=1,b[a++]=27,b[a++]=
+ 40,b[a++]=73),b[a++]=d-65344;else{var m=k[d];m?(2!==e&&(e=2,b[a++]=27,b[a++]=36,b[a++]=66),b[a++]=m>>8,b[a++]=m&255):(d=g[d])?(3!==e&&(e=3,b[a++]=27,b[a++]=36,b[a++]=40,b[a++]=68),b[a++]=d>>8,b[a++]=d&255):(2!==e&&(e=2,b[a++]=27,b[a++]=36,b[a++]=66),b[a++]=h>>8,b[a++]=h&255)}0!==e&&(b[a++]=27,b[a++]=40,b[a++]=66);return b.slice(0,a)}});n.defineEncoding({name:"UCS2toEUCJP",convert:function(c){for(var k=p.JISInverted,g=p.JISEXTInverted,h=k[12539],f=c.length,b=new Buffer(2*f),a=0,d,e=0;e<f;)if(d=c[e++],

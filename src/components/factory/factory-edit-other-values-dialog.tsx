@@ -1,29 +1,29 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useShallowEqualSelector } from '../../utils';
+import { useShallowEqualSelector } from "../../frontend-utils";
 
-import { makeStyles } from '@material-ui/core/styles';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import Slide from '@material-ui/core/Slide';
-import TextField from '@material-ui/core/TextField';
-import Button from '@material-ui/core/Button';
-import { TransitionProps } from '@material-ui/core/transitions';
+import { makeStyles } from 'tss-react/mui';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import { TransitionProps } from '@mui/material/transitions';
 import { actions as factoryEditOtherValuesDialogActions } from '../../redux/factory/factory-edit-other-values-dialog-feature';
 import { actions as factoryActions } from '../../redux/factory/factory-feature';
 import { ToC } from 'netmd-tocmanip';
 import { batchActions } from 'redux-batched-actions';
 
 const Transition = React.forwardRef(function Transition(
-    props: TransitionProps & { children?: React.ReactElement<any, any> },
+    props: SlideProps,
     ref: React.Ref<unknown>
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     marginUpDown: {
         marginTop: theme.spacing(1),
         marginBottom: theme.spacing(1),
@@ -36,8 +36,8 @@ function asByte(e: any, callback: (e: number) => void) {
 }
 
 export const FactoryModeEditOtherValuesDialog = (props: {}) => {
-    let dispatch = useDispatch();
-    let classes = useStyles();
+    const dispatch = useDispatch();
+    const { classes } = useStyles();
 
     const { visible } = useShallowEqualSelector(state => state.factoryEditOtherValuesDialog);
     const { toc: globalToc } = useShallowEqualSelector(state => state.factory);

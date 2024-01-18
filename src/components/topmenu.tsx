@@ -2,22 +2,23 @@ import React, { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { batchActions } from 'redux-batched-actions';
 
-import IconButton from '@material-ui/core/IconButton';
-import Menu from '@material-ui/core/Menu';
-import MenuItem from '@material-ui/core/MenuItem';
-import Divider from '@material-ui/core/Divider';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Divider from '@mui/material/Divider';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 
 import { wipeDisc, listContent, selfTest, exportCSV, importCSV, openRecognizeTrackDialog } from '../redux/actions';
 import { actions as appActions } from '../redux/app-feature';
 import { actions as renameDialogActions, RenameType } from '../redux/rename-dialog-feature';
 import { actions as factoryNoticeDialogActions } from '../redux/factory/factory-notice-dialog-feature';
-import { dispatchQueue, useShallowEqualSelector } from '../utils';
-import Link from '@material-ui/core/Link';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import ListItemText from '@material-ui/core/ListItemText';
-import Tooltip from '@material-ui/core/Tooltip';
-import { makeStyles } from '@material-ui/core/styles';
+import { dispatchQueue } from '../utils';
+import { useShallowEqualSelector } from '../frontend-utils';
+import Link from '@mui/material/Link';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Tooltip from '@mui/material/Tooltip';
+import { makeStyles } from 'tss-react/mui';
 
 import RefreshIcon from '@mui/icons-material/Refresh';
 import EditIcon from '@mui/icons-material/Edit';
@@ -56,7 +57,7 @@ import {
     writeModifiedTOC,
 } from '../redux/factory/factory-actions';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     listItemIcon: {
         minWidth: theme.spacing(5),
     },
@@ -67,14 +68,14 @@ const useStyles = makeStyles(theme => ({
 }));
 
 export const TopMenu = function(props: { tracksSelected?: number[]; onClick?: () => void }) {
-    const classes = useStyles();
+    const { classes } = useStyles();
     const dispatch = useDispatch();
 
     const { mainView, vintageMode, factoryModeRippingInMainUi, factoryModeShortcuts } = useShallowEqualSelector(state => state.appState);
     const { deviceCapabilities, disc } = useShallowEqualSelector(state => state.main);
     const { spUploadSpeedupActive } = useShallowEqualSelector(state => state.factory);
-    let discTitle = useShallowEqualSelector(state => state.main.disc?.title ?? ``);
-    let fullWidthDiscTitle = useShallowEqualSelector(state => state.main.disc?.fullWidthTitle ?? ``);
+    const discTitle = useShallowEqualSelector(state => state.main.disc?.title ?? ``);
+    const fullWidthDiscTitle = useShallowEqualSelector(state => state.main.disc?.fullWidthTitle ?? ``);
 
     const githubLinkRef = React.useRef<null | HTMLAnchorElement>(null);
     const helpLinkRef = React.useRef<null | HTMLAnchorElement>(null);

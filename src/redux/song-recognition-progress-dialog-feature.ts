@@ -52,7 +52,7 @@ const slice = createSlice({
         setCurrentStepProgress: (state, action: PayloadAction<Step>) => {
             state.currentStepCurrent = action.payload;
         },
-        setCurrentStepTotal: (state, action: PayloadAction<Step>) => {
+        setCurrentStepTotal: (state, action: PayloadAction<number>) => {
             state.currentStepTotal = action.payload;
         },
     },

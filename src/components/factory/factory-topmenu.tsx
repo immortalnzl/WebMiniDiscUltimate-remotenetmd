@@ -1,10 +1,10 @@
 import React, { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 
-import IconButton from '@material-ui/core/IconButton';
-import Menu from '@material-ui/core/Menu';
-import MenuItem from '@material-ui/core/MenuItem';
-import Divider from '@material-ui/core/Divider';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Divider from '@mui/material/Divider';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 
 import {
@@ -22,12 +22,12 @@ import {
 } from '../../redux/factory/factory-actions';
 import { actions as appActions } from '../../redux/app-feature';
 import { actions as factoryEditOtherValuesDialogActions } from '../../redux/factory/factory-edit-other-values-dialog-feature';
-import { useShallowEqualSelector } from '../../utils';
-import Link from '@material-ui/core/Link';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import ListItemText from '@material-ui/core/ListItemText';
-import Tooltip from '@material-ui/core/Tooltip';
-import { makeStyles } from '@material-ui/core/styles';
+import { useShallowEqualSelector } from "../../frontend-utils";
+import Link from '@mui/material/Link';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Tooltip from '@mui/material/Tooltip';
+import { makeStyles } from 'tss-react/mui';
 
 import RefreshIcon from '@mui/icons-material/Refresh';
 import GitHubIcon from '@mui/icons-material/GitHub';
@@ -48,7 +48,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 
 import { Capability, ExploitCapability } from '../../services/interfaces/netmd';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     listItemIcon: {
         minWidth: theme.spacing(5),
     },
@@ -59,7 +59,7 @@ const useStyles = makeStyles(theme => ({
 }));
 
 export const FactoryTopMenu = function(props: { onClick?: () => void }) {
-    const classes = useStyles();
+    const { classes } = useStyles();
     const dispatch = useDispatch();
 
     const { exploitCapabilities, spUploadSpeedupActive } = useShallowEqualSelector(state => state.factory);

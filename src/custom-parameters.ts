@@ -10,7 +10,7 @@ export type CustomParameterInfo = {
 
 export function isAllValid(archetype?: CustomParameterInfo[], parameters?: CustomParameters) {
     if (!archetype || !parameters) return true;
-    for (let parameter of archetype) {
+    for (const parameter of archetype) {
         if (parameter.validator) {
             if (!parameter.validator(parameters[parameter.varName]?.toString())) {
                 return false;
@@ -32,8 +32,8 @@ function getDefaultForType(type: CustomParameterType) {
 }
 
 export function initializeParameters(archetype?: CustomParameterInfo[]) {
-    let emptyParameters: CustomParameters = {};
-    for (let param of archetype ?? []) {
+    const emptyParameters: CustomParameters = {};
+    for (const param of archetype ?? []) {
         emptyParameters[param.varName] = param.defaultValue || getDefaultForType(param.type);
     }
     return emptyParameters;

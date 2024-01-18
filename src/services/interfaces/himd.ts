@@ -43,7 +43,7 @@ import { concatUint8Arrays } from 'netmd-js/dist/utils';
 import { recomputeGroupsAfterTrackMove } from '../../utils';
 import { CryptoProvider } from 'himd-js/dist/workers';
 
-const Worker = require('worker-loader!himd-js/dist/web-crypto-worker.js'); // eslint-disable-line import/no-webpack-loader-syntax
+import WorkerURL from 'himd-js/dist/web-crypto-worker?worker&url';
 
 export class HiMDSpec implements MinidiscSpec {
     constructor(private unrestricted: boolean = false) {
@@ -141,7 +141,7 @@ export class HiMDRestrictedService extends NetMDService {
         };
     }
     getWorker(): any[]{
-        return [new Worker(), makeAsyncWorker];
+        return [new Worker(new URL(WorkerURL, import.meta.url), { type: 'classic' }), makeAsyncWorker];
     }
 
     async getDeviceStatus(): Promise<DeviceStatus> {
@@ -342,11 +342,11 @@ export class HiMDRestrictedService extends NetMDService {
         progressCallback: (progress: { read: number; total: number }) => void
     ): Promise<{ format: DiscFormat; data: Uint8Array } | null> {
         const trackNumber = this.himd!.trackIndexToTrackSlot(index);
-        let [w, creator] = this.getWorker();
+        const [w, creator] = this.getWorker();
         const webWorker = await creator(w);
         const info = dumpTrack(this.himd!, trackNumber, webWorker);
         const blocks: Uint8Array[] = [];
-        for await (let { data, total } of info.data) {
+        for await (const { data, total } of info.data) {
             blocks.push(data);
             progressCallback({ read: blocks.length, total });
         }
@@ -495,6 +495,13 @@ export class HiMDFullService extends HiMDRestrictedService {
         });
     }
 
+    async listContent(dropCache?: boolean): Promise<Disc> {
+        if(dropCache){
+            await this.fsDriver!.init();
+        }
+        return super.listContent(dropCache);
+    }
+
     async finalizeUpload(): Promise<void> {
         await super.finalizeUpload();
         if (this.session) {
@@ -511,7 +518,7 @@ export class HiMDFullService extends HiMDRestrictedService {
 
     async prepareUpload(): Promise<void> {
         await super.prepareUpload();
-        let [w, creator] = this.getWorker();
+        const [w, creator] = this.getWorker();
         this.worker = await creator(w);
     }
 

@@ -1,32 +1,32 @@
 import React, { ReactElement, useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { forAnyDesktop, forWideDesktop, useShallowEqualSelector } from '../utils';
+import { forAnyDesktop, forWideDesktop, useShallowEqualSelector } from "../frontend-utils";
 
 import { actions as appActions } from '../redux/app-feature';
 
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogContentText from '@material-ui/core/DialogContentText';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import Slide from '@material-ui/core/Slide';
-import Button from '@material-ui/core/Button';
-import Box from '@material-ui/core/Box';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import MenuItem from '@material-ui/core/MenuItem';
-import Select from '@material-ui/core/Select';
-import Switch from '@material-ui/core/Switch';
-import Tooltip from '@material-ui/core/Tooltip';
-import Typography from '@material-ui/core/Typography';
-import { TransitionProps } from '@material-ui/core/transitions';
-import { makeStyles } from '@material-ui/core';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormControl from '@mui/material/FormControl';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
+import Switch from '@mui/material/Switch';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import { makeStyles } from 'tss-react/mui';
 import { AudioServices } from '../services/audio-export-service-manager';
 import { renderCustomParameter } from './custom-parameters-renderer';
 import { initializeParameters, isAllValid } from '../custom-parameters';
 import { batchActions } from 'redux-batched-actions';
 
 const Transition = React.forwardRef(function Transition(
-    props: TransitionProps & { children?: React.ReactElement<any, any> },
+    props: SlideProps,
     ref: React.Ref<unknown>
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
@@ -37,18 +37,18 @@ function deepCompare<T>(a: T, b: T) {
         return a === b;
     }
     if (Array.isArray(a)) {
-        for (let e in a) {
+        for (const e in a) {
             if (a[e] !== (b as any)[e]) return false;
         }
         return true;
     }
-    for (let [k, v] of Object.entries(a)) {
+    for (const [k, v] of Object.entries(a as any)) {
         if (!deepCompare(v, (b as any)[k])) return false;
     }
     return true;
 }
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     main: {
         [forAnyDesktop(theme)]: {
             height: 600,
@@ -71,7 +71,7 @@ const useStyles = makeStyles(theme => ({
     },
     header: {
         color: theme.palette.primary.main,
-        '&:not(:first-child)': {
+        '&:not(:first-of-type)': {
             marginTop: theme.spacing(3),
         },
     },
@@ -95,7 +95,7 @@ const SimpleField = ({
     name: string;
     formControl?: boolean;
     children: ReactElement<any, any>;
-    classes: ReturnType<typeof useStyles>;
+    classes: ReturnType<typeof useStyles>['classes'];
     tooltip?: string;
 }) => {
     const element = formControl ? (
@@ -123,7 +123,7 @@ const SimpleField = ({
 
 export const SettingsDialog = (props: {}) => {
     const dispatch = useDispatch();
-    const classes = useStyles();
+    const { classes } = useStyles();
 
     const visible = useShallowEqualSelector(state => state.appState.settingsDialogVisible);
 
@@ -187,8 +187,8 @@ export const SettingsDialog = (props: {}) => {
 
     //Appearance configuration
     const handleThemeChange = useCallback(
-        event => {
-            dispatch(appActions.setDarkMode(event.target.value));
+        (event: any) => {
+            dispatch(appActions.setDarkMode(event.target.value as any));
         },
         [dispatch]
     );
@@ -220,15 +220,16 @@ export const SettingsDialog = (props: {}) => {
     }, [dispatch, factoryModeNERAWDownload]);
 
     //Encoder configuration
-    const handleExportServiceChanges = useCallback(event => {
-        let serviceId = event.target.value;
+    const handleExportServiceChanges = useCallback(
+        (event: any) => {
+        const serviceId = event.target.value as number;
         setCurrentExportService(serviceId);
         setExportServiceConfig(initializeParameters(AudioServices[serviceId].customParameters));
     }, []);
 
-    const handleExportServiceParameterChange = useCallback((varName, value) => {
+    const handleExportServiceParameterChange = useCallback((varName: string, value: string | number | boolean) => {
         setExportServiceConfig(oldData => {
-            let newData = { ...oldData };
+            const newData = { ...oldData };
             newData[varName] = value;
             return newData;
         });
@@ -261,7 +262,6 @@ export const SettingsDialog = (props: {}) => {
                     <Select className={classes.wider} value={colorTheme} onChange={handleThemeChange}>
                         <MenuItem value="light">Light</MenuItem>
                         <MenuItem value="dark">Dark</MenuItem>
-                        <MenuItem value="dark-blue">Dark (Blue)</MenuItem>
                         <MenuItem value="system">Device Theme</MenuItem>
                     </Select>
                 </SimpleField>

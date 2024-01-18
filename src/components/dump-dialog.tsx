@@ -1,32 +1,32 @@
 import React, { useState, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import { useShallowEqualSelector } from '../utils';
+import { useShallowEqualSelector } from "../frontend-utils";
 
 import { downloadTracks, recordTracks } from '../redux/actions';
 import { actions as dumpDialogActions } from '../redux/dump-dialog-feature';
 
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import Slide from '@material-ui/core/Slide';
-import Button from '@material-ui/core/Button';
-import { makeStyles } from '@material-ui/core/styles';
-import Typography from '@material-ui/core/Typography';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import Button from '@mui/material/Button';
+import { makeStyles } from 'tss-react/mui';
+import Typography from '@mui/material/Typography';
 import serviceRegistry from '../services/registry';
-import { TransitionProps } from '@material-ui/core/transitions';
+import { TransitionProps } from '@mui/material/transitions';
 import { W95DumpDialog } from './win95/dump-dialog';
 import { exploitDownloadTracks } from '../redux/factory/factory-actions';
 import { LineInDeviceSelect } from './line-in-helpers';
 
 const Transition = React.forwardRef(function Transition(
-    props: TransitionProps & { children?: React.ReactElement<any, any> },
+    props: SlideProps,
     ref: React.Ref<unknown>
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     head: {
         textShadow: '0px 0px 12px rgba(150, 150, 150, 1)',
         fontSize: theme.typography.h2.fontSize,
@@ -45,12 +45,12 @@ export const DumpDialog = ({
     isExploitDownload: boolean;
 }) => {
     const dispatch = useDispatch();
-    const classes = useStyles();
+    const { classes } = useStyles();
 
     const [inputDeviceId, setInputDeviceId] = useState<string>('');
 
-    let { visible } = useShallowEqualSelector(state => state.dumpDialog);
-    let { deviceCapabilities } = useShallowEqualSelector(state => state.main);
+    const { visible } = useShallowEqualSelector(state => state.dumpDialog);
+    const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
 
     const handleClose = useCallback(() => {
         setInputDeviceId('');

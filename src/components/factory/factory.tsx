@@ -1,14 +1,14 @@
-import Box from '@material-ui/core/Box';
-import IconButton from '@material-ui/core/IconButton';
-import Tab from '@material-ui/core/Tab';
-import Tabs from '@material-ui/core/Tabs';
-import Typography from '@material-ui/core/Typography';
-import { makeStyles } from '@material-ui/core/styles';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+import Typography from '@mui/material/Typography';
+import { makeStyles } from 'tss-react/mui';
 import { ModeFlag, isValidFragment, TitleCell, Fragment, getTitleByTrackNumber, ToC } from 'netmd-tocmanip';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { exploitDownloadTracks, readToc, writeModifiedTOC } from '../../redux/factory/factory-actions';
-import { useShallowEqualSelector } from '../../utils';
+import { useShallowEqualSelector } from "../../frontend-utils";
 import { actions as factoryActions } from '../../redux/factory/factory-feature';
 import { FactoryModeEditDialog } from './factory-fragment-mode-edit-dialog';
 import { batchActions } from 'redux-batched-actions';
@@ -32,7 +32,7 @@ import { FactoryTopMenu } from './factory-topmenu';
 import { FactoryModeBadSectorDialog } from './factory-bad-sector-dialog';
 import { SettingsDialog } from '../settings-dialog';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     tocTable: {
         display: 'flex',
         flexDirection: 'row',
@@ -99,7 +99,7 @@ function gcd(a: number, b: number): number {
 }
 
 const Toc = () => {
-    const classes = useStyles();
+    const { classes } = useStyles();
     const dispatch = useDispatch();
     const { toc, modified, firmwareVersion, exploitCapabilities } = useShallowEqualSelector(state => state.factory);
     const { deviceName } = useShallowEqualSelector(state => state.main);
@@ -166,11 +166,11 @@ const Toc = () => {
     const handleSelectionChange = useCallback(
         (newIndex: number) => {
             setSelectedTile(newIndex);
-            let newHighlited: number[] = [];
+            const newHighlited: number[] = [];
 
             function lookBack(source: (TitleCell | Fragment)[], index: number) {
                 if (index === 0) return; // Linked to zero means not linked.
-                let linkedToThis = source.map((n, i) => ({ ...n, i })).filter(n => n.link === index);
+                const linkedToThis = source.map((n, i) => ({ ...n, i })).filter(n => n.link === index);
                 linkedToThis
                     .filter(n => !newHighlited.includes(n.i))
                     .forEach(n => {
@@ -180,7 +180,7 @@ const Toc = () => {
             }
 
             if (selectedTab === 0) {
-                let fragmentIndex = newIndex >= 256 ? newIndex - 256 : toc!.trackMap[newIndex];
+                const fragmentIndex = newIndex >= 256 ? newIndex - 256 : toc!.trackMap[newIndex];
 
                 lookBack(toc!.trackFragmentList, fragmentIndex);
                 // Look forward
@@ -191,7 +191,7 @@ const Toc = () => {
                     if (i === 0) break;
                 }
             } else if (selectedTab === 1) {
-                let cellIndex = newIndex >= 256 ? newIndex - 256 : toc!.titleMap[newIndex];
+                const cellIndex = newIndex >= 256 ? newIndex - 256 : toc!.titleMap[newIndex];
 
                 lookBack(toc!.titleCellList, cellIndex);
                 // Look forward
@@ -209,7 +209,7 @@ const Toc = () => {
 
     const handleUpdateLink = useCallback(
         (newLink: number) => {
-            let newTOC = JSON.parse(JSON.stringify(toc)) as ToC;
+            const newTOC = JSON.parse(JSON.stringify(toc)) as ToC;
             [newTOC.trackMap, newTOC.titleMap, newTOC.timestampMap][selectedTab][selectedTile] = newLink;
             dispatch(batchActions([factoryActions.setToc(newTOC), factoryActions.setModified(true)]));
         },
@@ -250,7 +250,7 @@ const Toc = () => {
         elseColor?: string
     ) {
         let i = 0;
-        for (let elem of source) {
+        for (const elem of source) {
             if (condition(elem, i)) {
                 target[i].contents.push({ text, color });
             } else if (elseText !== undefined) {
@@ -345,7 +345,7 @@ const Toc = () => {
     }, [selectedTab, toc, junctionTables, setContentsTable, setMapTable]);
 
     const calculatedSpaceString = useMemo(() => {
-        let fragmentsSpace: string[] = [];
+        const fragmentsSpace: string[] = [];
         let index = toc?.trackMap[selectedTile] ?? 0;
         let i = 0;
         while (index !== 0) {

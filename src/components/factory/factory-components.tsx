@@ -1,19 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { makeStyles } from '@material-ui/core';
-import Button from '@material-ui/core/Button';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableRow from '@material-ui/core/TableRow';
-import TextField from '@material-ui/core/TextField';
-import Tooltip from '@material-ui/core/Tooltip';
-import Typography from '@material-ui/core/Typography';
+import { makeStyles } from 'tss-react/mui';
+import Button from '@mui/material/Button';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableRow from '@mui/material/TableRow';
+import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import { actions as factoryFragmentModeDialogActions } from '../../redux/factory/factory-fragment-mode-edit-dialog-feature';
 import { useDispatch } from 'react-redux';
 import { batchActions } from 'redux-batched-actions';
 import { DiscAddress, ModeFlag } from 'netmd-tocmanip';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     tocTable: {
         tableLayout: 'fixed',
     },
@@ -101,10 +101,10 @@ export const TocTable = ({
     highlitedIndices: number[];
     contentCounter: number;
 }) => {
-    let data = [...input];
+    const data = [...input];
     data.filter(n => n.contents.length === 0).forEach(n => n.contents.push({ text: '?', color: 'red' }));
     while (data.length < 256) data.push({ contents: [{ text: '?', color: 'red' }] });
-    const classes = useStyles();
+    const { classes } = useStyles();
     return (
         <div className={classes.tableWrapper}>
             <Typography component="h3" variant="h6" className={classes.tableHeader}>
@@ -183,7 +183,7 @@ export const LabeledNumberInput = ({
     name: string;
     bytes?: number;
 }) => {
-    const classes = useStyles();
+    const { classes } = useStyles();
     const maxValue = useMemo(() => Math.pow(2, 8 * (bytes ?? 1)) - 1, [bytes]);
 
     const [localValue, setLocalValue] = useState<typeof value>(value);
@@ -215,7 +215,7 @@ export const LabeledNumberInput = ({
 export const CellInput = ({ value, setValue }: { value: string; setValue: (newValue: string) => void }) => {
     function backslashEscape(text: string) {
         let ret = '';
-        for (let char of [...text]) {
+        for (const char of [...text]) {
             const code = char.charCodeAt(0);
             if (code > 0xff) ret += '\\00';
             // Unicode non-ascii character.
@@ -234,7 +234,7 @@ export const CellInput = ({ value, setValue }: { value: string; setValue: (newVa
         let raw = '';
         let sequence = false;
         let half = null;
-        for (let char of [...text]) {
+        for (const char of [...text]) {
             if (char === '\\' && !sequence) {
                 if (half !== null) throw new Error('Invalid sequence');
                 sequence = true;
@@ -256,7 +256,7 @@ export const CellInput = ({ value, setValue }: { value: string; setValue: (newVa
         return raw;
     }
 
-    const classes = useStyles();
+    const { classes } = useStyles();
     const [tempValue, setTempValue] = useState(backslashEscape(value));
     useEffect(() => setTempValue(backslashEscape(value)), [value, setTempValue]);
     const [error, setError] = useState('');
@@ -303,7 +303,7 @@ export const ModeInput = ({
     setValue: (newValue: number) => void;
     fragmentIndex: number;
 }) => {
-    const classes = useStyles();
+    const { classes } = useStyles();
     const dispatch = useDispatch();
     const handleChange = useCallback(
         (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
@@ -350,11 +350,11 @@ export const DiscAddressInput = ({
     value: DiscAddress;
     setValue: (discAddress: DiscAddress) => void;
 }) => {
-    const classes = useStyles();
+    const { classes } = useStyles();
 
     const handleClusterEdit = useCallback(
         (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-            let inputValue = parseInt(event.target.value || '0', 16);
+            const inputValue = parseInt(event.target.value || '0', 16);
             if (isNaN(inputValue)) return;
             if (inputValue > 0x3fff) return;
             setValue({ ...value, cluster: inputValue });
@@ -364,7 +364,7 @@ export const DiscAddressInput = ({
 
     const handleSectorEdit = useCallback(
         (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-            let inputValue = parseInt(event.target.value || '0', 16);
+            const inputValue = parseInt(event.target.value || '0', 16);
             if (isNaN(inputValue)) return;
             if (inputValue > 0x3f) return;
             setValue({ ...value, sector: inputValue });
@@ -374,7 +374,7 @@ export const DiscAddressInput = ({
 
     const handleGroupEdit = useCallback(
         (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-            let inputValue = parseInt(event.target.value || '0', 16);
+            const inputValue = parseInt(event.target.value || '0', 16);
             if (isNaN(inputValue)) return;
             if (inputValue > 0xf) return;
             setValue({ ...value, group: inputValue });

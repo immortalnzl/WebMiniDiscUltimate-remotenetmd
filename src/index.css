@@ -12,3 +12,24 @@ body, html {
 div {
     outline: none;
 }
+
+a {
+    text-decoration: none !important;
+}
+
+a:hover {
+    text-decoration: underline !important;
+}
+
+@keyframes scrollLeft {
+    from {
+        transform: translateX(0%);
+    }
+    to {}
+}
+
+@keyframes blink {
+    50% {
+        visibility: hidden;
+    }
+}

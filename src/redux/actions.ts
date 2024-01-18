@@ -50,9 +50,9 @@ export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pa
                     await serviceRegistry.netmdService!.next();
                 } catch (e) {
                     // Some devices don't support next() and prev()
-                    if (state.main.deviceStatus?.track === state.main.disc?.trackCount! - 1 || !state.main.deviceStatus) return;
+                    if (state.main.deviceStatus?.track === state.main.disc!.trackCount - 1 || !state.main.deviceStatus) return;
                     await serviceRegistry.netmdService!.stop();
-                    await serviceRegistry.netmdService!.gotoTrack(state.main.deviceStatus?.track! + 1);
+                    await serviceRegistry.netmdService!.gotoTrack(state.main.deviceStatus.track! + 1);
                     await serviceRegistry.netmdService!.play();
                 }
                 break;
@@ -63,7 +63,7 @@ export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pa
                     // Some devices don't support next() and prev()
                     if (state.main.deviceStatus?.track === 0 || !state.main.deviceStatus) return;
                     await serviceRegistry.netmdService!.stop();
-                    await serviceRegistry.netmdService!.gotoTrack(state.main.deviceStatus?.track! - 1);
+                    await serviceRegistry.netmdService!.gotoTrack(state.main.deviceStatus.track! - 1);
                     await serviceRegistry.netmdService!.play();
                 }
                 break;
@@ -91,7 +91,7 @@ export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pa
         // We wait 500ms and let the monitor do further updates
         await sleep(500);
         try {
-            let deviceStatus = await serviceRegistry.netmdService!.getDeviceStatus();
+            const deviceStatus = await serviceRegistry.netmdService!.getDeviceStatus();
             dispatch(mainActions.setDeviceStatus(deviceStatus));
         } catch (e) {
             console.log('control: Cannot get device status');
@@ -108,8 +108,8 @@ export function renameGroup({ groupIndex, newName, newFullWidthName }: { groupIn
 
 export function groupTracks(indexes: number[]) {
     return async function(dispatch: AppDispatch) {
-        let begin = indexes[0];
-        let length = indexes[indexes.length - 1] - begin + 1;
+        const begin = indexes[0];
+        const length = indexes[indexes.length - 1] - begin + 1;
         const { netmdService } = serviceRegistry;
 
         netmdService!.addGroup(begin, length, '');
@@ -121,8 +121,8 @@ export function deleteGroups(indexes: number[]) {
     return async function(dispatch: AppDispatch) {
         dispatch(appStateActions.setLoading(true));
         const { netmdService } = serviceRegistry;
-        let sorted = [...indexes].sort((a, b) => b - a);
-        for (let index of sorted) {
+        const sorted = [...indexes].sort((a, b) => b - a);
+        for (const index of sorted) {
             await netmdService!.deleteGroup(index);
         }
         listContent()(dispatch);
@@ -136,7 +136,7 @@ export function dragDropTrack(sourceList: number, sourceIndex: number, targetLis
         dispatch(appStateActions.setLoading(true));
         const groupedTracks = getGroupedTracks(await serviceRegistry.netmdService!.listContent());
         // Remove the moved item from its current list
-        let movedItem = groupedTracks[sourceList].tracks.splice(sourceIndex, 1)[0];
+        const movedItem = groupedTracks[sourceList].tracks.splice(sourceIndex, 1)[0];
         let newIndex: number;
 
         // Calculate bounds
@@ -170,8 +170,8 @@ export function dragDropTrack(sourceList: number, sourceIndex: number, targetLis
 
         // Shift indices
         for (let i = boundsStartList; i <= boundsEndList; i++) {
-            let startingIndex = i === boundsStartList ? boundsStartIndex : 0;
-            let endingIndex = i === boundsEndList ? boundsEndIndex : groupedTracks[i].tracks.length;
+            const startingIndex = i === boundsStartList ? boundsStartIndex : 0;
+            const endingIndex = i === boundsEndList ? boundsEndIndex : groupedTracks[i].tracks.length;
             for (let j = startingIndex; j < endingIndex; j++) {
                 groupedTracks[i].tracks[j].index += offset;
             }
@@ -190,7 +190,7 @@ export function dragDropTrack(sourceList: number, sourceIndex: number, targetLis
                 }
                 if (prevList) {
                     // If there's a previous list, make this tracks's index previous list's last item's index + 1
-                    let lastIndexOfPrevList = prevList.tracks[prevList.tracks.length - 1].index;
+                    const lastIndexOfPrevList = prevList.tracks[prevList.tracks.length - 1].index;
                     newIndex = lastIndexOfPrevList + 1;
                 } else newIndex = 0; // Else default to index 0
             } else {
@@ -204,11 +204,11 @@ export function dragDropTrack(sourceList: number, sourceIndex: number, targetLis
 
         movedItem.index = newIndex;
         groupedTracks[targetList].tracks.splice(targetIndex, 0, movedItem);
-        let ungrouped = [];
+        const ungrouped = [];
 
         // Recompile the groups and update them on the player
-        let normalGroups = [];
-        for (let group of groupedTracks) {
+        const normalGroups = [];
+        for (const group of groupedTracks) {
             if (group.tracks.length === 0) continue;
             if (group.index === -1) ungrouped.push(...group.tracks);
             else normalGroups.push(group);
@@ -235,7 +235,7 @@ export function addService(info: ServiceConstructionInfo) {
 export function deleteService(index: number) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         if (index < getSimpleServices().length) return;
-        let availableServices = [...getState().appState.availableServices];
+        const availableServices = [...getState().appState.availableServices];
         availableServices.splice(index, 1);
         dispatch(appStateActions.setLastSelectedService(0));
         dispatch(appStateActions.setAvailableServices(availableServices));
@@ -258,7 +258,7 @@ export function pair(serviceInstance: NetMDService, spec: MinidiscSpec) {
         serviceRegistry.netmdFactoryService = undefined;
 
         try {
-            let connected = await serviceRegistry.netmdService!.connect();
+            const connected = await serviceRegistry.netmdService!.connect();
             if (connected) {
                 dispatch(appStateActions.setMainView('MAIN'));
                 return;
@@ -269,7 +269,7 @@ export function pair(serviceInstance: NetMDService, spec: MinidiscSpec) {
         }
 
         try {
-            let paired = await serviceRegistry.netmdService!.pair();
+            const paired = await serviceRegistry.netmdService!.pair();
             if (paired) {
                 dispatch(
                     batchActions([
@@ -283,7 +283,7 @@ export function pair(serviceInstance: NetMDService, spec: MinidiscSpec) {
             dispatch(batchActions([appStateActions.setPairingMessage(`Connection Failed`), appStateActions.setPairingFailed(true)]));
         } catch (err) {
             console.error(err);
-            let message = (err as Error).message;
+            const message = (err as Error).message;
             dispatch(batchActions([appStateActions.setPairingMessage(message), appStateActions.setPairingFailed(true)]));
         }
     };
@@ -301,8 +301,8 @@ export function listContent(dropCache: boolean = false) {
             console.log('listContent: Cannot get device status');
             console.log(e);
         }
-        let deviceName = await serviceRegistry.netmdService!.getDeviceName();
-        let deviceCapabilities = await serviceRegistry.netmdService!.getServiceCapabilities();
+        const deviceName = await serviceRegistry.netmdService!.getDeviceName();
+        const deviceCapabilities = await serviceRegistry.netmdService!.getServiceCapabilities();
 
         if (deviceStatus?.discPresent) {
             try {
@@ -446,12 +446,12 @@ export function downloadTracks(
             ])
         );
 
-        let disc = getState().main.disc;
-        let tracks = getTracks(disc!).filter(t => indexes.indexOf(t.index) >= 0);
+        const disc = getState().main.disc;
+        const tracks = getTracks(disc!).filter(t => indexes.indexOf(t.index) >= 0);
 
         const { netmdService } = serviceRegistry;
 
-        for (let [i, track] of tracks.entries()) {
+        for (const [i, track] of tracks.entries()) {
             dispatch(
                 recordDialogAction.setProgress({
                     trackTotal: tracks.length,
@@ -502,13 +502,13 @@ export function recordTracks(indexes: number[], deviceId: string) {
             ])
         );
 
-        let disc = getState().main.disc;
-        let tracks = getTracks(disc!).filter(t => indexes.indexOf(t.index) >= 0);
+        const disc = getState().main.disc;
+        const tracks = getTracks(disc!).filter(t => indexes.indexOf(t.index) >= 0);
 
         const { netmdService, mediaRecorderService } = serviceRegistry;
         await serviceRegistry.netmdService!.stop();
 
-        for (let [i, track] of tracks.entries()) {
+        for (const [i, track] of tracks.entries()) {
             dispatch(
                 recordDialogAction.setProgress({
                     trackTotal: tracks.length,
@@ -523,8 +523,8 @@ export function recordTracks(indexes: number[], deviceId: string) {
             await netmdService!.play();
             console.log('Waiting for track to be ready to play');
             let position = await netmdService!.getPosition();
-            let expected = [track.index, 0, 0, 1];
-            // eslint-disable-next-line
+            const expected = [track.index, 0, 0, 1];
+             
             while (position === null || !expected.every((_, i) => expected[i] === position![i])) {
                 await sleep(250);
                 position = await netmdService!.getPosition();
@@ -576,7 +576,7 @@ export function recordTracks(indexes: number[], deviceId: string) {
 
 export function renameInConvertDialog({ index, newName, newFullWidthName }: { index: number; newName: string; newFullWidthName: string }) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        let newTitles = [...getState().convertDialog.titles];
+        const newTitles = [...getState().convertDialog.titles];
         newTitles.splice(index, 1, {
             ...newTitles[index],
             title: newName,
@@ -598,7 +598,7 @@ export function renameInConvertDialogHiMD({
     artist: string;
 }) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        let newTitles = [...getState().convertDialog.titles];
+        const newTitles = [...getState().convertDialog.titles];
         newTitles.splice(index, 1, {
             ...newTitles[index],
             title,
@@ -619,7 +619,7 @@ export function renameInSongRecognitionDialog({
     newFullWidthName: string;
 }) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        let newTitles = [...getState().songRecognitionDialog.titles];
+        const newTitles = [...getState().songRecognitionDialog.titles];
         newTitles.splice(index, 1, {
             ...newTitles[index],
             manualOverrideNewTitle: newName,
@@ -874,7 +874,7 @@ export function exportCSV(callback: (blob: Blob, name: string) => void = downloa
                 ]);
             }
         }
-        let csvDocument = [csvHeader, ...rows].map(e => e.map(q => q.toString().replace(/,/g, '\\,')).join(',')).join('\n');
+        const csvDocument = [csvHeader, ...rows].map(e => e.map(q => q.toString().replace(/,/g, '\\,')).join(',')).join('\n');
 
         let title;
         if (disc.title) {
@@ -901,7 +901,7 @@ export function importCSV(file: File) {
             .split('\n')
             .map(e => e.trim())
             .filter(e => e.length !== 0)
-            .map(e => e.split(/(?<!\\),/g));
+            .map(e => e.split(/(?<!\\),/g).map(x => x.replace(/\\,/g, ',')));
 
         if (records.length === 0) {
             alert('Empty CSV file');
@@ -923,7 +923,7 @@ export function importCSV(file: File) {
             return;
         }
 
-        let addedGroupRanges = new Set<string>();
+        const addedGroupRanges = new Set<string>();
 
         const isTimeDifferenceAcceptable = (a: number, b: number) => Math.abs(a - b) < 2;
 
@@ -947,12 +947,12 @@ export function importCSV(file: File) {
 
         await serviceRegistry.netmdService!.wipeDiscTitleInfo();
 
-        for (let [sIndex, gRange, groupName, groupFullWidthName, name, fwName, album, artist, sDuration, codec, bitrate] of records.slice(
+        for (const [sIndex, grRange, groupName, groupFullWidthName, name, fwName, album, artist, sDuration, codec, bitrate] of records.slice(
             1
         )) {
-            let index = parseInt(sIndex),
-                duration = parseInt(sDuration);
-            gRange = gRange.replace(/ /g, '');
+            const index = parseInt(sIndex),
+                duration = parseInt(sDuration),
+                gRange = grRange.replace(/ /g, '');
             if (index === 0) {
                 // Disc title info
                 await serviceRegistry.netmdService!.renameDisc(name, fwName);
@@ -964,7 +964,7 @@ export function importCSV(file: File) {
                 continue;
             }
 
-            let currentTrackEncoding = ungroupedTracks[index - 1].encoding;
+            const currentTrackEncoding = ungroupedTracks[index - 1].encoding;
             if (
                 !isTimeDifferenceAcceptable(ungroupedTracks[index - 1].duration, duration) ||
                 currentTrackEncoding.codec.toLowerCase() !== codec.toLowerCase() ||
@@ -993,7 +993,7 @@ export function importCSV(file: File) {
                 if (!addedGroupRanges.has(gRange)) {
                     addedGroupRanges.add(gRange);
                     const [startS, endS] = gRange.split('-');
-                    let start = parseInt(startS),
+                    const start = parseInt(startS),
                         end = parseInt(endS),
                         length = end - start + 1;
                     await serviceRegistry.netmdService!.addGroup(start, length, groupName, groupFullWidthName);
@@ -1051,7 +1051,7 @@ export function openRecognizeTrackDialog(selectedTracks: number[]) {
 }
 
 export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 'line-in', inputModeConfiguration?: { deviceId?: string }) {
-    let trackEntries = [..._trackEntries];
+    const trackEntries = [..._trackEntries];
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         const shazam = new Shazam();
 
@@ -1088,7 +1088,7 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
 
         let i = 0;
         let toRecognizeI = 0;
-        for (let trackEntry of trackEntries) {
+        for (const trackEntry of trackEntries) {
             if (!trackEntry.selectedToRecognize || trackEntry.alreadyRecognized) {
                 i++;
                 continue;
@@ -1113,7 +1113,7 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
                 if (mode === 'exploits') {
                     // Download the track
 
-                    let atracData = await serviceRegistry.netmdFactoryService!.exploitDownloadTrack(
+                    const atracData = await serviceRegistry.netmdFactoryService!.exploitDownloadTrack(
                         trackEntry.index,
                         false,
                         e =>
@@ -1300,7 +1300,7 @@ export function convertAndUpload(
             bytesSentFromThisTrack = 0;
 
         const updateProgressCallback = ({ written, encrypted, total }: { written: number; encrypted: number; total: number }) => {
-            let now = new Date().getTime();
+            const now = new Date().getTime();
             if (now - lastProgress > 200) {
                 queueMicrotask(() => dispatch(uploadDialogActions.setWriteProgress({ written, encrypted, total })));
                 lastProgress = now;
@@ -1343,7 +1343,7 @@ export function convertAndUpload(
             };
         }
 
-        let trackUpdate: {
+        const trackUpdate: {
             current: number;
             converting: number;
             total: number;
@@ -1362,8 +1362,8 @@ export function convertAndUpload(
         };
         updateTrack();
 
-        let conversionIterator = async function*(files: TitledFile[]) {
-            let converted: Promise<{ file: TitledFile; data: ArrayBuffer }>[] = [];
+        const conversionIterator = async function*(files: TitledFile[]) {
+            const converted: Promise<{ file: TitledFile; data: ArrayBuffer }>[] = [];
 
             let i = 0;
             function convertNext() {
@@ -1375,10 +1375,10 @@ export function convertAndUpload(
                     return;
                 }
 
-                let f = files[i];
+                const f = files[i];
                 trackUpdate.converting = i;
                 trackUpdate.titleConverting = f.title;
-                let j = i;
+                const j = i;
                 updateTrack();
                 i++;
 
@@ -1452,9 +1452,9 @@ export function convertAndUpload(
             }
         };
 
-        let disc = getState().main.disc;
-        let usesHiMDTitles = getState().main.deviceCapabilities.includes(Capability.himdTitles);
-        let useFullWidth = getState().appState.fullWidthSupport;
+        const disc = getState().main.disc;
+        const usesHiMDTitles = getState().main.deviceCapabilities.includes(Capability.himdTitles);
+        const useFullWidth = getState().appState.fullWidthSupport;
         let {
             halfWidth: availableHalfWidthCharacters,
             fullWidth: availableFullWidthCharacters,
@@ -1465,17 +1465,17 @@ export function convertAndUpload(
         let i = 1;
         await netmdService?.prepareUpload();
 
-        for await (let item of conversionIterator(files)) {
+        for await (const item of conversionIterator(files)) {
             if (hasUploadBeenCancelled()) {
                 break;
             }
 
             const { file, data } = item;
 
-            let title = file.title;
+            const title = file.title;
 
             const fixLength = (l: number) => Math.max(Math.ceil(l / 7) * 7, 7);
-            let halfWidthTitle = title.substring(0, Math.min(getHalfWidthTitleLength(title), availableHalfWidthCharacters));
+            const halfWidthTitle = title.substring(0, Math.min(getHalfWidthTitleLength(title), availableHalfWidthCharacters));
             availableHalfWidthCharacters -= fixLength(getHalfWidthTitleLength(halfWidthTitle));
 
             let fullWidthTitle = file.fullWidthTitle;
@@ -1511,7 +1511,7 @@ export function convertAndUpload(
             } else {
                 try {
                     // SPS / SPM was filtered out before
-                    let formatOverride: Codec = (file.forcedEncoding as Codec | null) ?? format;
+                    const formatOverride: Codec = (file.forcedEncoding as Codec | null) ?? format;
                     await netmdService?.upload(
                         usesHiMDTitles ? { title, artist: file.artist, album: file.album } : halfWidthTitle,
                         fullWidthTitle,

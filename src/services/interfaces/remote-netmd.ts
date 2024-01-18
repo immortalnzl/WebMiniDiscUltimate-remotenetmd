@@ -4,7 +4,7 @@ import { concatUint8Arrays } from 'netmd-js/dist/utils';
 import { makeGetAsyncPacketIteratorOnWorkerThread } from 'netmd-js/dist/web-encrypt-worker';
 import { asyncMutex } from '../../utils';
 import { Capability, NetMDService, Group, Disc, Track, convertDiscToNJS, convertTrackToNJS, Codec, WireformatDict } from './netmd';
-const Worker = require('worker-loader!netmd-js/dist/web-encrypt-worker.js'); // eslint-disable-line import/no-webpack-loader-syntax
+import Worker from 'netmd-js/dist/web-encrypt-worker?worker';
 
 export class NetMDRemoteService extends NetMDService {
     private logger?: Logger;
@@ -88,11 +88,11 @@ export class NetMDRemoteService extends NetMDService {
 
     private async getFromServer(path: string, parameters?: { [key: string]: any }, method: string = 'GET') {
         try {
-            let url = new URL(`${this.server}/${path}`);
+            const url = new URL(`${this.server}/${path}`);
             let body = undefined;
             let headers = {};
             if (parameters) {
-                for (let key in parameters) {
+                for (const key in parameters) {
                     if (parameters[key] === undefined) delete parameters[key];
                 }
             }
@@ -209,7 +209,7 @@ export class NetMDRemoteService extends NetMDService {
         progressCallback: (progress: { written: number; encrypted: number; total: number }) => void
     ) {
         return new Promise<void>((res, rej) => {
-            let format = _format.codec === 'AT3' ? { codec: _format.bitrate === 66 ? 'LP4' : 'LP2' } : _format;
+            const format = _format.codec === 'AT3' ? { codec: _format.bitrate === 66 ? 'LP4' : 'LP2' } : _format;
             const servURL = new URL(this.server);
             const wsURL = new URL(`${servURL.protocol === 'https:' ? 'wss:' : 'ws:'}//${servURL.host}/upload`);
             //Send file
@@ -225,16 +225,16 @@ export class NetMDRemoteService extends NetMDService {
                     encrypted,
                 });
 
-            let w = new Worker();
+            const w = new Worker();
 
-            let webWorkerAsyncPacketIterator = makeGetAsyncPacketIteratorOnWorkerThread(w, ({ encryptedBytes }) => {
+            const webWorkerAsyncPacketIterator = makeGetAsyncPacketIteratorOnWorkerThread(w, ({ encryptedBytes }) => {
                 encrypted = encryptedBytes;
                 updateProgress();
             });
 
             // A dud track used for the encryption
             const track = new MDTrack('', WireformatDict[format.codec], data, 0x400, '', webWorkerAsyncPacketIterator);
-            let codec = format.codec.toString();
+            const codec = format.codec.toString();
             wsURL.search = new URLSearchParams({
                 title,
                 fullWidthTitle,
@@ -249,7 +249,7 @@ export class NetMDRemoteService extends NetMDService {
                 if (json.init) {
                     // Read and encrypt the file
                     // Send the results of the encryption iterator to the server
-                    for await (let piece of track.getPacketWorkerIterator()) {
+                    for await (const piece of track.getPacketWorkerIterator()) {
                         // Serialize the piece
                         const combined = concatUint8Arrays(new Uint8Array([0]), piece.iv, piece.key, piece.data);
                         ws.send(combined);

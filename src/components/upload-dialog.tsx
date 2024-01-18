@@ -1,26 +1,25 @@
 import React, { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import { useShallowEqualSelector } from '../utils';
+import { useShallowEqualSelector } from "../frontend-utils";
 
 import { actions as uploadDialogActions } from '../redux/upload-dialog-feature';
 
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogContentText from '@material-ui/core/DialogContentText';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import Slide from '@material-ui/core/Slide';
-import Button from '@material-ui/core/Button';
-import LinearProgress from '@material-ui/core/LinearProgress';
-import Box from '@material-ui/core/Box';
-import Checkbox from '@material-ui/core/Checkbox';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import { makeStyles } from '@material-ui/core/styles';
-import { TransitionProps } from '@material-ui/core/transitions';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import Button from '@mui/material/Button';
+import LinearProgress from '@mui/material/LinearProgress';
+import Box from '@mui/material/Box';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import { makeStyles } from 'tss-react/mui';
 import { W95UploadDialog } from './win95/upload-dialog';
 import { setNotifyWhenFinished } from '../redux/actions';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     progressPerc: {
         marginTop: theme.spacing(1),
     },
@@ -39,17 +38,17 @@ const useStyles = makeStyles(theme => ({
 }));
 
 const Transition = React.forwardRef(function Transition(
-    props: TransitionProps & { children?: React.ReactElement<any, any> },
+    props: SlideProps,
     ref: React.Ref<unknown>
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
 export const UploadDialog = (props: {}) => {
-    const classes = useStyles();
+    const { classes } = useStyles();
     const dispatch = useDispatch();
 
-    let {
+    const {
         visible,
         cancelled,
         writtenProgress,
@@ -72,9 +71,9 @@ export const UploadDialog = (props: {}) => {
         dispatch(setNotifyWhenFinished(!notifyWhenFinished));
     }, [dispatch, notifyWhenFinished]);
 
-    let progressValue = Math.floor((writtenProgress / totalProgress) * 100);
-    let bufferValue = Math.floor((encryptedProgress / totalProgress) * 100);
-    let convertedValue = Math.floor((trackConverting / trackTotal) * 100);
+    const progressValue = Math.floor((writtenProgress / totalProgress) * 100);
+    const bufferValue = Math.floor((encryptedProgress / totalProgress) * 100);
+    const convertedValue = Math.floor((trackConverting / trackTotal) * 100);
 
     if (vintageMode) {
         const p = {

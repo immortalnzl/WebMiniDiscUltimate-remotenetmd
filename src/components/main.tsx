@@ -1,7 +1,6 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import clsx from 'clsx';
-import { useDropzone } from 'react-dropzone';
+import { FileRejection, useDropzone } from 'react-dropzone';
 import {
     DragDropContext,
     Draggable,
@@ -22,42 +21,45 @@ import { DeviceStatus } from 'netmd-js';
 import { control } from '../redux/actions';
 
 import {
-    belowDesktop,
-    forAnyDesktop,
     formatTimeFromSeconds,
     getGroupedTracks,
     getSortedTracks,
     isSequential,
-    useShallowEqualSelector,
-    acceptedTypes
+    acceptedTypes,
 } from '../utils';
+import {
+    belowDesktop,
+    forAnyDesktop,
+    useShallowEqualSelector,
+    themeSpacing
+} from '../frontend-utils';
 
-import { lighten, makeStyles } from '@material-ui/core/styles';
-import { alpha } from '@material-ui/core/styles/colorManipulator';
-import Typography from '@material-ui/core/Typography';
-import Box from '@material-ui/core/Box';
-import Fab from '@material-ui/core/Fab';
+import { makeStyles } from 'tss-react/mui';
+import { alpha, lighten } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import Fab from '@mui/material/Fab';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import Backdrop from '@material-ui/core/Backdrop';
+import Backdrop from '@mui/material/Backdrop';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import EjectIcon from '@mui/icons-material/Eject';
 import DoneIcon from '@mui/icons-material/Done';
 
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableHead from '@material-ui/core/TableHead';
-import TableRow from '@material-ui/core/TableRow';
-import LinearProgress from '@material-ui/core/LinearProgress';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import LinearProgress from '@mui/material/LinearProgress';
 
-import IconButton from '@material-ui/core/IconButton';
-import Toolbar from '@material-ui/core/Toolbar';
-import Tooltip from '@material-ui/core/Tooltip';
+import IconButton from '@mui/material/IconButton';
+import Toolbar from '@mui/material/Toolbar';
+import Tooltip from '@mui/material/Tooltip';
 import { batchActions } from 'redux-batched-actions';
 
-import { GroupRow, leftInNondefaultCodecs, TrackRow } from './main-rows';
+import { GroupRow, LeftInNondefaultCodecs, MockTrackRow, TrackRow } from './main-rows';
 import { RenameDialog } from './rename-dialog';
 import { UploadDialog } from './upload-dialog';
 import { RecordDialog } from './record-dialog';
@@ -67,8 +69,8 @@ import { ConvertDialog } from './convert-dialog';
 import { AboutDialog } from './about-dialog';
 import { DumpDialog } from './dump-dialog';
 import { TopMenu } from './topmenu';
-import Checkbox from '@material-ui/core/Checkbox';
-import Button from '@material-ui/core/Button';
+import Checkbox from '@mui/material/Checkbox';
+import Button from '@mui/material/Button';
 import { W95Main } from './win95/main';
 import { useMemo } from 'react';
 import { ChangelogDialog } from './changelog-dialog';
@@ -81,7 +83,9 @@ import { SettingsDialog } from './settings-dialog';
 import { FactoryModeBadSectorDialog } from './factory/factory-bad-sector-dialog';
 import { DiscProtectedDialog } from './disc-protected-dialog';
 
-const useStyles = makeStyles(theme => ({
+// TODO jss-to-tss-react codemod: Unable to handle style definition reliably. Unsupported arrow function syntax.
+//Unexpected value type of ConditionalExpression.
+const useStyles = makeStyles()(theme => ({
     add: {
         position: 'absolute',
         bottom: theme.spacing(3),
@@ -106,7 +110,7 @@ const useStyles = makeStyles(theme => ({
         marginTop: theme.spacing(2),
         marginLeft: theme.spacing(-2),
         marginRight: theme.spacing(-2),
-        [theme.breakpoints.up(600 + theme.spacing(2) * 2)]: {
+        [theme.breakpoints.up(600 + themeSpacing(theme, 2) * 2)]: {
             marginLeft: theme.spacing(-3),
             marginRight: theme.spacing(-3),
         },
@@ -115,7 +119,7 @@ const useStyles = makeStyles(theme => ({
         flex: '1 1 100%',
     },
     toolbarHighlight:
-        theme.palette.type === 'light'
+        theme.palette.mode === 'light'
             ? {
                 color: theme.palette.secondary.main,
                 backgroundColor: lighten(theme.palette.secondary.light, 0.85),
@@ -149,7 +153,7 @@ const useStyles = makeStyles(theme => ({
     },
     dragHandleEmpty: {
         width: 20,
-        padding: `${theme.spacing(0.5)}px 0 0 0`,
+        padding: `${theme.spacing(0.5)} 0 0 0`,
     },
     fixedTable: {
         tableLayout: 'fixed',
@@ -171,7 +175,7 @@ function getTrackStatus(track: Track, deviceStatus: DeviceStatus | null): 'playi
 }
 
 export const Main = (props: {}) => {
-    let dispatch = useDispatch();
+    const dispatch = useDispatch();
     const disc = useShallowEqualSelector(state => state.main.disc);
     const flushable = useShallowEqualSelector(state => state.main.flushable);
     const deviceName = useShallowEqualSelector(state => state.main.deviceName);
@@ -209,7 +213,7 @@ export const Main = (props: {}) => {
     const handleDrop = useCallback(
         (result: DropResult, provided: ResponderProvided) => {
             if (!result.destination) return;
-            let sourceList = parseInt(result.source.droppableId),
+            const sourceList = parseInt(result.source.droppableId),
                 sourceIndex = result.source.index,
                 targetList = parseInt(result.destination.droppableId),
                 targetIndex = result.destination.index;
@@ -246,7 +250,7 @@ export const Main = (props: {}) => {
     }, [dispatch, disc, wasLastDiscNull, discProtectedDialogDisabled, setWasLastDiscNull]);
 
     const onDrop = useCallback(
-        (acceptedFiles: File[], rejectedFiles: File[]) => {
+        (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
             const bannedTypes = ['audio/mpegurl', 'audio/x-mpegurl'];
             const accepted = acceptedFiles.filter(n => !bannedTypes.includes(n.type));
             if (accepted.length > 0) {
@@ -263,7 +267,7 @@ export const Main = (props: {}) => {
         noClick: true,
     });
 
-    const classes = useStyles();
+    const { classes, cx } = useStyles();
     const tracks = useMemo(() => getSortedTracks(disc), [disc]);
     const groupedTracks = useMemo(() => getGroupedTracks(disc), [disc]);
 
@@ -272,11 +276,11 @@ export const Main = (props: {}) => {
         (event: React.MouseEvent, item: number) => {
             setSelectedGroups([]);
             if (event.shiftKey && selected.length && lastClicked !== -1) {
-                let rangeBegin = Math.min(lastClicked + 1, item),
+                const rangeBegin = Math.min(lastClicked + 1, item),
                     rangeEnd = Math.max(lastClicked - 1, item);
-                let copy = [...selected];
+                const copy = [...selected];
                 for (let i = rangeBegin; i <= rangeEnd; i++) {
-                    let index = copy.indexOf(i);
+                    const index = copy.indexOf(i);
                     if (index === -1) copy.push(i);
                     else copy.splice(index, 1);
                 }
@@ -318,7 +322,7 @@ export const Main = (props: {}) => {
 
     const handleRenameTrack = useCallback(
         (event: React.MouseEvent, index: number) => {
-            let track = tracks.find(t => t.index === index);
+            const track = tracks.find(t => t.index === index);
             if (!track) {
                 return;
             }
@@ -343,7 +347,7 @@ export const Main = (props: {}) => {
 
     const handleRenameGroup = useCallback(
         (event: React.MouseEvent, index: number) => {
-            let group = groupedTracks.find(g => g.index === index);
+            const group = groupedTracks.find(g => g.index === index);
             if (!group) {
                 return;
             }
@@ -532,7 +536,7 @@ export const Main = (props: {}) => {
                         <span>{`${formatTimeFromSeconds(disc.left)} left of ${formatTimeFromSeconds(disc.total)} `}</span>
                         <Tooltip
                             title={
-                                leftInNondefaultCodecs(disc.left)
+                                LeftInNondefaultCodecs(disc.left)
                             }
                             arrow
                         >
@@ -540,6 +544,7 @@ export const Main = (props: {}) => {
                         </Tooltip>
                         <div className={classes.spacing} />
                         <LinearProgress
+                        
                             variant="determinate"
                             color={((disc.total - disc.left) * 100) / disc.total >= 90 ? 'secondary' : 'primary'}
                             value={((disc.total - disc.left) * 100) / disc.total}
@@ -550,7 +555,7 @@ export const Main = (props: {}) => {
                 )}
             </Typography>
             <Toolbar
-                className={clsx(classes.toolbar, {
+                className={cx(classes.toolbar, {
                     [classes.toolbarHighlight]: selectedCount > 0 || selectedGroupsCount > 0,
                 })}
             >
@@ -559,6 +564,7 @@ export const Main = (props: {}) => {
                         indeterminate={selectedCount > 0 && selectedCount < tracks.length}
                         checked={selectedCount > 0}
                         disabled={selectedGroupsCount > 0}
+                        color='secondary'
                         onChange={handleSelectAllClick}
                         inputProps={{ 'aria-label': 'select all tracks' }}
                     />
@@ -577,6 +583,7 @@ export const Main = (props: {}) => {
                     <React.Fragment>
                         <Tooltip title="Record from MD">
                             <Button
+                                color="inherit"
                                 aria-label={isCapable(Capability.trackDownload) || factoryModeRippingInMainUi ? 'Download' : 'Record'}
                                 onClick={handleShowDumpDialog}
                             >
@@ -681,8 +688,9 @@ export const Main = (props: {}) => {
                                                         <TableBody
                                                             {...provided.droppableProps}
                                                             ref={provided.innerRef}
-                                                            className={clsx({ [classes.hoveringOverGroup]: snapshot.isDraggingOver })}
+                                                            className={cx({ [classes.hoveringOverGroup]: snapshot.isDraggingOver })}
                                                         >
+                                                            <MockTrackRow isHimdTrack={usesHimdTracks}/>
                                                             {group.title !== null && (
                                                                 <GroupRow
                                                                     usesHimdTracks={usesHimdTracks}
@@ -767,3 +775,4 @@ export const Main = (props: {}) => {
         </React.Fragment>
     );
 };
+export default Main;

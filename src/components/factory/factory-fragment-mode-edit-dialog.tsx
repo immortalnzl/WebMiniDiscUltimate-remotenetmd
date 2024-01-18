@@ -1,33 +1,33 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useShallowEqualSelector } from '../../utils';
+import { useShallowEqualSelector } from "../../frontend-utils";
 
-import { makeStyles } from '@material-ui/core/styles';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import Slide from '@material-ui/core/Slide';
-import Button from '@material-ui/core/Button';
-import Checkbox from '@material-ui/core/Checkbox';
-import FormControl from '@material-ui/core/FormControl';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import InputLabel from '@material-ui/core/InputLabel';
-import MenuItem from '@material-ui/core/MenuItem';
-import Select from '@material-ui/core/Select';
-import { TransitionProps } from '@material-ui/core/transitions';
+import { makeStyles } from 'tss-react/mui';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
+import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
+import { TransitionProps } from '@mui/material/transitions';
 import { actions as fragmentModeEditActions } from '../../redux/factory/factory-fragment-mode-edit-dialog-feature';
 import { ModeFlag } from 'netmd-tocmanip';
 import { editFragmentMode } from '../../redux/factory/factory-actions';
 
 const Transition = React.forwardRef(function Transition(
-    props: TransitionProps & { children?: React.ReactElement<any, any> },
+    props: SlideProps,
     ref: React.Ref<unknown>
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     marginUpDown: {
         marginTop: theme.spacing(3),
         marginBottom: theme.spacing(3),
@@ -35,8 +35,8 @@ const useStyles = makeStyles(theme => ({
 }));
 
 export const FactoryModeEditDialog = (props: {}) => {
-    let dispatch = useDispatch();
-    let classes = useStyles();
+    const dispatch = useDispatch();
+    const { classes } = useStyles();
 
     const { visible, fragmentIndex, mode } = useShallowEqualSelector(state => state.factoryFragmentModeEditDialog);
 

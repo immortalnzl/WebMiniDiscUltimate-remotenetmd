@@ -1,22 +1,22 @@
 import React, { useCallback } from 'react';
-import { useShallowEqualSelector } from '../../utils';
+import { useShallowEqualSelector } from "../../frontend-utils";
 
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogContentText from '@material-ui/core/DialogContentText';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import Slide from '@material-ui/core/Slide';
-import Button from '@material-ui/core/Button';
-import Link from '@material-ui/core/Link';
-import { makeStyles } from '@material-ui/core/styles';
-import { TransitionProps } from '@material-ui/core/transitions';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import Button from '@mui/material/Button';
+import Link from '@mui/material/Link';
+import { makeStyles } from 'tss-react/mui';
+import { TransitionProps } from '@mui/material/transitions';
 import { useDispatch } from 'react-redux';
 import { actions as factoryNoticeDialogActions } from '../../redux/factory/factory-notice-dialog-feature';
 import { actions as appStateActions } from '../../redux/app-feature';
 import { readToc } from '../../redux/factory/factory-actions';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     mainText: {
         whiteSpace: 'pre-wrap',
         textAlign: 'justify',
@@ -24,14 +24,14 @@ const useStyles = makeStyles(theme => ({
 }));
 
 const Transition = React.forwardRef(function Transition(
-    props: TransitionProps & { children?: React.ReactElement<any, any> },
+    props: SlideProps,
     ref: React.Ref<unknown>
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
 export const FactoryModeNoticeDialog = (props: {}) => {
-    const classes = useStyles();
+    const { classes } = useStyles();
     const dispatch = useDispatch();
     const { visible } = useShallowEqualSelector(state => state.factoryNoticeDialog);
     const handleClose = useCallback(() => {

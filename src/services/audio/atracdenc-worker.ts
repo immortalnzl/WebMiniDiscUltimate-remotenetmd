@@ -1,5 +1,7 @@
 /* eslint no-restricted-globals: 0 */
-import { getPublicPathFor } from '../../utils';
+function getPublicPathFor(script: string) {
+    return `${import.meta.env.BASE_URL}/${script}`;
+}
 export class AtracdencProcess {
     private messageCallback?: (ev: MessageEvent) => void;
 
@@ -15,7 +17,7 @@ export class AtracdencProcess {
     }
 
     async encode(data: ArrayBuffer, bitrate: string) {
-        let eventData = await new Promise<MessageEvent>(resolve => {
+        const eventData = await new Promise<MessageEvent>(resolve => {
             this.messageCallback = resolve;
             this.worker.postMessage({ action: 'encode', bitrate, data }, [data]);
         });
@@ -53,14 +55,14 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
             Module.callMain([`-e`, `atrac3`, `-i`, inWavFile, `-o`, outAt3File, `--bitrate`, bitrate]);
 
             // Read file and trim header (96 bytes)
-            let fileStat = Module.FS.stat(outAt3File);
-            let size = fileStat.size;
-            let tmp = new Uint8Array(size - 96);
-            let outAt3FileStream = Module.FS.open(outAt3File, 'r');
+            const fileStat = Module.FS.stat(outAt3File);
+            const size = fileStat.size;
+            const tmp = new Uint8Array(size - 96);
+            const outAt3FileStream = Module.FS.open(outAt3File, 'r');
             Module.FS.read(outAt3FileStream, tmp, 0, tmp.length, 96);
             Module.FS.close(outAt3FileStream);
 
-            let result = tmp.buffer;
+            const result = tmp.buffer;
 
             self.postMessage(
                 {

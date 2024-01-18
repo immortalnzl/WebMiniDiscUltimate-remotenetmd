@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import { useShallowEqualSelector } from '../utils';
+import { useShallowEqualSelector } from "../frontend-utils";
 import { actions as renameDialogActions, RenameType } from '../redux/rename-dialog-feature';
 import { actions as appActions } from '../redux/app-feature';
 import {
@@ -14,32 +14,31 @@ import {
 } from '../redux/actions';
 import serviceRegistry from '../services/registry';
 
-import { makeStyles } from '@material-ui/core/styles';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import TextField from '@material-ui/core/TextField';
-import Slide from '@material-ui/core/Slide';
-import Button from '@material-ui/core/Button';
-import Link from '@material-ui/core/Link';
-import Typography from '@material-ui/core/Typography';
-import { TransitionProps } from '@material-ui/core/transitions';
+import { makeStyles } from 'tss-react/mui';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import TextField from '@mui/material/TextField';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import Button from '@mui/material/Button';
+import Link from '@mui/material/Link';
+import Typography from '@mui/material/Typography';
 import { W95RenameDialog } from './win95/rename-dialog';
 import { batchActions } from 'redux-batched-actions';
 import { Capability } from '../services/interfaces/netmd';
 
 const Transition = React.forwardRef(function Transition(
-    props: TransitionProps & { children?: React.ReactElement<any, any> },
+    props: SlideProps,
     ref: React.Ref<unknown>
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     marginUpDown: {
-        marginTop: theme.spacing(3),
-        marginBottom: theme.spacing(3),
+        marginTop: theme.spacing(1.5),
+        marginBottom: theme.spacing(1.5),
     },
 }));
 
@@ -55,15 +54,15 @@ const nameMap: { [key in RenameType]: string } = {
 };
 
 export const RenameDialog = (props: {}) => {
-    let dispatch = useDispatch();
-    let classes = useStyles();
+    const dispatch = useDispatch();
+    const { classes } = useStyles();
 
     const { fullWidthTitle, himdAlbum, himdArtist, himdTitle, index, renameType, title, visible } = useShallowEqualSelector(
         state => state.renameDialog
     );
     const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
     
-    let allowFullWidth = useShallowEqualSelector(state => state.appState.fullWidthSupport);
+    const allowFullWidth = useShallowEqualSelector(state => state.appState.fullWidthSupport);
 
     const what = nameMap[renameType];
 
@@ -260,6 +259,7 @@ export const RenameDialog = (props: {}) => {
                             label={`Title`}
                             type="text"
                             fullWidth
+                            className={classes.marginUpDown}
                             value={himdTitle}
                             onKeyDown={handleEnterKeyEvent}
                             onChange={handleHiMDTitleChange}
@@ -270,6 +270,7 @@ export const RenameDialog = (props: {}) => {
                             label={`Album`}
                             type="text"
                             fullWidth
+                            className={classes.marginUpDown}
                             value={himdAlbum}
                             onKeyDown={handleEnterKeyEvent}
                             onChange={handleHiMDAlbumChange}
@@ -280,6 +281,7 @@ export const RenameDialog = (props: {}) => {
                             label={`Artist`}
                             type="text"
                             fullWidth
+                            className={classes.marginUpDown}
                             value={himdArtist}
                             onKeyDown={handleEnterKeyEvent}
                             onChange={handleHiMDArtistChange}
@@ -293,6 +295,7 @@ export const RenameDialog = (props: {}) => {
                             label={`${what} Name`}
                             type="text"
                             fullWidth
+                            className={classes.marginUpDown}
                             value={title}
                             onKeyDown={handleEnterKeyEvent}
                             onChange={handleChange}

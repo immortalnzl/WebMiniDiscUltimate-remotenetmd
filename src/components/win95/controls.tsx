@@ -1,16 +1,16 @@
 import React from 'react';
 import { Button, Panel } from 'react95';
-import { belowDesktop } from '../../utils';
+import { belowDesktop } from "../../frontend-utils";
 
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
 import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
 import PauseIcon from '@mui/icons-material/Pause';
-import { makeStyles } from '@material-ui/core/styles';
+import { makeStyles } from 'tss-react/mui';
 import { Capability } from '../../services/interfaces/netmd';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     container: {
         display: 'flex',
         flex: '1 1 auto',
@@ -45,7 +45,7 @@ export const W95Controls = (props: {
     lcdRef: React.RefObject<HTMLParagraphElement>;
     lcdScrollDuration: number;
 }) => {
-    const classes = useStyles();
+    const { classes } = useStyles();
     return (
         <div className={classes.container}>
             {props.isCapable(Capability.playbackControl) && (

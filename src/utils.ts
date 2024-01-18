@@ -1,25 +1,20 @@
-import { useSelector, shallowEqual } from 'react-redux';
 import { AppDispatch, RootState } from './redux/store';
 import { Mutex } from 'async-mutex';
-import { Theme } from '@material-ui/core';
 import * as mm from 'music-metadata-browser';
 import { Disc, Group, Track } from './services/interfaces/netmd';
-import { useEffect, useState } from 'react';
 import { createWorker } from '@ffmpeg/ffmpeg';
 import { ForcedEncodingFormat } from './redux/convert-dialog-feature';
 import { HiMDKBPSToFrameSize } from 'himd-js';
 
 export type Promised<R> = R extends Promise<infer Q> ? Q : never;
 
-export const acceptedTypes = [
-    `audio/*`,
-    `video/mp4`,
-    `video/webm`,
-    'video/x-matroska',
-    `.oma`,
-    `.at3`,
-    `.aea`
-]
+export const acceptedTypes = {
+    "audio/*": [],
+    "video/mp4": [],
+    "video/webm": [],
+    'video/x-matroska': [],
+    "application/octet-stream": [".oma", ".at3", ".aea"],
+}
 
 export function sleep(ms: number) {
     return new Promise(resolve => {
@@ -66,7 +61,7 @@ export async function getMetadataFromFile(
         if (channelCount !== null) {
             const dataSectionLength = file.size - 2048;
             const soundGroupsCount = dataSectionLength / 212;
-            let totalSecondsOfAudio = (soundGroupsCount * 11.6) / 1000 / channelCount;
+            const totalSecondsOfAudio = (soundGroupsCount * 11.6) / 1000 / channelCount;
             const titleBytes = new Uint8Array((await file.arrayBuffer()).slice(4, 4 + 256));
             const firstNull = titleBytes.indexOf(0);
             const titleString = new TextDecoder('ascii').decode(titleBytes.slice(0, firstNull === -1 ? 256 : firstNull));
@@ -99,9 +94,9 @@ export async function getMetadataFromFile(
     try {
         const fileData = await file.arrayBuffer();
         const blob = new Blob([new Uint8Array(fileData)]);
-        let metadata = await mm.parseBlob(blob, { duration: true });
-        let bitrate = (metadata.format.bitrate ?? 0) / 1000;
-        let duration = metadata.format.duration ?? 0;
+        const metadata = await mm.parseBlob(blob, { duration: true });
+        const bitrate = (metadata.format.bitrate ?? 0) / 1000;
+        const duration = metadata.format.duration ?? 0;
         const title = metadata.common.title ?? removeExtension(file.name); //Fallback to file name if there's no title in the metadata.
         const artist = metadata.common.artist ?? 'Unknown Artist';
         const album = metadata.common.album ?? 'Unknown Album';
@@ -134,7 +129,7 @@ export async function getATRACOMAEncoding(
 
     let ea3Offset;
     if (Buffer.from(fileData.slice(0, 3)).toString() === 'ea3') {
-        let tagLength = ((fileData[6] & 0x7f) << 21) | ((fileData[7] & 0x7f) << 14) | ((fileData[8] & 0x7f) << 7) | (fileData[9] & 0x7f);
+        const tagLength = ((fileData[6] & 0x7f) << 21) | ((fileData[7] & 0x7f) << 14) | ((fileData[8] & 0x7f) << 7) | (fileData[9] & 0x7f);
         ea3Offset = tagLength + 10;
         if ((fileData[5] & 0x10) !== 0) {
             ea3Offset += 10;
@@ -142,18 +137,18 @@ export async function getATRACOMAEncoding(
     } else {
         ea3Offset = 0;
     }
-    let ea3Header = fileData.slice(ea3Offset, ea3Offset + 96);
+    const ea3Header = fileData.slice(ea3Offset, ea3Offset + 96);
     const headerLength = ea3Offset + 96;
 
     if (Buffer.from(ea3Header.slice(0, 4)).toString() !== 'EA3\x01') return null; // Not a valid OMA - invalid EA3 header
 
     if (ea3Header[5] !== 96) return null; // Invalid EA3 tag size;
-    let encryptionType = (ea3Header[6] << 8) | ea3Header[7];
+    const encryptionType = (ea3Header[6] << 8) | ea3Header[7];
     if (encryptionType !== 0xffff && encryptionType !== 0xff80) {
         return 'ILLEGAL'; // It's an OMA, but encrypted.
     }
-    let codecInfo = (ea3Header[33] << 16) | (ea3Header[34] << 8) | ea3Header[35];
-    let codecType = ea3Header[32];
+    const codecInfo = (ea3Header[33] << 16) | (ea3Header[34] << 8) | ea3Header[35];
+    const codecType = ea3Header[32];
     if ([3, 4, 5].includes(codecType)) return null; // MP3 / LPCM / WMA - pass to ffmpeg.
     if (codecType !== 0 && codecType !== 1) return 'ILLEGAL'; // Unknown codec.
     // At this point, the OMA is known to be ATRAC3
@@ -171,8 +166,8 @@ export async function getATRACOMAEncoding(
         return 'ILLEGAL';
     }
 
-    for (let [_kbps, fSize] of Object.entries(HiMDKBPSToFrameSize.atrac3plus)) {
-        let kbps = parseInt(_kbps);
+    for (const [_kbps, fSize] of Object.entries(HiMDKBPSToFrameSize.atrac3plus)) {
+        const kbps = parseInt(_kbps);
         if (fSize === frameSize + 8 && jointStereo === 0) {
             return { format: { codec: 'A3+', bitrate: kbps }, headerLength };
         }
@@ -217,8 +212,8 @@ export async function getATRACWAVEncoding(
             return { format: { codec: 'AT3', bitrate: 66 }, headerLength };
     }
 
-    for (let [_kbps, fSize] of Object.entries(HiMDKBPSToFrameSize.atrac3plus)) {
-        let kbps = parseInt(_kbps);
+    for (const [_kbps, fSize] of Object.entries(HiMDKBPSToFrameSize.atrac3plus)) {
+        const kbps = parseInt(_kbps);
         if (fSize === bytesPerFrame * 2 && channels === 2) {
             return { format: { codec: 'A3+', bitrate: kbps }, headerLength };
         }
@@ -228,7 +223,7 @@ export async function getATRACWAVEncoding(
 
 export async function sleepWithProgressCallback(ms: number, cb: (perc: number) => void) {
     let elapsedSecs = 1;
-    let interval = setInterval(() => {
+    const interval = setInterval(() => {
         elapsedSecs++;
         cb(Math.min(100, ((elapsedSecs * 1000) / ms) * 100));
     }, 1000);
@@ -236,16 +231,8 @@ export async function sleepWithProgressCallback(ms: number, cb: (perc: number) =
     window.clearInterval(interval);
 }
 
-export function useShallowEqualSelector<TState = RootState, TSelected = unknown>(selector: (state: TState) => TSelected): TSelected {
-    return useSelector(selector, shallowEqual);
-}
-
-export function debugEnabled() {
-    return process.env.NODE_ENV === 'development';
-}
-
 export function getPublicPathFor(script: string) {
-    return `${process.env.PUBLIC_URL}/${script}`;
+    return `${import.meta.env.BASE_URL}${script}`;
 }
 
 export function savePreference(key: string, value: unknown) {
@@ -253,7 +240,7 @@ export function savePreference(key: string, value: unknown) {
 }
 
 export function loadPreference<T>(key: string, defaultValue: T): T {
-    let res = localStorage.getItem(key);
+    const res = localStorage.getItem(key);
     if (res === null) {
         return defaultValue;
     } else {
@@ -268,19 +255,19 @@ export function loadPreference<T>(key: string, defaultValue: T): T {
 export function timeToSeekArgs(timeInSecs: number): number[] {
     let value = Math.round(timeInSecs); // ignore frames
 
-    let s = value % 60;
+    const s = value % 60;
     value = (value - s) / 60; // min
 
-    let m = value % 60;
+    const m = value % 60;
     value = (value - m) / 60; // hour
 
-    let h = value;
+    const h = value;
 
     return [h, m, s, 0];
 }
 
 export function secondsToNormal(time: number): string {
-    let negative = time < 0;
+    const negative = time < 0;
     const [h, m, s] = timeToSeekArgs(Math.abs(time));
     return `${negative ? '-' : ''}${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
@@ -302,22 +289,22 @@ export function pad(str: string | number, pad: string) {
 }
 
 export function formatTimeFromSeconds(seconds: number) {
-    let s = seconds % 60;
+    const s = seconds % 60;
     seconds = (seconds - s) / 60; // min
 
-    let m = seconds % 60;
+    const m = seconds % 60;
     seconds = (seconds - m) / 60; // hour
 
-    let h = seconds;
+    const h = seconds;
 
     return `${pad(h, '00')}:${pad(m, '00')}:${pad(s, '00')}`;
 }
 
 export function getSortedTracks(disc: Disc | null): DisplayTrack[] {
-    let tracks: DisplayTrack[] = [];
+    const tracks: DisplayTrack[] = [];
     if (disc !== null) {
-        for (let group of disc.groups) {
-            for (let track of group.tracks) {
+        for (const group of disc.groups) {
+            for (const track of group.tracks) {
                 tracks.push({
                     index: track.index,
                     title: track.title ?? `Unknown Title`,
@@ -340,16 +327,16 @@ export function getGroupedTracks(disc: Disc | null) {
     if (!disc) {
         return [];
     }
-    let groupedList: Group[] = [];
-    let ungroupedTracks = [...(disc.groups.find(n => n.title === null)?.tracks ?? [])];
+    const groupedList: Group[] = [];
+    const ungroupedTracks = [...(disc.groups.find(n => n.title === null)?.tracks ?? [])];
 
     let lastIndex = 0;
 
-    for (let group of disc.groups) {
+    for (const group of disc.groups) {
         if (group.title === null) {
             continue; // Ungrouped tracks
         }
-        let toCopy = group.tracks[0].index - lastIndex;
+        const toCopy = group.tracks[0].index - lastIndex;
         groupedList.push({
             index: -1,
             title: null,
@@ -371,23 +358,23 @@ export function getGroupedTracks(disc: Disc | null) {
 export function recomputeGroupsAfterTrackMove(disc: Disc, trackIndex: number, targetIndex: number) {
     // Used for moving tracks in netmd-mock and deleting
     let offset = trackIndex > targetIndex ? 1 : -1;
-    let deleteMode = targetIndex === -1;
+    const deleteMode = targetIndex === -1;
 
     if (deleteMode) {
         offset = -1;
         targetIndex = disc.trackCount;
     }
 
-    let boundsStart = Math.min(trackIndex, targetIndex);
-    let boundsEnd = Math.max(trackIndex, targetIndex);
+    const boundsStart = Math.min(trackIndex, targetIndex);
+    const boundsEnd = Math.max(trackIndex, targetIndex);
 
-    let allTracks = disc.groups
+    const allTracks = disc.groups
         .map(n => n.tracks)
         .reduce((a, b) => a.concat(b), [])
         .sort((a, b) => a.index - b.index)
         .filter(n => !deleteMode || n.index !== trackIndex);
 
-    let groupBoundaries: {
+    const groupBoundaries: {
         name: string | null;
         fullWidthName: string | null;
         start: number;
@@ -403,7 +390,7 @@ export function recomputeGroupsAfterTrackMove(disc: Disc, trackIndex: number, ta
 
     let anyChanges = false;
 
-    for (let group of groupBoundaries) {
+    for (const group of groupBoundaries) {
         if (group.start > boundsStart && group.start <= boundsEnd) {
             group.start += offset;
             anyChanges = true;
@@ -416,7 +403,7 @@ export function recomputeGroupsAfterTrackMove(disc: Disc, trackIndex: number, ta
 
     if (!anyChanges) return disc;
 
-    let newDisc: Disc = { ...disc };
+    const newDisc: Disc = { ...disc };
 
     // Convert back
     newDisc.groups = groupBoundaries
@@ -429,8 +416,8 @@ export function recomputeGroupsAfterTrackMove(disc: Disc, trackIndex: number, ta
         .filter(n => n.tracks.length > 0);
 
     // Convert ungrouped tracks
-    let allGrouped = newDisc.groups.map(n => n.tracks).reduce((a, b) => a.concat(b), []);
-    let ungrouped = allTracks.filter(n => !allGrouped.includes(n));
+    const allGrouped = newDisc.groups.map(n => n.tracks).reduce((a, b) => a.concat(b), []);
+    const ungrouped = allTracks.filter(n => !allGrouped.includes(n));
 
     // Fix all the track indexes
     if (deleteMode) {
@@ -447,7 +434,7 @@ export function recomputeGroupsAfterTrackMove(disc: Disc, trackIndex: number, ta
 export function isSequential(numbers: number[]) {
     if (numbers.length === 0) return true;
     let last = numbers[0];
-    for (let num of numbers) {
+    for (const num of numbers) {
         if (num === last) {
             ++last;
         } else return false;
@@ -470,18 +457,6 @@ export function asyncMutex(target: any, propertyKey: string, descriptor: Propert
     return descriptor;
 }
 
-export function forAnyDesktop(theme: Theme) {
-    return theme.breakpoints.up(600 + theme.spacing(2) * 2);
-}
-
-export function belowDesktop(theme: Theme) {
-    return theme.breakpoints.down(600 + theme.spacing(2) * 2);
-}
-
-export function forWideDesktop(theme: Theme) {
-    return theme.breakpoints.up(700 + theme.spacing(2) * 2) + ` and (min-height: 750px)`;
-}
-
 export function askNotificationPermission(): Promise<NotificationPermission> {
     // Adapted from: https://developer.mozilla.org/en-US/docs/Web/API/Notifications_API/Using_the_Notifications_API
     function checkNotificationPromise() {
@@ -501,8 +476,8 @@ export function askNotificationPermission(): Promise<NotificationPermission> {
 }
 
 export function downloadBlob(buffer: Blob, fileName: string) {
-    let url = URL.createObjectURL(buffer);
-    let a = document.createElement('a');
+    const url = URL.createObjectURL(buffer);
+    const a = document.createElement('a');
     document.body.appendChild(a);
     a.style.display = 'none';
     a.href = url;
@@ -545,32 +520,17 @@ export function createDownloadTrackName(track: Track, useNERAWExtension?: boolea
 }
 
 export function getTracks(disc: Disc): Track[] {
-    let tracks: Track[] = [];
-    for (let group of disc.groups) {
-        for (let track of group.tracks) {
+    const tracks: Track[] = [];
+    for (const group of disc.groups) {
+        for (const track of group.tracks) {
             tracks.push(track);
         }
     }
     return tracks;
 }
 
-export function useThemeDetector() {
-    const getCurrentTheme = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const [isDarkTheme, setIsDarkTheme] = useState(getCurrentTheme());
-    const mqListener = (e: any) => {
-        setIsDarkTheme(e.matches);
-    };
-
-    useEffect(() => {
-        const darkThemeMq = window.matchMedia('(prefers-color-scheme: dark)');
-        darkThemeMq.addEventListener('change', mqListener);
-        return () => darkThemeMq.removeEventListener('change', mqListener);
-    }, []);
-    return isDarkTheme;
-}
-
 export async function ffmpegTranscode(data: Uint8Array, inputFormat: string, outputParameters: string) {
-    let ffmpegProcess = createWorker({
+    const ffmpegProcess = createWorker({
         logger: (payload: any) => {
             console.log(payload.action, payload.message);
         },
@@ -599,7 +559,7 @@ export function dispatchQueue(
     ...entries: ((dispatch: AppDispatch, getState: () => RootState) => Promise<void>)[]
 ): (dispatch: AppDispatch, getState: () => RootState) => Promise<void> {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
-        for (let entry of entries) {
+        for (const entry of entries) {
             await entry(dispatch, getState);
         }
     };

@@ -1,23 +1,22 @@
 import React from 'react';
 import { useDispatch } from 'react-redux';
-import { useShallowEqualSelector } from '../utils';
+import { useShallowEqualSelector } from "../frontend-utils";
 
 import { actions as appActions } from '../redux/app-feature';
 
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogContentText from '@material-ui/core/DialogContentText';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import Slide from '@material-ui/core/Slide';
-import Button from '@material-ui/core/Button';
-import Link from '@material-ui/core/Link';
-import { TransitionProps } from '@material-ui/core/transitions';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import Button from '@mui/material/Button';
+import Link from '@mui/material/Link';
 import { W95AboutDialog } from './win95/about-dialog';
 import { GIT_DIFF, GIT_HASH, BUILD_DATE } from '../version-info';
 
 const Transition = React.forwardRef(function Transition(
-    props: TransitionProps & { children?: React.ReactElement<any, any> },
+    props: SlideProps,
     ref: React.Ref<unknown>
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
@@ -26,7 +25,7 @@ const Transition = React.forwardRef(function Transition(
 export const AboutDialog = (props: {}) => {
     const dispatch = useDispatch();
 
-    let visible = useShallowEqualSelector(state => state.appState.aboutDialogVisible);
+    const visible = useShallowEqualSelector(state => state.appState.aboutDialogVisible);
     const vintageMode = useShallowEqualSelector(state => state.appState.vintageMode);
 
     const handleClose = () => {

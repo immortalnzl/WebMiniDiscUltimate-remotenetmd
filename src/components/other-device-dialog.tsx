@@ -1,18 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useShallowEqualSelector } from '../utils';
+import { useShallowEqualSelector } from "../frontend-utils";
 import { actions as otherDeviceActions } from '../redux/other-device-feature';
 
-import { makeStyles } from '@material-ui/core/styles';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import Slide from '@material-ui/core/Slide';
-import Button from '@material-ui/core/Button';
-import MenuItem from '@material-ui/core/MenuItem';
-import Select from '@material-ui/core/Select';
-import { TransitionProps } from '@material-ui/core/transitions';
+import { makeStyles } from 'tss-react/mui';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import Button from '@mui/material/Button';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
+import { TransitionProps } from '@mui/material/transitions';
 import { Services } from '../services/interface-service-manager';
 import { batchActions } from 'redux-batched-actions';
 import { addService } from '../redux/actions';
@@ -20,13 +20,13 @@ import { isAllValid, initializeParameters } from '../custom-parameters';
 import { renderCustomParameter } from './custom-parameters-renderer';
 
 const Transition = React.forwardRef(function Transition(
-    props: TransitionProps & { children?: React.ReactElement<any, any> },
+    props: SlideProps,
     ref: React.Ref<unknown>
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     marginUpDown: {
         marginTop: theme.spacing(3),
         marginBottom: theme.spacing(3),
@@ -41,8 +41,8 @@ const useStyles = makeStyles(theme => ({
 }));
 
 export const OtherDeviceDialog = (props: {}) => {
-    let dispatch = useDispatch();
-    let classes = useStyles();
+    const dispatch = useDispatch();
+    const { classes } = useStyles();
 
     const otherDeviceDialogVisible = useShallowEqualSelector(state => state.otherDeviceDialog.visible);
     const otherDeviceDialogSelectedServiceIndex = useShallowEqualSelector(state => state.otherDeviceDialog.selectedServiceIndex);
@@ -68,11 +68,11 @@ export const OtherDeviceDialog = (props: {}) => {
     const [addButtonDisabled, setAddButtonDisabled] = useState(false);
 
     const handleServiceSelectionChanged = useCallback(
-        event => {
+        (event: any) => {
             dispatch(
                 batchActions([
-                    otherDeviceActions.setSelectedServiceIndex(event.target.value),
-                    otherDeviceActions.setCustomParameters(initializeParameters(customServices[event.target.value].customParameters)),
+                    otherDeviceActions.setSelectedServiceIndex(event.target.value as number),
+                    otherDeviceActions.setCustomParameters(initializeParameters(customServices[event.target.value as number].customParameters)),
                 ])
             );
         },
@@ -80,7 +80,7 @@ export const OtherDeviceDialog = (props: {}) => {
     );
 
     const handleParameterChange = useCallback(
-        (varName, value) => {
+        (varName: string, value: string | number | boolean) => {
             const newData = { ...otherDeviceDialogCustomParameters };
             newData[varName] = value;
             dispatch(otherDeviceActions.setCustomParameters(newData));
@@ -99,7 +99,7 @@ export const OtherDeviceDialog = (props: {}) => {
             onClose={handleClose}
             maxWidth={'sm'}
             fullWidth={true}
-            TransitionComponent={Transition as any}
+            TransitionComponent={Transition}
             aria-labelledby="rename-dialog-title"
         >
             <DialogTitle id="rename-dialog-title">Add Custom Device</DialogTitle>

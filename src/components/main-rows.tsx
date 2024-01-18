@@ -1,17 +1,13 @@
 import React, { useCallback } from 'react';
-import clsx from 'clsx';
-
-import { makeStyles } from '@material-ui/core/styles';
-import TableCell from '@material-ui/core/TableCell';
-import TableRow from '@material-ui/core/TableRow';
-import Tooltip from '@material-ui/core/Tooltip';
-
-import * as BadgeImpl from '@material-ui/core/Badge/Badge';
+import { makeStyles } from 'tss-react/mui';
+import TableCell from '@mui/material/TableCell';
+import TableRow from '@mui/material/TableRow';
+import Tooltip from '@mui/material/Tooltip';
 
 import DragIndicator from '@mui/icons-material/DragIndicator';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
-import IconButton from '@material-ui/core/IconButton';
+import IconButton from '@mui/material/IconButton';
 import FolderIcon from '@mui/icons-material/Folder';
 import DeleteIcon from '@mui/icons-material/Delete';
 
@@ -20,9 +16,10 @@ import { Capability, Track, Group } from '../services/interfaces/netmd';
 import { formatTimeFromSeconds, secondsToNormal } from '../utils';
 
 import serviceRegistry from '../services/registry';
+import { alpha, lighten } from '@mui/material';
 
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles<void, 'indexCell' | 'titleCell' | 'playButtonInTrackList' | 'trackIndex' | 'deleteGroupButton' | 'groupFolderIcon'>()((theme, _params, classes) => ({
     currentTrackRow: {
         color: theme.palette.primary.main,
         '& > td': {
@@ -30,11 +27,11 @@ const useStyles = makeStyles(theme => ({
         },
     },
     inGroupTrackRow: {
-        '& > $indexCell': {
-            transform: `translateX(${theme.spacing(3)}px)`,
+        [`& > .${classes.indexCell}`]: {
+            transform: `translateX(${theme.spacing(3)})`,
         },
-        '& > $titleCell': {
-            transform: `translateX(${theme.spacing(3)}px)`,
+        [`& > .${classes.titleCell}`]: {
+            transform: `translateX(${theme.spacing(3)})`,
         },
     },
     playButtonInTrackList: {
@@ -43,10 +40,10 @@ const useStyles = makeStyles(theme => ({
     trackRow: {
         userSelect: 'none',
         '&:hover': {
-            '& $playButtonInTrackList': {
+            [`& .${classes.playButtonInTrackList}`]: {
                 display: 'inline-flex',
             },
-            '& $trackIndex': {
+            [`& .${classes.trackIndex}`]: {
                 display: 'none',
             },
         },
@@ -58,8 +55,20 @@ const useStyles = makeStyles(theme => ({
         marginLeft: theme.spacing(-0.5),
     },
     formatBadge: {
-        ...(BadgeImpl as any).styles(theme).badge,
-        ...(BadgeImpl as any).styles(theme).colorPrimary,
+        color: 'white',
+        height: theme.spacing(2.5),
+        zIndex: 1,
+        flexWrap: 'wrap',
+        fontSize: '0.75rem',
+        minWidth: theme.spacing(2.5),
+        boxSizing: 'border-box',
+        alignItems: 'center',
+        fontWeight: 500,
+        alignContent: 'center',
+        borderRadius: '10px',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        backgroundColor: theme.palette.primary.main,
         position: 'static',
         display: 'inline-flex',
         border: `2px solid ${theme.palette.background.paper}`,
@@ -108,24 +117,49 @@ const useStyles = makeStyles(theme => ({
     },
     dragHandle: {
         width: 20,
-        padding: `${theme.spacing(0.5)}px 0 0 0`,
+        padding: `${theme.spacing(0.5)} 0 0 0`,
     },
     dragHandleEmpty: {
         width: 20,
-        padding: `${theme.spacing(0.5)}px 0 0 0`,
+        padding: `${theme.spacing(0.5)} 0 0 0`,
     },
     groupFolderIcon: {},
     groupHeadRow: {
         userSelect: 'none',
         '&:hover': {
-            '& $deleteGroupButton': {
+            [`& .${classes.deleteGroupButton}`]: {
                 display: 'inline-flex',
             },
-            '& $groupFolderIcon': {
+            [`& .${classes.groupFolderIcon}`]: {
                 display: 'none',
             },
         },
     },
+    rowClass: {
+        "&.Mui-selected": theme.palette.mode === 'light' ? {
+            backgroundColor: lighten(theme.palette.secondary.main, 0.85),
+            "&:hover": {
+                backgroundColor: lighten(theme.palette.secondary.main, 0.85),
+            }
+        } : {
+            backgroundColor: alpha(theme.palette.secondary.main, 0.16),
+            "&:hover": {
+                backgroundColor: alpha(theme.palette.secondary.main, 0.16),
+            }
+        },
+        "&:hover": {
+            backgroundImage: "linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))",
+        }
+    },
+    mockRow: {
+        '& *': {
+            margin: '0px !important',
+            lineHeight: '0px',
+            padding: '0px !important'
+        },
+        borderSpacing: '0px',
+        visibility: 'collapse',
+    }
 }));
 
 interface TrackRowProps {
@@ -141,6 +175,35 @@ interface TrackRowProps {
     isCapable: (capability: Capability) => boolean;
 }
 
+export function MockTrackRow({isHimdTrack} : {isHimdTrack: boolean}) {
+    const { classes, cx } = useStyles();
+    return (
+        <TableRow
+            hover
+            color="inherit"
+            className={classes.mockRow}
+            style={{ maxHeight: '0px !important', height: '0px !important' }}
+        >
+            <TableCell className={classes.dragHandle} onClick={event => event.stopPropagation()}>
+            </TableCell>
+            <TableCell className={classes.indexCell}>
+            </TableCell>
+            <TableCell className={classes.titleCell} title={''}>
+            </TableCell>
+            {isHimdTrack && (
+                <>
+                    <TableCell className={classes.titleCell} title={''}>
+                    </TableCell>
+                    <TableCell className={classes.titleCell} title={''}>
+                    </TableCell>
+                </>
+            )}
+            <TableCell align="right" className={classes.durationCell}>
+            </TableCell>
+        </TableRow>
+    );
+}
+
 export function TrackRow({
     track,
     inGroup,
@@ -153,14 +216,14 @@ export function TrackRow({
     onTogglePlayPause,
     isCapable,
 }: TrackRowProps) {
-    const classes = useStyles();
+    const { classes, cx } = useStyles();
 
-    const handleRename = useCallback(event => isCapable(Capability.metadataEdit) && onRename(event, track.index), [
+    const handleRename = useCallback((event: React.MouseEvent) => isCapable(Capability.metadataEdit) && onRename(event, track.index), [
         track.index,
         onRename,
         isCapable,
     ]);
-    const handleSelect = useCallback(event => onSelect(event, track.index), [track.index, onSelect]);
+    const handleSelect = useCallback((event: React.MouseEvent) => onSelect(event, track.index), [track.index, onSelect]);
     const handlePlayPause: React.MouseEventHandler = useCallback(
         event => {
             event.stopPropagation();
@@ -180,7 +243,8 @@ export function TrackRow({
             onDoubleClick={handleRename}
             onClick={handleSelect}
             color="inherit"
-            className={clsx({
+            className={cx({
+                [classes.rowClass]: true,
                 [classes.trackRow]: isCapable(Capability.playbackControl),
                 [classes.inGroupTrackRow]: inGroup,
                 [classes.currentTrackRow]: isPlayingOrPaused,
@@ -193,7 +257,7 @@ export function TrackRow({
                 <span className={classes.trackIndex}>{track.index + 1}</span>
                 <IconButton
                     aria-label="play/pause"
-                    className={clsx(classes.controlButtonInTrackCommon, classes.playButtonInTrackList)}
+                    classes={{root: cx(classes.controlButtonInTrackCommon, classes.playButtonInTrackList)}}
                     size="small"
                     onClick={handlePlayPause}
                     onDoubleClick={handleDoubleClickOnPlayButton}
@@ -245,7 +309,7 @@ interface GroupRowProps {
 }
 
 export function GroupRow({ group, usesHimdTracks, onRename, onDelete, isCapable, onSelect, isSelected }: GroupRowProps) {
-    const classes = useStyles();
+    const { classes, cx } = useStyles();
 
     const handleDelete = useCallback((event: React.MouseEvent) => isCapable(Capability.metadataEdit) && onDelete(event, group.index), [
         onDelete,
@@ -262,16 +326,16 @@ export function GroupRow({ group, usesHimdTracks, onRename, onDelete, isCapable,
         <TableRow
             hover
             selected={isSelected}
-            className={clsx({ [classes.groupHeadRow]: isCapable(Capability.metadataEdit) })}
+            className={cx({ [classes.groupHeadRow]: isCapable(Capability.metadataEdit), [classes.rowClass]: true })}
             onDoubleClick={handleRename}
             onClick={handleSelect}
         >
             <TableCell className={classes.dragHandleEmpty}></TableCell>
             <TableCell className={classes.indexCell}>
-                <FolderIcon className={clsx(classes.controlButtonInTrackCommon, classes.groupFolderIcon)} fontSize="inherit"/>
+                <FolderIcon className={cx(classes.controlButtonInTrackCommon, classes.groupFolderIcon)} fontSize="inherit"/>
                 <IconButton
                     aria-label="delete"
-                    className={clsx(classes.controlButtonInTrackCommon, classes.deleteGroupButton)}
+                    className={cx(classes.controlButtonInTrackCommon, classes.deleteGroupButton)}
                     size="small"
                     onClick={handleDelete}
                 >
@@ -297,7 +361,7 @@ export function GroupRow({ group, usesHimdTracks, onRename, onDelete, isCapable,
     );
 }
 
-export function leftInNondefaultCodecs(timeLeft: number){
+export function LeftInNondefaultCodecs(timeLeft: number){
     const minidiscSpec = serviceRegistry.netmdSpec;
     if(!minidiscSpec){
         return (<></>);

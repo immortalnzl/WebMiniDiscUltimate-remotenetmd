@@ -1,8 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import {
-    belowDesktop,
-    useShallowEqualSelector,
     getMetadataFromFile,
     removeExtension,
     secondsToNormal,
@@ -11,64 +9,67 @@ import {
     getChannelsFromAEA,
     acceptedTypes
 } from '../utils';
+import {
+    belowDesktop,
+    useShallowEqualSelector
+} from "../frontend-utils";
 
 import { actions as convertDialogActions, ForcedEncodingFormat, TitleFormatType } from '../redux/convert-dialog-feature';
 import { actions as renameDialogActions, RenameType } from '../redux/rename-dialog-feature';
 import { actions as appActions } from '../redux/app-feature';
 import { convertAndUpload } from '../redux/actions';
 
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import Slide from '@material-ui/core/Slide';
-import Button from '@material-ui/core/Button';
-import { makeStyles } from '@material-ui/core/styles';
-import FormControl from '@material-ui/core/FormControl';
-import ToggleButton from '@material-ui/lab/ToggleButton';
-import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
-import { TransitionProps } from '@material-ui/core/transitions';
-import Typography from '@material-ui/core/Typography';
-import Select from '@material-ui/core/Select';
-import Input from '@material-ui/core/Input';
-import MenuItem from '@material-ui/core/MenuItem';
-import Accordion from '@material-ui/core/Accordion';
-import AccordionSummary from '@material-ui/core/AccordionSummary';
-import AccordionDetails from '@material-ui/core/AccordionDetails';
-import Checkbox from '@material-ui/core/Checkbox';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Slider from '@material-ui/core/Slider';
-import Tooltip from '@material-ui/core/Tooltip';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import Button from '@mui/material/Button';
+import { makeStyles } from 'tss-react/mui';
+import FormControl from '@mui/material/FormControl';
+import ToggleButton from '@mui/lab/ToggleButton';
+import ToggleButtonGroup from '@mui/lab/ToggleButtonGroup';
+import { TransitionProps } from '@mui/material/transitions';
+import Typography from '@mui/material/Typography';
+import Select from '@mui/material/Select';
+import Input from '@mui/material/Input';
+import MenuItem from '@mui/material/MenuItem';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Slider from '@mui/material/Slider';
+import Tooltip from '@mui/material/Tooltip';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import TitleIcon from '@mui/icons-material/Title';
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemText from '@material-ui/core/ListItemText';
-import IconButton from '@material-ui/core/IconButton';
-import Toolbar from '@material-ui/core/Toolbar';
-import { lighten } from '@material-ui/core/styles';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import Radio from '@material-ui/core/Radio';
-import { useDropzone } from 'react-dropzone';
-import Backdrop from '@material-ui/core/Backdrop';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import IconButton from '@mui/material/IconButton';
+import Toolbar from '@mui/material/Toolbar';
+import { lighten } from '@mui/material/styles';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import Radio from '@mui/material/Radio';
+import { FileRejection, useDropzone } from 'react-dropzone';
+import Backdrop from '@mui/material/Backdrop';
 import { W95ConvertDialog } from './win95/convert-dialog';
 import { batchActions } from 'redux-batched-actions';
 import { Capability, Codec, CodecFamily, Disc } from '../services/interfaces/netmd';
 import serviceRegistry from '../services/registry';
-import clsx from 'clsx';
-import Link from '@material-ui/core/Link';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableHead from '@material-ui/core/TableHead';
-import TableRow from '@material-ui/core/TableRow';
-import { leftInNondefaultCodecs } from './main-rows';
+import Link from '@mui/material/Link';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import { LeftInNondefaultCodecs } from './main-rows';
 
 const Transition = React.forwardRef(function Transition(
-    props: TransitionProps & { children?: React.ReactElement<any, any> },
+    props: SlideProps,
     ref: React.Ref<unknown>
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
@@ -86,7 +87,9 @@ function TooltipOrDefault(params: { children: any; title: any; arrow: boolean; t
     }
 }
 
-const useStyles = makeStyles(theme => ({
+// TODO jss-to-tss-react codemod: Unable to handle style definition reliably. Unsupported arrow function syntax.
+//Unexpected value type of ConditionalExpression.
+const useStyles = makeStyles()(theme => ({
     container: {
         display: 'flex',
         flexDirection: 'row',
@@ -139,7 +142,7 @@ const useStyles = makeStyles(theme => ({
         overflow: 'auto',
     },
     toolbarHighlight:
-        theme.palette.type === 'light'
+        theme.palette.mode === 'light'
             ? {
                 color: theme.palette.secondary.main,
                 backgroundColor: lighten(theme.palette.secondary.light, 0.85),
@@ -227,7 +230,7 @@ function createForcedEncodingText(selectedCodec: Codec, file: { forcedEncoding: 
         'AT3@132kbps': 'LP2',
     };
     if (!file.forcedEncoding) return '';
-    let fullCodecName = file.forcedEncoding.codec + (file.forcedEncoding?.bitrate ? `@${Math.round(file.forcedEncoding.bitrate!)}kbps` : '');
+    const fullCodecName = file.forcedEncoding.codec + (file.forcedEncoding?.bitrate ? `@${Math.round(file.forcedEncoding.bitrate!)}kbps` : '');
     if (file.forcedEncoding.codec === 'MP3' && selectedCodec.codec !== 'MP3') {
         return '';
     }
@@ -236,11 +239,11 @@ function createForcedEncodingText(selectedCodec: Codec, file: { forcedEncoding: 
 
 export const ConvertDialog = (props: { files: File[] }) => {
     const dispatch = useDispatch();
-    const classes = useStyles();
+    const { classes, cx } = useStyles();
 
-    let { visible, format, titleFormat, titles } = useShallowEqualSelector(state => state.convertDialog);
-    let { fullWidthSupport } = useShallowEqualSelector(state => state.appState);
-    let { disc, deviceCapabilities } = useShallowEqualSelector(state => state.main);
+    const { visible, format, titleFormat, titles } = useShallowEqualSelector(state => state.convertDialog);
+    const { fullWidthSupport } = useShallowEqualSelector(state => state.appState);
+    const { disc, deviceCapabilities } = useShallowEqualSelector(state => state.main);
     const minidiscSpec = serviceRegistry.netmdSpec!;
 
     const [files, setFiles] = useState<FileWithMetadata[]>([]);
@@ -285,14 +288,14 @@ export const ConvertDialog = (props: { files: File[] }) => {
     const loadMetadataFromFiles = useMemo(
         () => async (files: File[]): Promise<FileWithMetadata[]> => {
             setLoadingMetadata(true);
-            let titledFiles = [];
-            for (let file of files) {
-                let metadata = await getMetadataFromFile(file);
+            const titledFiles = [];
+            for (const file of files) {
+                const metadata = await getMetadataFromFile(file);
                 let forcedEncoding: null | 'ILLEGAL' | { format: ForcedEncodingFormat; headerLength: number } = await getATRACWAVEncoding(
                     file
                 );
                 if (file.name.toLowerCase().endsWith('.aea')) {
-                    let channels = await getChannelsFromAEA(file);
+                    const channels = await getChannelsFromAEA(file);
                     if (channels === 1 || channels === 2) {
                         forcedEncoding = {
                             format: { codec: channels === 1 ? 'SPM' : 'SPS' },
@@ -397,8 +400,8 @@ export const ConvertDialog = (props: { files: File[] }) => {
     );
 
     const renameTrackManually = useCallback(
-        index => {
-            let track = titles[index];
+        (index: number) => {
+            const track = titles[index];
             dispatch(
                 batchActions([
                     renameDialogActions.setVisible(true),
@@ -429,7 +432,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
             const newFileArray = files.slice();
 
             // Swap trakcs
-            let tmp = newFileArray[selectedTrackIndex];
+            const tmp = newFileArray[selectedTrackIndex];
             newFileArray[selectedTrackIndex] = newFileArray[targetIndex];
             newFileArray[targetIndex] = tmp;
 
@@ -452,7 +455,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
     }, [dispatch]);
 
     const handleChangeFormat = useCallback(
-        (ev, newFormat: string | null) => {
+        (_ev: SyntheticEvent, newFormat: string | null) => {
             if (newFormat === null) {
                 return;
             }
@@ -494,7 +497,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
     );
 
     const handleChangeTitleFormat = useCallback(
-        (event: React.ChangeEvent<{ value: any }>) => {
+        (event: any) => {
             dispatch(convertDialogActions.setTitleFormat(event.target.value));
         },
         [dispatch]
@@ -556,7 +559,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
     useEffect(() => {
         if (!disc) return;
 
-        let testedDisc = JSON.parse(JSON.stringify(disc)) as Disc;
+        const testedDisc = JSON.parse(JSON.stringify(disc)) as Disc;
         let ungrouped = testedDisc.groups.find(n => n.title === null);
         if (!ungrouped) {
             ungrouped = {
@@ -567,7 +570,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
             };
             testedDisc.groups.push(ungrouped);
         }
-        for (let track of titles) {
+        for (const track of titles) {
             ungrouped.tracks.push({
                 title: track.title,
                 fullWidthTitle: track.fullWidthTitle,
@@ -579,7 +582,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
             });
         }
         setAvailableCharacters(minidiscSpec.getRemainingCharactersForTitles(testedDisc));
-        let totalTracksDurationInStandard = titles.reduce((total, b) => {
+        const totalTracksDurationInStandard = titles.reduce((total, b) => {
             if (!b.forcedEncoding || (b.forcedEncoding.codec === 'MP3' && thisSpecFormat.codec !== 'MP3')) {
                 // MP3 forcedEncoding only suggests the target bitrate when the user selects 'MP3' as the recording format
                 // MP3 can never be 'forced', like LP2 can f.ex.
@@ -595,13 +598,13 @@ export const ConvertDialog = (props: { files: File[] }) => {
             } else {
                 forcedEncodingCodec = b.forcedEncoding.codec;
             }
-            let codec: Codec = {
+            const codec: Codec = {
                 bitrate: b.forcedEncoding.bitrate,
                 codec: forcedEncodingCodec,
             };
             return total + minidiscSpec.translateToDefaultMeasuringModeFrom(codec, duration);
         }, 0);
-        let secondsLeftInChosenFormat = minidiscSpec.translateDefaultMeasuringModeTo(thisSpecFormat, disc.left);
+        const secondsLeftInChosenFormat = minidiscSpec.translateDefaultMeasuringModeTo(thisSpecFormat, disc.left);
         setAvailableSeconds(
             secondsLeftInChosenFormat - minidiscSpec.translateDefaultMeasuringModeTo(thisSpecFormat, totalTracksDurationInStandard)
         );
@@ -752,7 +755,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
 
     // Add/Remove tracks
     const onDrop = useCallback(
-        (acceptedFiles: File[], rejectedFiles: File[]) => {
+        (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
             const bannedTypes = ['audio/mpegurl', 'audio/x-mpegurl'];
             const accepted = acceptedFiles.filter(n => !bannedTypes.includes(n.type));
             if (accepted.length > 0) {
@@ -777,14 +780,10 @@ export const ConvertDialog = (props: { files: File[] }) => {
         if (selectedTrackIndex >= newFileArray.length) {
             setSelectedTrack(newFileArray.length - 1);
         }
-    }, [selectedTrackIndex, files, setFiles]);
+        if(newFileArray.length === 0) handleClose();
+    }, [selectedTrackIndex, files, setFiles, handleClose]);
 
     const dialogVisible = useShallowEqualSelector(state => state.convertDialog.visible);
-    useEffect(() => {
-        if (dialogVisible && files.length === 0) {
-            handleClose();
-        }
-    }, [files, dialogVisible, handleClose]);
 
     const handleConvert = useCallback(() => {
         handleClose();
@@ -864,7 +863,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
             TransitionComponent={Transition as any}
             aria-labelledby="convert-dialog-slide-title"
             aria-describedby="convert-dialog-slide-description"
-            classes={{ paper: clsx({ [classes.himdDialog]: usesHimdTitles }) }}
+            classes={{ paper: cx({ [classes.himdDialog]: usesHimdTitles }) }}
         >
             <DialogTitle id="convert-dialog-slide-title">Upload Settings</DialogTitle>
             <DialogContent className={classes.dialogContent}>
@@ -878,7 +877,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                                 <ToggleButton
                                     disabled={formatsSupport[idx] === 'unsupported'}
                                     classes={{
-                                        root: clsx(classes.toggleButton, {
+                                        root: cx(classes.toggleButton, {
                                             [classes.toggleButtonWarning]: formatsSupport[idx] === 'mediocre',
                                         }),
                                     }}
@@ -972,11 +971,11 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         <TooltipOrDefault
                             tooltipEnabled={minidiscSpec.availableFormats.length > 1}
                             title={
-                                leftInNondefaultCodecs((disc?.left ?? 0) - availableSPSeconds)
+                                LeftInNondefaultCodecs((disc?.left ?? 0) - availableSPSeconds)
                             }
                             arrow
                         >
-                            <span className={clsx({ [classes.timeTooltip]: minidiscSpec.availableFormats.length > 1 })}>
+                            <span className={cx({ [classes.timeTooltip]: minidiscSpec.availableFormats.length > 1 })}>
                                 {secondsToNormal((disc?.left ?? 0) - availableSPSeconds)} {minidiscSpec.defaultFormat.codec} time{' '}
                             </span>
                         </TooltipOrDefault>
@@ -985,7 +984,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                         component="h3"
                         align="center"
                         hidden={loadingMetadata}
-                        className={clsx({ [classes.durationNotFit]: availableSPSeconds <= 0 })}
+                        className={cx({ [classes.durationNotFit]: availableSPSeconds <= 0 })}
                     >
                         Remaining:{' '}
                         <TooltipOrDefault
@@ -1014,7 +1013,7 @@ export const ConvertDialog = (props: { files: File[] }) => {
                             }
                             arrow
                         >
-                            <span className={clsx({ [classes.timeTooltip]: minidiscSpec.availableFormats.length > 1 })}>
+                            <span className={cx({ [classes.timeTooltip]: minidiscSpec.availableFormats.length > 1 })}>
                                 {secondsToNormal(availableSPSeconds)} {minidiscSpec.defaultFormat.codec} time
                             </span>
                         </TooltipOrDefault>

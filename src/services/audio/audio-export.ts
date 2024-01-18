@@ -36,7 +36,7 @@ export abstract class DefaultFfmpegAudioExportService implements AudioExportServ
         this.loglines = [];
         await this.loadFfmpeg();
 
-        let ext = file.name.split('.').slice(-1);
+        const ext = file.name.split('.').slice(-1);
         if (ext.length === 0) {
             throw new Error(`Unrecognized file format: ${file.name}`);
         }
@@ -65,8 +65,8 @@ export abstract class DefaultFfmpegAudioExportService implements AudioExportServ
         const maxVolumeRegex = /max_volume: ((-)?[\d]*\.[\d]*) dB/;
         let maxVolume;
 
-        for (let line of this.loglines) {
-            let match = line.message.match(maxVolumeRegex);
+        for (const line of this.loglines) {
+            const match = line.message.match(maxVolumeRegex);
             if (match !== null) {
                 maxVolume = parseFloat(match[1]);
             }
@@ -78,12 +78,12 @@ export abstract class DefaultFfmpegAudioExportService implements AudioExportServ
     async info() {
         await this.ffmpegProcess.transcode(this.inFileName, `${this.outFileNameNoExt}.metadata`, `-f ffmetadata`);
 
-        let audioFormatRegex = /Audio:\s(.*?),/; // Actual content
-        let inputFormatRegex = /Input #0,\s(.*?),/; // Container
+        const audioFormatRegex = /Audio:\s(.*?),/; // Actual content
+        const inputFormatRegex = /Input #0,\s(.*?),/; // Container
         let format: string | null = null;
         let input: string | null = null;
 
-        for (let line of this.loglines) {
+        for (const line of this.loglines) {
             let match = line.message.match(audioFormatRegex);
             if (match !== null) {
                 format = match[1];
@@ -105,9 +105,9 @@ export abstract class DefaultFfmpegAudioExportService implements AudioExportServ
     async createFfmpegParams(parameters: ExportParams, outputFormat: string, moreParams?: string) {
         const { loudnessTarget, enableReplayGain } = parameters;
         let additionalCommands = '';
-        let commonFormatting = `-ac 2 -ar 44100`;
+        const commonFormatting = `-ac 2 -ar 44100`;
         if (loudnessTarget !== undefined && loudnessTarget <= 0 && loudnessTarget >= -12) {
-            let peakVolume = await this.volumeDetect();
+            const peakVolume = await this.volumeDetect();
             additionalCommands += `-af volume=${loudnessTarget - peakVolume}dB`;
         } else if (enableReplayGain) {
             additionalCommands += `-af volume=replaygain=track`;
@@ -135,7 +135,7 @@ export abstract class DefaultFfmpegAudioExportService implements AudioExportServ
         const ffmpegCommand = await this.createFfmpegParams(parameters, 's16be');
         const outFileName = `${this.outFileNameNoExt}.raw`;
         await this.ffmpegProcess.transcode(this.inFileName, outFileName, ffmpegCommand);
-        let { data } = await this.ffmpegProcess.read(outFileName);
+        const { data } = await this.ffmpegProcess.read(outFileName);
         return data.buffer;
     }
 
@@ -147,7 +147,7 @@ export abstract class DefaultFfmpegAudioExportService implements AudioExportServ
         );
         const outFileName = `${this.outFileNameNoExt}.mp3`;
         await this.ffmpegProcess.transcode(this.inFileName, outFileName, ffmpegCommand);
-        let { data } = await this.ffmpegProcess.read(outFileName);
+        const { data } = await this.ffmpegProcess.read(outFileName);
         return data.buffer;
     }
 

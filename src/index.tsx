@@ -1,6 +1,8 @@
-/* eslint no-restricted-globals: 0 */
+import { Buffer } from 'buffer';
+(globalThis as any).Buffer = Buffer;
+
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 import * as serviceWorker from './serviceWorker';
 import serviceRegistry from './services/registry';
@@ -11,14 +13,10 @@ import { actions as mainActions } from './redux/main-feature';
 
 import App from './components/app';
 
-import './index.css';
-import './fonts/fonts.css';
-
 import { MediaRecorderService } from './services/browserintegration/mediarecorder';
 import { BrowserMediaSessionService } from './services/browserintegration/media-session';
 import { listContent } from './redux/actions';
 import { sleep } from './utils';
-
 // serviceRegistry.netmdService = (window as any).native?.interface || new NetMDUSBService({ debug: true });
 // serviceRegistry.netmdService = new NetMDMockService(); // Uncomment to work without a device attached
 // serviceRegistry.audioExportService = new FFMpegAudioExportService();
@@ -37,8 +35,8 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
 (function setupEventHandlers() {
     window.addEventListener('beforeunload', ev => {
         const state = store.getState();
-        let isUploading = state.uploadDialog.visible;
-        let isDownloading = state.factoryProgressDialog.visible || state.recordDialog.visible;
+        const isUploading = state.uploadDialog.visible;
+        const isDownloading = state.factoryProgressDialog.visible || state.recordDialog.visible;
         if (!(isUploading || isDownloading)) {
             return;
         }
@@ -59,7 +57,6 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
         store.dispatch(appActions.setNotifyWhenFinished(false));
     }
 
-    // eslint-disable-next-line
     let deferredPrompt: any;
     window.addEventListener('beforeinstallprompt', (e: any) => {
         e.preventDefault();
@@ -125,18 +122,14 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
     monitor();
 })();
 
-ReactDOM.render(
+const root = createRoot(document.getElementById('root')!);
+root.render(
     <Provider store={store}>
         <App />
-    </Provider>,
-    document.getElementById('root')
+    </Provider>
 );
 
 if (process.env.REACT_APP_NO_GA_RELEASE !== 'true') {
     serviceWorker.register();
     // serviceWorker.unregister();
-}
-
-if ((module as any).hot) {
-    (module as any).hot.accept();
 }

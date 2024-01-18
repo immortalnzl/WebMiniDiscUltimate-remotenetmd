@@ -1,14 +1,14 @@
 import * as React from 'react';
-import Button from '@material-ui/core/Button';
-import ButtonGroup from '@material-ui/core/ButtonGroup';
+import Button from '@mui/material/Button';
+import ButtonGroup from '@mui/material/ButtonGroup';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
-import ClickAwayListener from '@material-ui/core/ClickAwayListener';
-import Grow from '@material-ui/core/Grow';
-import Paper from '@material-ui/core/Paper';
-import Popper from '@material-ui/core/Popper';
-import MenuItem from '@material-ui/core/MenuItem';
-import MenuList from '@material-ui/core/MenuList';
-import { ButtonProps } from '@material-ui/core/Button';
+import ClickAwayListener from '@mui/material/ClickAwayListener';
+import Grow from '@mui/material/Grow';
+import Paper from '@mui/material/Paper';
+import Popper from '@mui/material/Popper';
+import MenuItem from '@mui/material/MenuItem';
+import MenuList from '@mui/material/MenuList';
+import { ButtonProps } from '@mui/material/Button';
 
 export type OptionType = {
     name: string;
@@ -44,7 +44,7 @@ export default function SplitButton(props: SplitButtonProps) {
         setOpen(prevOpen => !prevOpen);
     };
 
-    const handleClose = (event: React.MouseEvent<Document, MouseEvent>) => {
+    const handleClose = (event: any) => {
         if (anchorRef.current && anchorRef.current.contains(event.target as HTMLElement)) {
             return;
         }
@@ -65,9 +65,9 @@ export default function SplitButton(props: SplitButtonProps) {
                     aria-label="select merge strategy"
                     aria-haspopup="menu"
                     onClick={handleToggle}
-                    style={{ minWidth: width ? width * 0.2 : undefined }}
+                    style={{ minWidth: width ? width * 0.2 : undefined, background: '#e0e0e0' }}
                 >
-                    <ArrowDropDownIcon />
+                    <ArrowDropDownIcon htmlColor='#000'/>
                 </Button>
             </ButtonGroup>
             <Popper

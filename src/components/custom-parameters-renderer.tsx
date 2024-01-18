@@ -1,7 +1,7 @@
 import React from 'react';
-import Checkbox from '@material-ui/core/Checkbox';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import TextField from '@material-ui/core/TextField';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import TextField from '@mui/material/TextField';
 import { CustomParameterInfo, CustomParameterType } from '../custom-parameters';
 
 export function renderCustomParameter(

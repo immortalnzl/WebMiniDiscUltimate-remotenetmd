@@ -82,7 +82,7 @@ export class BrowserMediaSessionService {
 
         navigator.mediaSession.setActionHandler('seekto', details => {
             const trackNumber = this.getState().main.deviceStatus?.track ?? -1;
-            if (trackNumber === -1 || details.seekTime === null) {
+            if (trackNumber === -1 || details.seekTime === null || details.seekTime === undefined) {
                 return; // can't seek without knowing the track number or the seek time
             }
             debouncedSeek(details.seekTime, trackNumber);

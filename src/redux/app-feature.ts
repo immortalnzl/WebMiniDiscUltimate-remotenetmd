@@ -12,7 +12,7 @@ export interface AppState {
     pairingFailed: boolean;
     pairingMessage: string;
     browserSupported: boolean;
-    colorTheme: 'dark' | 'dark-blue' | 'light' | 'system';
+    colorTheme: 'dark' | 'light' | 'system';
     vintageMode: boolean;
     aboutDialogVisible: boolean;
     discProtectedDialogVisible: boolean;

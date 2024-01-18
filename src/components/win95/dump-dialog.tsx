@@ -22,8 +22,8 @@ export const W95DumpDialog = (props: {
     useEffect(() => {
         async function updateDeviceList() {
             await navigator.mediaDevices.getUserMedia({ audio: true });
-            let devices = await navigator.mediaDevices.enumerateDevices();
-            let inputDevices = devices
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const inputDevices = devices
                 .filter(device => device.kind === 'audioinput')
                 .map(device => ({ deviceId: device.deviceId, label: device.label }));
             setInputDevices(inputDevices);

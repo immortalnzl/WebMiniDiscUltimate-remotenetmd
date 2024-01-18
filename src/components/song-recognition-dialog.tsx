@@ -1,46 +1,46 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { belowDesktop, useShallowEqualSelector, forAnyDesktop, forWideDesktop } from '../utils';
+import { belowDesktop, useShallowEqualSelector, forAnyDesktop, forWideDesktop } from "../frontend-utils";
 
-import { actions as songRecognitionDialogActions } from '../redux/song-recognition-dialog-feature';
+import { actions as songRecognitionDialogActions, ImportMethod } from '../redux/song-recognition-dialog-feature';
 import { recognizeTracks, renameTrack } from '../redux/actions';
 import { actions as renameDialogActions, RenameType } from '../redux/rename-dialog-feature';
 
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import Slide from '@material-ui/core/Slide';
-import Button from '@material-ui/core/Button';
-import { makeStyles } from '@material-ui/core/styles';
-import FormControl from '@material-ui/core/FormControl';
-import ToggleButton from '@material-ui/lab/ToggleButton';
-import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
-import { TransitionProps } from '@material-ui/core/transitions';
-import Typography from '@material-ui/core/Typography';
-import Select from '@material-ui/core/Select';
-import Input from '@material-ui/core/Input';
-import MenuItem from '@material-ui/core/MenuItem';
-import Checkbox from '@material-ui/core/Checkbox';
-import Link from '@material-ui/core/Link';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableHead from '@material-ui/core/TableHead';
-import TableRow from '@material-ui/core/TableRow';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Slide, { SlideProps } from '@mui/material/Slide';
+import Button from '@mui/material/Button';
+import { makeStyles } from 'tss-react/mui';
+import FormControl from '@mui/material/FormControl';
+import ToggleButton from '@mui/lab/ToggleButton';
+import ToggleButtonGroup from '@mui/lab/ToggleButtonGroup';
+import { TransitionProps } from '@mui/material/transitions';
+import Typography from '@mui/material/Typography';
+import Select from '@mui/material/Select';
+import Input from '@mui/material/Input';
+import MenuItem from '@mui/material/MenuItem';
+import Checkbox from '@mui/material/Checkbox';
+import Link from '@mui/material/Link';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
 import { Capability } from '../services/interfaces/netmd';
 import serviceRegistry from '../services/registry';
 import { LineInDeviceSelect } from './line-in-helpers';
 import { batchActions } from 'redux-batched-actions';
 
 const Transition = React.forwardRef(function Transition(
-    props: TransitionProps & { children?: React.ReactElement<any, any> },
+    props: SlideProps,
     ref: React.Ref<unknown>
 ) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     dialog: {
         margin: 'auto',
         [forAnyDesktop(theme)]: {
@@ -129,7 +129,7 @@ const useStyles = makeStyles(theme => ({
 
 export const SongRecognitionDialog = (props: {}) => {
     const dispatch = useDispatch();
-    const classes = useStyles();
+    const { classes } = useStyles();
 
     const { visible, titles, titleFormat, importMethod } = useShallowEqualSelector(state => state.songRecognitionDialog);
     const { fullWidthSupport } = useShallowEqualSelector(state => state.appState);
@@ -158,7 +158,7 @@ export const SongRecognitionDialog = (props: {}) => {
     }, []);
 
     const handleChangeImportMethod = useCallback(
-        (e, newFormat) => {
+        (e: React.SyntheticEvent, newFormat: ImportMethod) => {
             newFormat && dispatch(songRecognitionDialogActions.setImportMethod(newFormat));
             if (newFormat !== 'line-in') {
                 stopAudioInput();
@@ -168,7 +168,7 @@ export const SongRecognitionDialog = (props: {}) => {
     );
 
     const handleChangeTitleFormat = useCallback(
-        e => {
+        (e: any) => {
             dispatch(songRecognitionDialogActions.setTitleFormat(e.target.value));
         },
         [dispatch]
@@ -230,7 +230,7 @@ export const SongRecognitionDialog = (props: {}) => {
 
     const handleOpenRenameDialog = useCallback(
         (index: number) => {
-            let track = titles[index];
+            const track = titles[index];
             dispatch(
                 batchActions([
                     renameDialogActions.setVisible(true),
@@ -246,7 +246,7 @@ export const SongRecognitionDialog = (props: {}) => {
 
     useEffect(() => {
         let changed = false;
-        let newArray = [...titles];
+        const newArray = [...titles];
         for (let i = 0; i < newArray.length; i++) {
             const title = newArray[i];
             const minidiscSpec = serviceRegistry.netmdSpec!;

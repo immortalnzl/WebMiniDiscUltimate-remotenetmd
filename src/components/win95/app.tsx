@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
-import { forAnyDesktop, forWideDesktop, useShallowEqualSelector } from '../../utils';
+import { makeStyles } from 'tss-react/mui';
+import { forAnyDesktop, forWideDesktop, useShallowEqualSelector } from "../../frontend-utils";
 
 import { Welcome } from '../welcome';
 import { Main } from '../main';
@@ -27,7 +27,7 @@ img {
 `;
 
 const useStyles = (props: { showsList: boolean }) =>
-    makeStyles(theme => ({
+    makeStyles()(theme => ({
         desktop: {
             width: '100%',
             height: '100%',
@@ -66,7 +66,7 @@ const useStyles = (props: { showsList: boolean }) =>
 export const W95App = () => {
     const { mainView, loading } = useShallowEqualSelector(state => state.appState);
     const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
-    const classes = useStyles({ showsList: mainView === 'WELCOME' || deviceCapabilities.includes(Capability.contentList) })();
+    const { classes } = useStyles({ showsList: mainView === 'WELCOME' || deviceCapabilities.includes(Capability.contentList) })();
 
     const dispatch = useDispatch();
     const [isMenuOpen, setMenuOpen] = useState(false);

@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Capability } from '../services/interfaces/netmd';
-import { useShallowEqualSelector } from '../utils';
+import { useShallowEqualSelector } from "../frontend-utils";
 
-import FormHelperText from '@material-ui/core/FormHelperText';
+import FormHelperText from '@mui/material/FormHelperText';
 import { Controls } from './controls';
-import Box from '@material-ui/core/Box';
-import FormControl from '@material-ui/core/FormControl';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
-import Typography from '@material-ui/core/Typography';
-import { makeStyles } from '@material-ui/core';
+import Box from '@mui/material/Box';
+import FormControl from '@mui/material/FormControl';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import Typography from '@mui/material/Typography';
+import { makeStyles } from 'tss-react/mui';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles()(theme => ({
     container: {
         display: 'flex',
         flexDirection: 'row',
@@ -33,7 +33,7 @@ const useStyles = makeStyles(theme => ({
 }));
 
 export function LineInDeviceSelect({ handleChange, inputDeviceId }: { handleChange: (ev: any) => void; inputDeviceId: string }) {
-    const classes = useStyles();
+    const { classes } = useStyles();
 
     const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
     const [devices, setInputDevices] = useState<{ deviceId: string; label: string }[]>([]);
@@ -41,8 +41,8 @@ export function LineInDeviceSelect({ handleChange, inputDeviceId }: { handleChan
     useEffect(() => {
         async function updateDeviceList() {
             await navigator.mediaDevices.getUserMedia({ audio: true });
-            let devices = await navigator.mediaDevices.enumerateDevices();
-            let inputDevices = devices
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const inputDevices = devices
                 .filter(device => device.kind === 'audioinput')
                 .map(device => ({ deviceId: device.deviceId, label: device.label }));
             setInputDevices(inputDevices);

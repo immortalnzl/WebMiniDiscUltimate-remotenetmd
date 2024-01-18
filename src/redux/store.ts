@@ -32,7 +32,7 @@ const errorCatcher: Middleware = store => next => async action => {
     }
 };
 
-let reducer = combineReducers({
+const reducer = combineReducers({
     renameDialog,
     otherDeviceDialog,
     uploadDialog,
