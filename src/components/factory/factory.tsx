@@ -481,7 +481,7 @@ const Toc = () => {
                             {selectedTab === 0 && (
                                 <React.Fragment>
                                     <Typography variant="h5" className={classes.infoText}>
-                                        Fragment {selectedTile - 256}
+                                        {selectedTile === 256 ? 'Freelist' : `Fragment ${selectedTile - 256}`}
                                     </Typography>
                                     <DiscAddressInput
                                         name="Start"
