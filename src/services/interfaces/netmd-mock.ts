@@ -164,6 +164,10 @@ class NetMDMockService extends NetMDService {
         };
     }
 
+    isDeviceConnected(){
+        return false;
+    }
+
     async getServiceCapabilities() {
         return this.capabilities;
     }

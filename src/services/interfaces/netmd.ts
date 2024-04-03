@@ -244,6 +244,7 @@ export abstract class NetMDService {
     abstract gotoTrack(index: number): Promise<void>;
     abstract gotoTime(index: number, hour: number, minute: number, second: number, frame: number): Promise<void>;
     abstract getPosition(): Promise<number[] | null>;
+    abstract isDeviceConnected(device: USBDevice): boolean;
 
     async factory(): Promise<NetMDFactoryService | null> {
         return null;
@@ -781,6 +782,10 @@ export class NetMDUSBService extends NetMDService {
         const factoryInstance = await this.netmdInterface!.factory();
         const esm = await ExploitStateManager.create(this.netmdInterface!, factoryInstance, ConsoleLogger);
         return new NetMDFactoryUSBService(factoryInstance, this, this.mutex, esm);
+    }
+
+    isDeviceConnected(device: USBDevice){
+        return this.netmdInterface!.netMd.isDeviceConnected(device);
     }
 }
 

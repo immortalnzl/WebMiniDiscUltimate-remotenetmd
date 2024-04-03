@@ -57,6 +57,10 @@ export class NetMDRemoteService extends NetMDService {
         };
     }
 
+    isDeviceConnected(){
+        return false;
+    }
+
     private async fetchServerCapabilities() {
         const serverInfo = await this.getFromServer('');
         if (!serverInfo) throw new Error('Not ready.');

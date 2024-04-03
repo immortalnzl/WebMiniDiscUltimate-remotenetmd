@@ -45,8 +45,12 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
     });
 
     if (navigator && navigator.usb) {
-        navigator.usb.ondisconnect = function() {
-            store.dispatch(appActions.setMainView('WELCOME'));
+        navigator.usb.ondisconnect = function(event) {
+            if(serviceRegistry.netmdService!.isDeviceConnected(event.device)){
+                store.dispatch(appActions.setMainView('WELCOME'));
+            } else {
+                console.log("The device disconnected isn't connected to this webapp");
+            }
         };
     } else {
         store.dispatch(appActions.setBrowserSupported(false));

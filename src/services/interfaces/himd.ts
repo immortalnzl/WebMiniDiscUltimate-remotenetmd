@@ -395,6 +395,10 @@ export class HiMDRestrictedService extends NetMDService {
 
     async wipeDiscTitleInfo(): Promise<void> {}
 
+    isDeviceConnected(device: USBDevice){
+        return false;
+    }
+
     ///////////////////////UNRESTRICTED ONLY/////////////////////////
 
     play(): Promise<void> {
@@ -575,5 +579,9 @@ export class HiMDFullService extends HiMDRestrictedService {
                 this.worker!
             );
         }
+    }
+
+    isDeviceConnected(device: USBDevice){
+        return this.fsDriver!.driver.isDeviceConnected(device);
     }
 }
