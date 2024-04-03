@@ -462,7 +462,7 @@ export class HiMDFullService extends HiMDRestrictedService {
     async initHiMD(): Promise<void> {
         await this.fsDriver!.init();
         this.himd = await HiMD.init(this.fsDriver!);
-        Object.defineProperty(window, 'signHiMDDisc', {
+        Object.defineProperty(globalThis, 'signHiMDDisc', {
             configurable: true,
             writable: true,
             value: async () => {
@@ -537,7 +537,7 @@ export class HiMDFullService extends HiMDRestrictedService {
                 await this.session.performAuthentication();
             }
             const stream = new HiMDWriteStream(this.himd!, this.atdata!, true);
-            const titleObject = title as { title?: string | undefined; album?: string | undefined; artist?: string | undefined };
+            const titleObject = title as { title?: string; album?: string; artist?: string };
             let frameSize;
             if (format.codec === 'LP2') {
                 format = { codec: 'AT3', bitrate: 66 };
