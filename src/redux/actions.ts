@@ -1093,12 +1093,24 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
                 i++;
                 continue;
             }
+            const SECONDS_TO_OFFSET = 10;
+            const TRY_COUNT = 2;
+            const SECONDS_TO_READ = 16;
+            const MIN_DURATION = 2*(SECONDS_TO_OFFSET*TRY_COUNT + SECONDS_TO_READ);
+
+            // TRY_COUNT tries to get the song right:
+            const track = getTracks(getState().main.disc!).find(e => e.index === trackEntry.index)!;
             dispatch(songRecognitionProgressDialogActions.setCurrentTrack(toRecognizeI));
 
-            // 6 tries to get the song right:
-            const track = getTracks(getState().main.disc!).find(e => e.index === trackEntry.index)!;
+            if (track.duration < MIN_DURATION){
+                trackEntries[i] = {
+                    ...trackEntries[i],
+                    recognizeFail: true,
+                };
+                continue;
+            }
 
-            for (let offset = 0; offset < 48; offset += 8) {
+            for (let offset = 0; offset < SECONDS_TO_OFFSET*TRY_COUNT; offset += SECONDS_TO_OFFSET) {
                 let rawSamples: Uint8Array;
                 dispatch(
                     batchActions([
@@ -1124,7 +1136,7 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
                                 ])
                             ),
                         {
-                            secondsToRead: 16,
+                            secondsToRead: SECONDS_TO_READ,
                             startSeconds: optimalStartSeconds,
                             writeHeader: true,
                         }
@@ -1156,7 +1168,7 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
                     await netmdService?.play();
                     await mediaRecorderService?.initStream(deviceId);
                     await mediaRecorderService?.startRecording();
-                    await sleepWithProgressCallback(16 * 1000, (perc: number) => {
+                    await sleepWithProgressCallback(SECONDS_TO_READ * 1000, (perc: number) => {
                         dispatch(songRecognitionProgressDialogActions.setCurrentStepProgress(perc));
                     });
                     await mediaRecorderService?.stopRecording();

@@ -18,7 +18,6 @@ import Stepper from '@mui/material/Stepper';
 import StepLabel from '@mui/material/StepLabel';
 import Typography from '@mui/material/Typography';
 import { makeStyles } from 'tss-react/mui';
-import { TransitionProps } from '@mui/material/transitions';
 
 const useStyles = makeStyles()(theme => ({
     progressPerc: {
@@ -27,7 +26,7 @@ const useStyles = makeStyles()(theme => ({
     progressBar: {
         marginTop: theme.spacing(3),
     },
-    uploadLabel: {
+    label: {
         marginTop: theme.spacing(3),
     },
     spacer: {
@@ -95,7 +94,7 @@ export const SongRecognitionProgressDialog = (props: {}) => {
                         </StepLabel>
                     </Step>
                 </Stepper>
-                <DialogContentText id="recognize-dialog-slide-description">
+                <DialogContentText id="recognize-dialog-slide-description" className={classes.label}>
                     Recognizing {currentTrack + 1} of {totalTracks}
                 </DialogContentText>
 
@@ -107,7 +106,7 @@ export const SongRecognitionProgressDialog = (props: {}) => {
                 />
                 <Box className={classes.progressPerc}>{currentStepCurrent !== -1 && `${currentStepProgress}%`}</Box>
 
-                <DialogContentText id="recognize-dialog-slide-description" className={classes.uploadLabel}>
+                <DialogContentText id="recognize-dialog-slide-description" className={classes.label}>
                     {['Reading...', 'Computing checksums...', 'Identifying...'][currentStep]}
                 </DialogContentText>
                 <LinearProgress className={classes.progressBar} variant="determinate" color="secondary" value={tracksProgress} />
