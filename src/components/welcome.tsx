@@ -21,7 +21,7 @@ import ChromeIconPath from '../images/chrome-icon.svg';
 import { W95Welcome } from './win95/welcome';
 
 import SplitButton, { OptionType } from './split-button';
-import { createService, getConnectButtonName, getServiceSpec, getSimpleServices, Services } from '../services/interface-service-manager';
+import { createService, doesServiceRequireChrome, getConnectButtonName, getServiceSpec, getSimpleServices, Services } from '../services/interface-service-manager';
 
 import { OtherDeviceDialog } from './other-device-dialog';
 import { SettingsDialog } from './settings-dialog';
@@ -93,6 +93,7 @@ export const Welcome = (props: {}) => {
     const dispatch = useDispatch();
     const {
         browserSupported,
+        runningChrome,
         availableServices,
         pairingFailed,
         pairingMessage,
@@ -119,6 +120,11 @@ export const Welcome = (props: {}) => {
         setWhyUnsupported(true);
     };
 
+    const forceContinue = (event: React.SyntheticEvent) => {
+        event.preventDefault();
+        dispatch(appActions.setBrowserSupported(true));
+    }
+
     if (vintageMode) {
         const p = {
             dispatch,
@@ -139,6 +145,7 @@ export const Welcome = (props: {}) => {
             dispatch(pair(createService(availableServices[i])!, getServiceSpec(availableServices[i])!));
         },
         id: i,
+        disabled: !runningChrome && doesServiceRequireChrome(availableServices[i]),
     }));
 
     const firstService = Services.find(n => n.customParameters);
@@ -202,6 +209,7 @@ export const Welcome = (props: {}) => {
                                 color="primary"
                                 boxClassName={classes.buttonBox}
                                 width={200}
+                                disabled={Services[lastSelectedService].requiresChrome && !runningChrome}
                                 selectedIndex={lastSelectedService}
                                 dropdownMapping={mapToEntry}
                             />
@@ -242,6 +250,11 @@ export const Welcome = (props: {}) => {
                                 Chrome
                             </Link>{' '}
                             instead
+                        </Typography>
+
+                        <Typography component="p" variant="subtitle1" align="center" className={classes.spacing}>
+                            If you want to connect to a remote device,
+                            click <Link rel="noopener noreferrer" href="#" onClick={forceContinue}>here</Link> to load the app anyway.
                         </Typography>
 
                         {showWhyUnsupported ? (

@@ -14,6 +14,7 @@ export type OptionType = {
     name: string;
     handler: () => void;
     switchTo: boolean;
+    disabled?: boolean;
 } & any;
 
 export type SplitButtonProps = {
@@ -91,6 +92,7 @@ export default function SplitButton(props: SplitButtonProps) {
                                     {options.map((option, index) => (
                                         <MenuItem
                                             key={`${index}-connect-button`}
+                                            disabled={option.disabled}
                                             selected={index === selectedIndex}
                                             onClick={event => handleMenuItemClick(event, index)}
                                         >

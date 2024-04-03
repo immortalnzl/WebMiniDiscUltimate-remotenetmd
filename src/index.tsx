@@ -54,6 +54,7 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
         };
     } else {
         store.dispatch(appActions.setBrowserSupported(false));
+        store.dispatch(appActions.setRunningChrome(false));
     }
 
     if (!('Notification' in window) || Notification.permission === 'denied') {

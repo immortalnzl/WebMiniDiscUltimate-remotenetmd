@@ -12,6 +12,7 @@ export interface AppState {
     pairingFailed: boolean;
     pairingMessage: string;
     browserSupported: boolean;
+    runningChrome: boolean;
     colorTheme: 'dark' | 'light' | 'system';
     vintageMode: boolean;
     aboutDialogVisible: boolean;
@@ -42,6 +43,7 @@ export const buildInitialState = (): AppState => {
         pairingFailed: false,
         pairingMessage: ``,
         browserSupported: true,
+        runningChrome: true,
         colorTheme: loadPreference('colorTheme', 'system'),
         vintageMode: loadPreference('vintageMode', false),
         changelogDialogVisible: false,
@@ -88,6 +90,9 @@ export const slice = createSlice({
         },
         setBrowserSupported: (state, action: PayloadAction<boolean>) => {
             state.browserSupported = action.payload;
+        },
+        setRunningChrome: (state, action: PayloadAction<boolean>) => {
+            state.runningChrome = action.payload;
         },
         setDarkMode: (state, action: PayloadAction<'dark' | 'light' | 'system'>) => {
             state.colorTheme = action.payload;

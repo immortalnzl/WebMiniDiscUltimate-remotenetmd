@@ -12,6 +12,7 @@ interface ServicePrototype {
     name: string;
     customParameters?: CustomParameterInfo[];
     description?: ReactHTMLElement<any>;
+    requiresChrome: boolean;
 }
 
 export interface ServiceConstructionInfo {
@@ -25,18 +26,21 @@ export const Services: ServicePrototype[] = [
         getConnectName: () => 'Connect',
         create: () => window.native?.interface ?? new NetMDUSBService({ debug: true }),
         spec: new DefaultMinidiscSpec(),
+        requiresChrome: true,
     },
     {
         name: 'HiMD (Restricted)',
         getConnectName: () => 'Connect to HiMD (Restricted)',
         create: () => new HiMDRestrictedService({ debug: true }),
         spec: new HiMDSpec(false),
+        requiresChrome: true,
     },
     {
         name: 'HiMD (Full)',
         getConnectName: () => 'Connect to HiMD (Full)',
         create: () => window.native?.himdFullInterface ?? new HiMDFullService({ debug: true }),
         spec: new HiMDSpec(true),
+        requiresChrome: true,
     },
     {
         name: 'Remote NetMD',
@@ -49,6 +53,7 @@ export const Services: ServicePrototype[] = [
         ),
         create: parameters => new NetMDRemoteService({ debug: true, ...parameters } as any),
         spec: new DefaultMinidiscSpec(),
+        requiresChrome: false,
         customParameters: [
             {
                 userFriendlyName: 'Server Address',
@@ -84,6 +89,7 @@ export const Services: ServicePrototype[] = [
             return new NetMDMockService(parameters);
         },
         spec: new DefaultMinidiscSpec(),
+        requiresChrome: false,
         customParameters: [
             {
                 userFriendlyName: 'Test Number',
@@ -185,4 +191,8 @@ export function getServiceSpec(info: ServiceConstructionInfo) {
 
 export function getConnectButtonName(service: ServiceConstructionInfo) {
     return getPrototypeByName(service.name)!.getConnectName(service.parameters);
+}
+
+export function doesServiceRequireChrome(info: ServiceConstructionInfo) {
+    return getPrototypeByName(info.name)?.requiresChrome ?? false;
 }

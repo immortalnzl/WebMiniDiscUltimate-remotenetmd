@@ -58,9 +58,12 @@ const resetStatePayload = 'WELCOME';
 const resetStateReducer: typeof reducer = function(...args) {
     const action = args[1];
     if (action.type === resetStateAction && action.payload === resetStatePayload) {
+        // RunningChrome must reflect the actual browser type
+        const initialAppState = buildInitialAppState();
+        initialAppState.runningChrome = !!(navigator && navigator.usb);
         return {
             ...initialState,
-            appState: buildInitialAppState(),
+            appState: initialAppState,
         };
     }
     return reducer(...args);
