@@ -26,6 +26,7 @@ import {
     getCodecName,
     HiMDFilesystem,
     DevicesIds,
+    deleteTracks,
 } from 'himd-js';
 import {
     Capability,
@@ -111,6 +112,7 @@ export class HiMDRestrictedService extends NetMDService {
     protected atdata: HiMDFile | null = null;
     protected fsDriver?: HiMDFilesystem;
     protected spec: MinidiscSpec;
+    protected bypassFSCoherencyChecks = false;
 
     constructor({ debug = false }: { debug: boolean }) {
         super();
@@ -277,8 +279,10 @@ export class HiMDRestrictedService extends NetMDService {
     }
 
     async wipeDisc(): Promise<void> {
+        const space = await this.fsDriver!.getTotalSpace();
+        // Recreate FS only on the 1GB discs
         try{
-            await this.himd!.wipe(false);
+            await this.himd!.wipe(space > 500000000);
             this.dropCachedContentList();
         }catch(ex){
             console.log(ex);
@@ -464,7 +468,7 @@ export class HiMDFullService extends HiMDRestrictedService {
     }
 
     async initHiMD(): Promise<void> {
-        await this.fsDriver!.init();
+        await this.fsDriver!.init(this.bypassFSCoherencyChecks);
         this.himd = await HiMD.init(this.fsDriver!);
         Object.defineProperty(globalThis, 'signHiMDDisc', {
             configurable: true,
@@ -524,6 +528,19 @@ export class HiMDFullService extends HiMDRestrictedService {
         await super.prepareUpload();
         const [w, creator] = this.getWorker();
         this.worker = await creator(w);
+    }
+
+    async deleteTracks(indexes: number[]): Promise<void> {
+        const allTrackSlots = indexes.map(e => this.himd!.trackIndexToTrackSlot(e));
+        await deleteTracks(this.himd!, indexes);
+        // Re-sign the disc
+        const session = new UMSCHiMDSession(this.fsDriver!.driver, this.himd!);
+        await session.performAuthentication();
+        for(let trackSlot of allTrackSlots) {
+            session.allMacs!.set(new Uint8Array(8).fill(0), (trackSlot - 1) * 8);
+        }
+        await session.finalizeSession();
+        this.dropCachedContentList();
     }
 
     async upload(
