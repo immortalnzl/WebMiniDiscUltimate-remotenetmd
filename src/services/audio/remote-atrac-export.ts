@@ -3,6 +3,8 @@ import { getATRACWAVEncoding } from '../../utils';
 import { CodecFamily } from '../interfaces/netmd';
 import { DefaultFfmpegAudioExportService, ExportParams } from './audio-export';
 
+const MAX_TRIES = 3;
+
 export class RemoteAtracExportService extends DefaultFfmpegAudioExportService {
     public address: string;
     public originalFileName: string = '';
@@ -51,10 +53,21 @@ export class RemoteAtracExportService extends DefaultFfmpegAudioExportService {
         encodingURL.searchParams.set('type', encoderFormat);
         if (loudnessTarget !== undefined) encodingURL.searchParams.set('loudnessTarget', loudnessTarget.toString());
         if (enableReplayGain !== undefined) encodingURL.searchParams.set('applyReplaygain', enableReplayGain.toString());
-        const response = await fetch(encodingURL.href, {
-            method: 'POST',
-            body: payload,
-        });
+        let response: Response | null = null;
+        for(let i = 0; i<MAX_TRIES; i++){
+            try{
+                response = await fetch(encodingURL.href, {
+                    method: 'POST',
+                    body: payload,
+                });
+                break;
+            }catch(ex){
+                console.log("Error while fetching: " + ex);
+            }
+        }
+        if(response === null) {
+            throw new Error("Failed to convert audio!");
+        }
         const source = await response.arrayBuffer();
         const content = new Uint8Array(source);
         const file = new File([content], 'test.at3');
