@@ -1,4 +1,4 @@
-import { batchActions } from 'redux-batched-actions';
+import { batchActions } from '../frontend-utils';
 import { AppDispatch, RootState } from './store';
 import { actions as uploadDialogActions } from './upload-dialog-feature';
 import { actions as renameDialogActions } from './rename-dialog-feature';
@@ -10,7 +10,7 @@ import { actions as convertDialogActions } from './convert-dialog-feature';
 import { actions as songRecognitionDialogActions, TitleEntry } from './song-recognition-dialog-feature';
 import { actions as songRecognitionProgressDialogActions } from './song-recognition-progress-dialog-feature';
 import serviceRegistry from '../services/registry';
-import { AnyAction } from '@reduxjs/toolkit';
+import { UnknownAction } from '@reduxjs/toolkit';
 import {
     sleepWithProgressCallback,
     sleep,
@@ -1546,7 +1546,7 @@ export function convertAndUpload(
 
         document.title = originalTitle;
 
-        let actionToDispatch: AnyAction[] = [uploadDialogActions.setVisible(false)];
+        let actionToDispatch: UnknownAction[] = [uploadDialogActions.setVisible(false)];
 
         if (error) {
             console.error(error);

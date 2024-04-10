@@ -6,12 +6,11 @@ import Typography from '@mui/material/Typography';
 import { makeStyles } from 'tss-react/mui';
 import { ModeFlag, isValidFragment, TitleCell, Fragment, getTitleByTrackNumber, ToC } from 'netmd-tocmanip';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, batchActions } from '../../frontend-utils';
 import { exploitDownloadTracks, readToc, writeModifiedTOC } from '../../redux/factory/factory-actions';
 import { useShallowEqualSelector } from "../../frontend-utils";
 import { actions as factoryActions } from '../../redux/factory/factory-feature';
 import { FactoryModeEditDialog } from './factory-fragment-mode-edit-dialog';
-import { batchActions } from 'redux-batched-actions';
 import { ExploitCapability } from '../../services/interfaces/netmd';
 import DoneIcon from '@mui/icons-material/Done';
 import CloseIcon from '@mui/icons-material/Close';
@@ -31,6 +30,7 @@ import { FactoryModeEditOtherValuesDialog } from './factory-edit-other-values-di
 import { FactoryTopMenu } from './factory-topmenu';
 import { FactoryModeBadSectorDialog } from './factory-bad-sector-dialog';
 import { SettingsDialog } from '../settings-dialog';
+import { AppDispatch } from '../../redux/store';
 
 const useStyles = makeStyles()(theme => ({
     tocTable: {
@@ -100,7 +100,7 @@ function gcd(a: number, b: number): number {
 
 const Toc = () => {
     const { classes } = useStyles();
-    const dispatch = useDispatch();
+    const dispatch = useDispatch() as AppDispatch;
     const { toc, modified, firmwareVersion, exploitCapabilities } = useShallowEqualSelector(state => state.factory);
     const { deviceName } = useShallowEqualSelector(state => state.main);
     const { visible: factoryFragmentDialogVisible } = useShallowEqualSelector(state => state.factoryFragmentModeEditDialog);

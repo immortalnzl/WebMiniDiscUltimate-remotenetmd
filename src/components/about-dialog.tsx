@@ -1,5 +1,5 @@
 import React from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch } from '../frontend-utils';
 import { useShallowEqualSelector } from "../frontend-utils";
 
 import { actions as appActions } from '../redux/app-feature';

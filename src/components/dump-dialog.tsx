@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch } from '../frontend-utils';
 import { useShallowEqualSelector } from "../frontend-utils";
 
 import { downloadTracks, recordTracks } from '../redux/actions';

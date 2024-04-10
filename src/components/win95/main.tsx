@@ -115,7 +115,7 @@ export const W95Main = (props: {
     isCapable: (capability: Capability) => boolean;
 }) => {
     const { classes } = useStyles();
-    const themeContext = useContext(ThemeContext);
+    const themeContext = useContext(ThemeContext)!;
     const { mainView } = useShallowEqualSelector(state => state.appState);
 
     return (

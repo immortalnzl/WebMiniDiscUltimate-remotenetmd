@@ -9,8 +9,7 @@ import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { actions as factoryFragmentModeDialogActions } from '../../redux/factory/factory-fragment-mode-edit-dialog-feature';
-import { useDispatch } from 'react-redux';
-import { batchActions } from 'redux-batched-actions';
+import { useDispatch, batchActions } from '../../frontend-utils';
 import { DiscAddress, ModeFlag } from 'netmd-tocmanip';
 
 const useStyles = makeStyles()(theme => ({

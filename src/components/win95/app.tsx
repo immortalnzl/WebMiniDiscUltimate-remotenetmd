@@ -10,7 +10,7 @@ import { Window, WindowHeader, Button, Toolbar, Panel, Hourglass, styleReset, An
 import { createGlobalStyle, ThemeProvider as StyledThemeProvider } from 'styled-components';
 import original from 'react95/dist/themes/original';
 import { TopMenu } from '../topmenu';
-import { useDispatch } from 'react-redux';
+import { useDispatch } from '../../frontend-utils';
 
 import CDPlayerIconUrl from '../../images/win95/cdplayer.png';
 import { WindowCloseIcon } from './common';

@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useShallowEqualSelector } from "../../frontend-utils";
+import { useShallowEqualSelector, useDispatch, batchActions } from "../../frontend-utils";
 
 import { makeStyles } from 'tss-react/mui';
 import Dialog from '@mui/material/Dialog';
@@ -10,11 +9,9 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Slide, { SlideProps } from '@mui/material/Slide';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import { TransitionProps } from '@mui/material/transitions';
 import { actions as factoryEditOtherValuesDialogActions } from '../../redux/factory/factory-edit-other-values-dialog-feature';
 import { actions as factoryActions } from '../../redux/factory/factory-feature';
 import { ToC } from 'netmd-tocmanip';
-import { batchActions } from 'redux-batched-actions';
 
 const Transition = React.forwardRef(function Transition(
     props: SlideProps,

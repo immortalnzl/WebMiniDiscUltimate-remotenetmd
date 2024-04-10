@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, batchActions } from '../frontend-utils';
 import { belowDesktop, useShallowEqualSelector, forAnyDesktop, forWideDesktop } from "../frontend-utils";
 
 import { actions as songRecognitionDialogActions, ImportMethod } from '../redux/song-recognition-dialog-feature';
@@ -31,7 +31,6 @@ import TableRow from '@mui/material/TableRow';
 import { Capability } from '../services/interfaces/netmd';
 import serviceRegistry from '../services/registry';
 import { LineInDeviceSelect } from './line-in-helpers';
-import { batchActions } from 'redux-batched-actions';
 
 const Transition = React.forwardRef(function Transition(
     props: SlideProps,

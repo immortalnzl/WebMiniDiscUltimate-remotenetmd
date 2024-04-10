@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, batchActions } from '../frontend-utils';
 import { useShallowEqualSelector } from "../frontend-utils";
 import { actions as renameDialogActions, RenameType } from '../redux/rename-dialog-feature';
 import { actions as appActions } from '../redux/app-feature';
@@ -25,7 +25,6 @@ import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
 import { W95RenameDialog } from './win95/rename-dialog';
-import { batchActions } from 'redux-batched-actions';
 import { Capability } from '../services/interfaces/netmd';
 
 const Transition = React.forwardRef(function Transition(

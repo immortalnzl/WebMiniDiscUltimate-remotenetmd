@@ -1,4 +1,4 @@
-import { configureStore, getDefaultMiddleware, Middleware, combineReducers } from '@reduxjs/toolkit';
+import { configureStore, Middleware, combineReducers, Dispatch } from '@reduxjs/toolkit';
 import uploadDialog from './upload-dialog-feature';
 import renameDialog from './rename-dialog-feature';
 import otherDeviceDialog from './other-device-feature';
@@ -19,7 +19,7 @@ import factoryEditOtherValuesDialog from './factory/factory-edit-other-values-di
 import factoryBadSectorDialog from './factory/factory-bad-sector-dialog-feature';
 
 import main from './main-feature';
-import { batchActions } from 'redux-batched-actions';
+import { BatchAction, batchActions, batchDispatchMiddleware } from 'redux-batched-actions';
 
 const errorCatcher: Middleware = store => next => async action => {
     try {
@@ -71,7 +71,7 @@ const resetStateReducer: typeof reducer = function(...args) {
 
 export const store = configureStore({
     reducer: resetStateReducer,
-    middleware: [errorCatcher, ...getDefaultMiddleware()],
+    middleware: getDefaultMiddleware => getDefaultMiddleware().prepend(errorCatcher).concat(batchDispatchMiddleware),
 });
 
 const initialState = Object.freeze(store.getState());

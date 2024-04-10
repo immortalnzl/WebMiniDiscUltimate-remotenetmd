@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, batchActions } from '../frontend-utils';
 import { deleteService, pair } from '../redux/actions';
 
 import { useShallowEqualSelector } from "../frontend-utils";
@@ -30,7 +30,6 @@ import { AboutDialog } from './about-dialog';
 
 import { actions as otherDialogActions } from '../redux/other-device-feature';
 import { actions as appActions } from '../redux/app-feature';
-import { batchActions } from 'redux-batched-actions';
 import { initializeParameters } from '../custom-parameters';
 
 const useStyles = makeStyles()(theme => ({

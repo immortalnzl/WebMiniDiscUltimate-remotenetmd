@@ -1,5 +1,5 @@
 import React, { SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch } from '../frontend-utils';
 import {
     getMetadataFromFile,
     removeExtension,
@@ -11,7 +11,8 @@ import {
 } from '../utils';
 import {
     belowDesktop,
-    useShallowEqualSelector
+    useShallowEqualSelector,
+    batchActions
 } from "../frontend-utils";
 
 import { actions as convertDialogActions, ForcedEncodingFormat, TitleFormatType } from '../redux/convert-dialog-feature';
@@ -57,7 +58,6 @@ import Radio from '@mui/material/Radio';
 import { FileRejection, useDropzone } from 'react-dropzone';
 import Backdrop from '@mui/material/Backdrop';
 import { W95ConvertDialog } from './win95/convert-dialog';
-import { batchActions } from 'redux-batched-actions';
 import { Capability, Codec, CodecFamily, Disc } from '../services/interfaces/netmd';
 import serviceRegistry from '../services/registry';
 import Link from '@mui/material/Link';

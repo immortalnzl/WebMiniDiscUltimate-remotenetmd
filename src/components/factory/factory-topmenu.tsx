@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch } from '../../frontend-utils';
 
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';

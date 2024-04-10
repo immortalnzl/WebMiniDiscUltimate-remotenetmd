@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, batchActions } from '../frontend-utils';
 import { useShallowEqualSelector } from "../frontend-utils";
 import { actions as otherDeviceActions } from '../redux/other-device-feature';
 
@@ -14,7 +14,6 @@ import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import { TransitionProps } from '@mui/material/transitions';
 import { Services } from '../services/interface-service-manager';
-import { batchActions } from 'redux-batched-actions';
 import { addService } from '../redux/actions';
 import { isAllValid, initializeParameters } from '../custom-parameters';
 import { renderCustomParameter } from './custom-parameters-renderer';

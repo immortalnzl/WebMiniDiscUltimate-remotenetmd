@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch } from '../frontend-utils';
 import { FileRejection, useDropzone } from 'react-dropzone';
 import {
     DragDropContext,
@@ -31,7 +31,8 @@ import {
     belowDesktop,
     forAnyDesktop,
     useShallowEqualSelector,
-    themeSpacing
+    themeSpacing,
+    batchActions
 } from '../frontend-utils';
 
 import { makeStyles } from 'tss-react/mui';
@@ -57,7 +58,6 @@ import LinearProgress from '@mui/material/LinearProgress';
 import IconButton from '@mui/material/IconButton';
 import Toolbar from '@mui/material/Toolbar';
 import Tooltip from '@mui/material/Tooltip';
-import { batchActions } from 'redux-batched-actions';
 
 import { GroupRow, LeftInNondefaultCodecs, MockTrackRow, TrackRow } from './main-rows';
 import { RenameDialog } from './rename-dialog';

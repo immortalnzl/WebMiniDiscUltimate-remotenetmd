@@ -13,7 +13,7 @@ import { makeStyles } from 'tss-react/mui';
 import { getSortedTracks } from '../utils';
 import { belowDesktop, useShallowEqualSelector } from "../frontend-utils";
 import { control } from '../redux/actions';
-import { useDispatch } from 'react-redux';
+import { useDispatch } from '../frontend-utils';
 
 import MDIcon0 from '../images/md0.svg?react';
 import MDIcon1 from '../images/md1.svg?react';

@@ -11,7 +11,7 @@ import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
 import { makeStyles } from 'tss-react/mui';
 import { TransitionProps } from '@mui/material/transitions';
-import { useDispatch } from 'react-redux';
+import { useDispatch } from '../../frontend-utils';
 import { actions as factoryNoticeDialogActions } from '../../redux/factory/factory-notice-dialog-feature';
 import { actions as appStateActions } from '../../redux/app-feature';
 import { readToc } from '../../redux/factory/factory-actions';

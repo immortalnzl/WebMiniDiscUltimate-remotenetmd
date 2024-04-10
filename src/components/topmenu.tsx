@@ -1,6 +1,5 @@
 import React, { useCallback } from 'react';
-import { useDispatch } from 'react-redux';
-import { batchActions } from 'redux-batched-actions';
+import { useDispatch, batchActions } from '../frontend-utils';
 
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';

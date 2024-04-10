@@ -14,7 +14,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Box from '@mui/material/Box';
 import { makeStyles } from 'tss-react/mui';
 import { TransitionProps } from '@mui/material/transitions';
-import { useDispatch } from 'react-redux';
+import { useDispatch } from '../../frontend-utils';
 
 const useStyles = makeStyles()(theme => ({
     progressPerc: {

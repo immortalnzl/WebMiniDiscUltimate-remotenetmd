@@ -1,7 +1,7 @@
 import { actions as factoryProgressDialogActions } from './factory-progress-dialog-feature';
 import { actions as factoryBadSectorDialogActions } from './factory-bad-sector-dialog-feature';
 import { actions as factoryActions } from '../factory/factory-feature';
-import { batchActions } from 'redux-batched-actions';
+import { batchActions } from '../../frontend-utils';
 import { AppDispatch, RootState } from '../store';
 import { actions as appStateActions } from '../app-feature';
 import serviceRegistry from '../../services/registry';

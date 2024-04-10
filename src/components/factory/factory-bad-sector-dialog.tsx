@@ -14,8 +14,7 @@ import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import { TransitionProps } from '@mui/material/transitions';
-import { useDispatch } from 'react-redux';
+import { useDispatch } from '../../frontend-utils';
 import { BadSectorResponse, reportBadSectorReponse } from '../../redux/factory/factory-actions';
 
 const Transition = React.forwardRef(function Transition(

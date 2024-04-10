@@ -1,5 +1,5 @@
 import React, { ReactElement, useCallback, useEffect, useMemo, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { batchActions, useDispatch } from '../frontend-utils';
 import { forAnyDesktop, forWideDesktop, useShallowEqualSelector } from "../frontend-utils";
 
 import { actions as appActions } from '../redux/app-feature';
@@ -23,7 +23,6 @@ import { makeStyles } from 'tss-react/mui';
 import { AudioServices } from '../services/audio-export-service-manager';
 import { renderCustomParameter } from './custom-parameters-renderer';
 import { initializeParameters, isAllValid } from '../custom-parameters';
-import { batchActions } from 'redux-batched-actions';
 
 const Transition = React.forwardRef(function Transition(
     props: SlideProps,

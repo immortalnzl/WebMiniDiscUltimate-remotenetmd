@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch } from '../../frontend-utils';
 import { useShallowEqualSelector } from "../../frontend-utils";
 
 import { makeStyles } from 'tss-react/mui';

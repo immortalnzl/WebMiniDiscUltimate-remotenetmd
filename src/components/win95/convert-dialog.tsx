@@ -59,7 +59,7 @@ export const W95ConvertDialog = (props: {
     handleRenameSelectedTrack: () => void;
     dialogVisible: boolean;
 }) => {
-    const themeContext = useContext(ThemeContext);
+    const themeContext = useContext(ThemeContext)!;
 
     const renderTracks = useCallback(() => {
         return props.titles.map((file, i) => {
