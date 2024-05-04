@@ -6,7 +6,7 @@ import { NetMDMockService } from './interfaces/netmd-mock';
 import { NetMDRemoteService } from './interfaces/remote-netmd';
 
 interface ServicePrototype {
-    create: (parameters?: CustomParameters) => NetMDService;
+    create: (parameters?: CustomParameters) => NetMDService | null;
     spec: MinidiscSpec;
     getConnectName: (parameters?: CustomParameters) => string;
     name: string;
@@ -38,7 +38,15 @@ export const Services: ServicePrototype[] = [
     {
         name: 'HiMD (Full)',
         getConnectName: () => 'Connect to HiMD (Full)',
-        create: () => window.native?.himdFullInterface ?? new HiMDFullService({ debug: true }),
+        create: () => {
+            if(window.native?.himdFullInterface){
+                return window.native?.himdFullInterface;
+            }
+            if(confirm("Warning: For Full HiMD mode, it is recommended to use ElectronWMD instead! Continue?")) {
+                return new HiMDFullService({ debug: true });
+            }
+            return null;
+        },
         spec: new HiMDSpec(true),
         requiresChrome: true,
     },
@@ -182,7 +190,7 @@ export function filterOutCorrupted(savedCustomServices: ServiceConstructionInfo[
 }
 
 export function createService(info: ServiceConstructionInfo) {
-    return getPrototypeByName(info.name)?.create(info.parameters);
+    return getPrototypeByName(info.name)?.create(info.parameters) ?? null;
 }
 
 export function getServiceSpec(info: ServiceConstructionInfo) {

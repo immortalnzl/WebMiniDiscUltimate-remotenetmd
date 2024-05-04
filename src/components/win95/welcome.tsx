@@ -24,7 +24,7 @@ export interface W95WelcomeProps {
     dispatch: Dispatch<any>;
     pairingFailed: boolean;
     pairingMessage: string;
-    createService: () => NetMDService;
+    createService: () => NetMDService | null;
     spec: MinidiscSpec;
     connectName: string;
 }
@@ -36,7 +36,10 @@ export const W95Welcome = (props: W95WelcomeProps) => {
         <>
             <WindowContent className={classes.windowContent}>
                 <p style={{ paddingBottom: 8 }}>Press the button to connect to a NetMD device</p>
-                <Button style={{ minWidth: 90 }} onClick={() => dispatch(pair(createService(), spec))}>
+                <Button style={{ minWidth: 90 }} onClick={() => {
+                    const instance = createService();
+                    if(instance) dispatch(pair(instance, spec));
+                }}>
                     {connectName}
                 </Button>
                 <p style={{ visibility: pairingFailed ? 'visible' : 'hidden' }} className={classes.pairingMessage}>

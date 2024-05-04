@@ -129,7 +129,7 @@ export const Welcome = (props: {}) => {
             dispatch,
             pairingFailed,
             pairingMessage,
-            createService: () => createService(availableServices[lastSelectedService])!,
+            createService: () => createService(availableServices[lastSelectedService]) ?? null,
             spec: getServiceSpec(availableServices[lastSelectedService])!,
             connectName: getConnectButtonName(availableServices[lastSelectedService]),
         };
@@ -140,8 +140,11 @@ export const Welcome = (props: {}) => {
         name: getConnectButtonName(n),
         switchTo: true,
         handler: () => {
-            dispatch(appActions.setLastSelectedService(i));
-            dispatch(pair(createService(availableServices[i])!, getServiceSpec(availableServices[i])!));
+            const instance = createService(availableServices[i]);
+            if(instance){
+                dispatch(appActions.setLastSelectedService(i));
+                dispatch(pair(instance, getServiceSpec(availableServices[i])!));
+            }
         },
         id: i,
         disabled: !runningChrome && doesServiceRequireChrome(availableServices[i]),
