@@ -122,7 +122,7 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
                 exceptionOccurred = true; // Stop monitor on exception
             }
         }
-        setTimeout(monitor, 5000);
+        setTimeout(monitor, 500);
     }
     monitor();
 })();

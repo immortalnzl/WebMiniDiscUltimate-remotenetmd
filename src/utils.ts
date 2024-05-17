@@ -288,7 +288,7 @@ export function pad(str: string | number, pad: string) {
     return (pad + str).slice(-pad.length);
 }
 
-export function formatTimeFromSeconds(seconds: number) {
+export function formatTimeFromSeconds(seconds: number, withHours = true) {
     const s = seconds % 60;
     seconds = (seconds - s) / 60; // min
 
@@ -297,7 +297,7 @@ export function formatTimeFromSeconds(seconds: number) {
 
     const h = seconds;
 
-    return `${pad(h, '00')}:${pad(m, '00')}:${pad(s, '00')}`;
+    return (withHours ? `${pad(h, '00')}:` : '') + `${pad(m, '00')}:${pad(s, '00')}`;
 }
 
 export function getSortedTracks(disc: Disc | null): DisplayTrack[] {

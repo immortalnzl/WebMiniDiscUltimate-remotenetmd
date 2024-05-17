@@ -10,7 +10,7 @@ import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
 
 import { makeStyles } from 'tss-react/mui';
-import { getSortedTracks } from '../utils';
+import { formatTimeFromSeconds, getSortedTracks } from '../utils';
 import { belowDesktop, useShallowEqualSelector } from "../frontend-utils";
 import { control } from '../redux/actions';
 import { useDispatch } from '../frontend-utils';
@@ -35,6 +35,7 @@ const useStyles = makeStyles()(theme => ({
     lcd: {
         flex: '1 1 auto',
         position: 'relative',
+        cursor: 'pointer',
         marginLeft: theme.spacing(1.5),
         marginRight: theme.spacing(1.5),
         paddingLeft: theme.spacing(3),
@@ -108,6 +109,9 @@ export const Controls = () => {
     const isCapable = (capability: Capability) => deviceCapabilities.includes(capability);
 
     const { classes, cx } = useStyles();
+    const [lcdScreen, _setLCDScreen] = useState<number>(-1);
+    const setLCDScreen = (newScreen: number) => lcdScreen === newScreen ? void 0 : _setLCDScreen(newScreen);
+
     const handlePrev = useCallback(() => {
         dispatch(control('prev'));
     }, [dispatch]);
@@ -132,18 +136,47 @@ export const Controls = () => {
     const tracks = useMemo(() => getSortedTracks(disc), [disc]);
     if (!discPresent) {
         message = ``;
+        setLCDScreen(-1);
     } else if (deviceState === 'readingTOC') {
         message = 'READING TOC';
+        setLCDScreen(-1);
     } else if (tracks.length === 0) {
         message = `BLANKDISC`;
+        setLCDScreen(-1);
     } else if (deviceStatus && deviceStatus.track !== null && tracks[deviceStatus.track]) {
-        const title = tracks[deviceStatus.track].fullWidthTitle || tracks[deviceStatus.track].title;
+        const track = tracks[deviceStatus.track];
+        const title = track.fullWidthTitle || track.title;
         message = (deviceStatus.track + 1).toString().padStart(3, '0') + (title ? ' - ' + title : '');
+        switch(lcdScreen) {
+            // -1, 0 - use default
+            case 1: // Elapsed Time
+                message = `${(deviceStatus.time?.minute ?? 0).toString().padStart(2, '0')}:${(deviceStatus.time?.second ?? 0).toString().padStart(2, '0')} / ${formatTimeFromSeconds(track.duration, false)}`;
+                break;
+            case 2:
+                let timeDiff = track.duration - ((deviceStatus.time?.minute ?? 0) * 60 + (deviceStatus.time?.second ?? 0));
+                message = `-${formatTimeFromSeconds(timeDiff, false)}`;
+                break;
+
+        }
+        // Is locked on a certain message, but can allow other?
+        if(lcdScreen === -1) {
+            // Unlock it
+            setLCDScreen(0);
+        }
     }
 
     const [lcdScroll, setLcdScroll] = useState(0);
     const [lcdScrollDuration, setLcdScrollDuration] = useState(0);
     const [lcdIconFrame, setLcdIconFrame] = useState(0);
+
+    const handleLCDClick = useCallback(() => {
+        _setLCDScreen(old => {
+            if(old === -1) return old; //Locked
+            let next = old + 1;
+            if(next >= 3) next = 0;
+            return next;
+        });
+    }, [_setLCDScreen]);
 
     // LCD Text scrolling
     const animationDelayInMS = 2000;
@@ -237,7 +270,7 @@ export const Controls = () => {
                     </IconButton>
                 </React.Fragment>
             ) : null}
-            <div className={classes.lcd}>
+            <div className={classes.lcd} onClick={handleLCDClick}>
                 <div className={classes.lcdText}>
                     <span
                         className={cx(lcdScroll ? classes.scrollingStatusMessage : classes.statusMessage, {
