@@ -35,7 +35,7 @@ export const W95TopMenu = (props: {
         );
         items.push(
             <ListItem key="vintage" onClick={props.handleVintageMode}>
-                <Checkbox checked name="vintageMode" variant="menu" value="vintageMode" label="Retro Mode (beta)" defaultChecked />
+                <Checkbox checked={true} label={<label>Retro Mode (beta)</label>} defaultChecked={true} />
             </ListItem>
         );
 
