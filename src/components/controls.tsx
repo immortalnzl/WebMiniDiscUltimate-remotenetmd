@@ -1,4 +1,5 @@
-import React, { useCallback, useRef, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useRef, useEffect, useState, useMemo, SyntheticEvent } from 'react';
+import clsx from 'clsx';
 
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
@@ -48,6 +49,7 @@ const useStyles = makeStyles()(theme => ({
             marginLeft: 0,
             marginRight: theme.spacing(2),
         },
+        userSelect: 'none',
     },
     lcdText: {
         overflow: 'hidden',
@@ -96,6 +98,24 @@ const useStyles = makeStyles()(theme => ({
         width: 48,
         height: 48,
     },
+    durationHolder: {
+        display: 'flex',
+        position: 'relative',
+        top: -44,
+    },
+    duration: {
+        // width: '100%',
+        flexGrow: 0.01,
+        height: 8,
+        backgroundSize: '8px 4px',
+        
+        backgroundRepeat: 'repeat-x',
+        backgroundImage: "url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAICAYAAADwdn+XAAABhWlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV9Tix9UBC0i4pChOlkQFREnrUIRKpRaoVUHk0u/oElDkuLiKLgWHPxYrDq4OOvq4CoIgh8gzg5Oii5S4v+SQosYD4778e7e4+4dINRKTDXbxgBVs4xkLCqmM6ti+ysC6EU/ZtApMVOfSyTi8Bxf9/Dx9S7Cs7zP/Tm6lazJAJ9IPMt0wyLeIJ7atHTO+8QhVpAU4nPiUYMuSPzIddnlN855hwWeGTJSyXniELGYb2G5hVnBUIknicOKqlG+kHZZ4bzFWS1VWOOe/IXBrLayzHWaQ4hhEUtIQISMCooowUKEVo0UE0naj3r4Bx1/glwyuYpg5FhAGSokxw/+B7+7NXMT425SMAoEXmz7Yxho3wXqVdv+Prbt+gngfwautKa/XAOmP0mvNrXwEdCzDVxcNzV5D7jcAQaedMmQHMlPU8jlgPcz+qYM0HcLdK25vTX2cfoApKir+A1wcAiM5Cl73ePdHa29/Xum0d8PjEtysaBQHcsAAAAJcEhZcwAALiMAAC4jAXilP3YAAAAHdElNRQfoBRIXCBTPWcirAAAAGXRFWHRDb21tZW50AENyZWF0ZWQgd2l0aCBHSU1QV4EOFwAAABhJREFUKM9jZCAM/uOTZGKgEIwaMBgMAAD0cwEPreO1ugAAAABJRU5ErkJggg==')",
+        filter: theme.palette.mode === 'dark' ? 'invert(1) contrast(0.5)' : 'contrast(0.1)',
+    },
+    durationSlowDown: {
+        transition: 'flex-grow linear 0.5s',
+    }
 }));
 
 export const Controls = () => {
@@ -110,7 +130,9 @@ export const Controls = () => {
 
     const { classes, cx } = useStyles();
     const [lcdScreen, _setLCDScreen] = useState<number>(-1);
+    const [trackPercentage, _setTrackPercentage] = useState<number>(0);
     const setLCDScreen = (newScreen: number) => lcdScreen === newScreen ? void 0 : _setLCDScreen(newScreen);
+    const setTrackPercentage = (newTrackPercentage: typeof _setTrackPercentage extends (a: infer R) => any ? R : never) => newTrackPercentage === trackPercentage ? void 0 : _setTrackPercentage(newTrackPercentage);
 
     const handlePrev = useCallback(() => {
         dispatch(control('prev'));
@@ -128,6 +150,10 @@ export const Controls = () => {
         dispatch(control('pause'));
     }, [dispatch]);
 
+    const [isSeeking, setIsSeeking] = useState(false);
+    const [isSeekingProgressLocked, setIsSeekingProgressLocked] = useState(false);
+    const [lcdClickPrevent, setLCDClickPrevent] = useState(false);
+    const durationHolderRef = useRef<HTMLDivElement | null>(null);
     let message = ``;
     const trackIndex = deviceStatus?.track ?? null;
     const deviceState = deviceStatus?.state ?? null;
@@ -137,26 +163,38 @@ export const Controls = () => {
     if (!discPresent) {
         message = ``;
         setLCDScreen(-1);
+        setTrackPercentage(0);
     } else if (deviceState === 'readingTOC') {
         message = 'READING TOC';
         setLCDScreen(-1);
+        setTrackPercentage(0);
     } else if (tracks.length === 0) {
         message = `BLANKDISC`;
         setLCDScreen(-1);
+        setTrackPercentage(0);
     } else if (deviceStatus && deviceStatus.track !== null && tracks[deviceStatus.track]) {
         const track = tracks[deviceStatus.track];
         const title = track.fullWidthTitle || track.title;
+        let currentTimeSecs = ((deviceStatus.time?.minute ?? 0) * 60 + (deviceStatus.time?.second ?? 0));
         message = (deviceStatus.track + 1).toString().padStart(3, '0') + (title ? ' - ' + title : '');
+        const messageIsTime = () => message = `${formatTimeFromSeconds(currentTimeSecs, false)} / ${formatTimeFromSeconds(track.duration, false)}`;
         switch(lcdScreen) {
             // -1, 0 - use default
             case 1: // Elapsed Time
-                message = `${(deviceStatus.time?.minute ?? 0).toString().padStart(2, '0')}:${(deviceStatus.time?.second ?? 0).toString().padStart(2, '0')} / ${formatTimeFromSeconds(track.duration, false)}`;
+                messageIsTime();
                 break;
             case 2:
-                let timeDiff = track.duration - ((deviceStatus.time?.minute ?? 0) * 60 + (deviceStatus.time?.second ?? 0));
+                let timeDiff = track.duration - currentTimeSecs;
                 message = `-${formatTimeFromSeconds(timeDiff, false)}`;
                 break;
-
+        }
+        if(isSeekingProgressLocked) {
+            currentTimeSecs = Math.floor(trackPercentage * track.duration / 100);
+        } else {
+            setTrackPercentage(Math.floor((currentTimeSecs / track.duration) * 100));
+        }
+        if(isSeeking) {
+            messageIsTime();
         }
         // Is locked on a certain message, but can allow other?
         if(lcdScreen === -1) {
@@ -177,6 +215,47 @@ export const Controls = () => {
             return next;
         });
     }, [_setLCDScreen]);
+
+    const startSeeking = (e: SyntheticEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setLCDClickPrevent(true);
+        setIsSeeking(true);
+        setIsSeekingProgressLocked(true);
+    }
+
+    useEffect(() => {
+        const func = (e: MouseEvent) => {
+            if(!isSeeking) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const xPerc = Math.min(Math.max((e.pageX - durationHolderRef.current!.getBoundingClientRect().left) * 100 / durationHolderRef.current!.clientWidth, 0), 100)
+            setTrackPercentage(xPerc);
+        }
+        window.addEventListener('mousemove', func);
+        return () => window.removeEventListener('mousemove', func);
+    }, [isSeeking, durationHolderRef]);
+
+    useEffect(() => {
+        const func = () => {
+            setIsSeeking(wasSeeking => {
+                if(wasSeeking) {
+                    setTimeout(() => setIsSeekingProgressLocked(false), 1000);
+                    if(!deviceStatus?.track) return false;
+                    const track = tracks[deviceStatus.track];
+                    // Hack:
+                    setTrackPercentage((trackPercentage: number) => {
+                        const seekTo = Math.floor(trackPercentage * track.duration / 100);
+                        dispatch(control('seek', { trackNumber: deviceStatus.track, time: seekTo}));
+                        return trackPercentage;
+                    });
+                }
+                return false;
+            });
+        }
+        window.addEventListener('mouseup', func);
+        return () => window.removeEventListener('mouseup', func);
+    }, [setIsSeeking, deviceStatus, tracks, dispatch]);
 
     // LCD Text scrolling
     const animationDelayInMS = 2000;
@@ -270,7 +349,7 @@ export const Controls = () => {
                     </IconButton>
                 </React.Fragment>
             ) : null}
-            <div className={classes.lcd} onClick={handleLCDClick}>
+            <div className={classes.lcd} onClick={lcdClickPrevent ? () => setLCDClickPrevent(false) : handleLCDClick}>
                 <div className={classes.lcdText}>
                     <span
                         className={cx(lcdScroll ? classes.scrollingStatusMessage : classes.statusMessage, {
@@ -288,6 +367,10 @@ export const Controls = () => {
                 </div>
                 <div className={classes.lcdDisc}>
                     {discPresent && <DiscFrame className={cx(classes.lcdDiscIcon, { [classes.lcdBlink]: paused })} />}
+                </div>
+                <div className={classes.durationHolder} ref={durationHolderRef} onMouseDown={startSeeking}>
+                    <div className={clsx(classes.duration, {[classes.durationSlowDown]: !isSeeking})} style={{flexGrow: trackPercentage}}></div>
+                    <div style={{flexGrow: 100 - trackPercentage}}></div>
                 </div>
             </div>
         </Box>
