@@ -28,6 +28,8 @@ Object.defineProperty(window, 'wmdVersion', {
     writable: false,
 });
 
+const originalApplicationTitle = document.title;
+
 if (localStorage.getItem('version') !== (window as any).wmdVersion) {
     store.dispatch(appActions.showChangelogDialog(true));
 }
@@ -48,6 +50,7 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
         navigator.usb.ondisconnect = function(event) {
             if(serviceRegistry.netmdService!.isDeviceConnected(event.device)){
                 store.dispatch(appActions.setMainView('WELCOME'));
+                document.title = originalApplicationTitle;
             } else {
                 console.log("The device disconnected isn't connected to this webapp");
             }
@@ -115,6 +118,11 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
                 const serviceFlushability = await serviceRegistry.netmdService!.canBeFlushed();
                 if (currentFlushability !== serviceFlushability) {
                     store.dispatch(mainActions.setFlushable(serviceFlushability));
+                }
+                // Since this function doesn't execute if there's any operational dialog on screen
+                // (including the track upload dialog), this won't conflict with anything.
+                if(document.title !== originalApplicationTitle) {
+                    document.title = originalApplicationTitle;
                 }
                 await sleep(250);
             } catch (e) {
