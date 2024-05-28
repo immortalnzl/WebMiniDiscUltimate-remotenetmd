@@ -9,7 +9,6 @@ export interface LogPayload {
 
 export type ExportParams = {
     format: { bitrate?: number; codec: 'AT3' | 'A3+' | 'PCM' | 'MP3' };
-    loudnessTarget?: number;
     enableReplayGain?: boolean;
 };
 
@@ -103,13 +102,10 @@ export abstract class DefaultFfmpegAudioExportService implements AudioExportServ
     }
 
     async createFfmpegParams(parameters: ExportParams, outputFormat: string, moreParams?: string) {
-        const { loudnessTarget, enableReplayGain } = parameters;
+        const { enableReplayGain } = parameters;
         let additionalCommands = '';
         const commonFormatting = `-ac 2 -ar 44100`;
-        if (loudnessTarget !== undefined && loudnessTarget <= 0 && loudnessTarget >= -12) {
-            const peakVolume = await this.volumeDetect();
-            additionalCommands += `-af volume=${loudnessTarget - peakVolume}dB`;
-        } else if (enableReplayGain) {
+        if (enableReplayGain) {
             additionalCommands += `-af volume=replaygain=track`;
         }
         return `${additionalCommands} ${commonFormatting} ${moreParams ?? ''} -f ${outputFormat}`;

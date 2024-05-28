@@ -1239,7 +1239,7 @@ export function flushDevice() {
 export function convertAndUpload(
     files: TitledFile[],
     format: Codec,
-    additionalParameters?: { loudnessTarget?: number; enableReplayGain: boolean }
+    additionalParameters?: { enableReplayGain: boolean }
 ) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         const deviceCapabilities = getState().main.deviceCapabilities;
@@ -1431,7 +1431,6 @@ export function convertAndUpload(
 
                             data = await audioExportService!.export({
                                 format: audioExportFormat,
-                                loudnessTarget: additionalParameters?.loudnessTarget,
                                 enableReplayGain: additionalParameters?.enableReplayGain,
                             });
                             totalBytesCalc += data.byteLength;

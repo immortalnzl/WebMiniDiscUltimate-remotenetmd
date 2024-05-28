@@ -509,24 +509,10 @@ export const ConvertDialog = (props: { files: File[] }) => {
     }, [setTracksOrderVisible]);
 
     const [enableReplayGain, setEnableReplayGain] = useState(false);
-    const [enableNormalization, setEnableNormalization] = useState(false);
-    const [normalizationTarget, setNormalizationTarget] = useState<number>(-5);
 
     const handleToggleReplayGain = useCallback(() => {
         setEnableReplayGain(enableReplayGain => !enableReplayGain);
-        setEnableNormalization(false);
-    }, [setEnableReplayGain, setEnableNormalization]);
-
-    const handleToggleNormalization = useCallback(() => {
-        setEnableNormalization(enableNormalization => !enableNormalization);
-        setEnableReplayGain(false);
-    }, [setEnableNormalization]);
-    const handleNormalizationSliderChange = useCallback(
-        (evt: any, newValue: number | number[]) => {
-            setNormalizationTarget(newValue as number);
-        },
-        [setNormalizationTarget]
-    );
+    }, [setEnableReplayGain]);
 
     const handleToggleFullWidthSupport = useCallback(() => {
         dispatch(appActions.setFullWidthSupport(!fullWidthSupport));
@@ -788,7 +774,6 @@ export const ConvertDialog = (props: { files: File[] }) => {
     const handleConvert = useCallback(() => {
         handleClose();
         setEnableReplayGain(false);
-        setEnableNormalization(false);
         dispatch(
             convertAndUpload(
                 titles.map((n, i) => ({
@@ -801,12 +786,11 @@ export const ConvertDialog = (props: { files: File[] }) => {
                 })),
                 thisSpecFormat,
                 {
-                    loudnessTarget: enableNormalization ? normalizationTarget : undefined,
                     enableReplayGain,
                 }
             )
         );
-    }, [dispatch, handleClose, titles, thisSpecFormat, files, normalizationTarget, enableNormalization, enableReplayGain]);
+    }, [dispatch, handleClose, titles, thisSpecFormat, files, enableReplayGain]);
 
     const isSelectedMediocre = serviceRegistry.audioExportService!.getSupport(thisSpecFormat.codec) === 'mediocre';
     const isSelectedUnsupported = serviceRegistry.audioExportService!.getSupport(thisSpecFormat.codec) === 'unsupported';
@@ -1096,24 +1080,6 @@ export const ConvertDialog = (props: { files: File[] }) => {
                             label={`Use ReplayGain`}
                             className={classes.advancedOption}
                             control={<Checkbox checked={enableReplayGain} onChange={handleToggleReplayGain} />}
-                        />
-                        <FormControlLabel
-                            label={`Normalize tracks${enableNormalization ? ` to ${normalizationTarget} dB` : ''}`}
-                            className={classes.advancedOption}
-                            control={<Checkbox checked={enableNormalization} onChange={handleToggleNormalization} />}
-                        />
-                        <Slider
-                            min={-12}
-                            max={0}
-                            step={0.1}
-                            marks={[
-                                { value: -12, label: '-12dB' },
-                                { value: 0, label: '0dB' },
-                            ]}
-                            className={classes.advancedOption}
-                            value={normalizationTarget}
-                            onChange={handleNormalizationSliderChange}
-                            disabled={!enableNormalization}
                         />
                     </AccordionDetails>
                 </Accordion>

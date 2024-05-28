@@ -19,7 +19,7 @@ export class RemoteAtracExportService extends DefaultFfmpegAudioExportService {
         this.originalFileName = file.name;
     }
 
-    async encodeATRAC3({ format, loudnessTarget, enableReplayGain }: ExportParams): Promise<ArrayBuffer> {
+    async encodeATRAC3({ format, enableReplayGain }: ExportParams): Promise<ArrayBuffer> {
         const { data } = await this.ffmpegProcess.read(this.inFileName);
 
         const payload = new FormData();
@@ -51,7 +51,6 @@ export class RemoteAtracExportService extends DefaultFfmpegAudioExportService {
                 throw new Error('Invalid format given to encoder');
         }
         encodingURL.searchParams.set('type', encoderFormat);
-        if (loudnessTarget !== undefined) encodingURL.searchParams.set('loudnessTarget', loudnessTarget.toString());
         if (enableReplayGain !== undefined) encodingURL.searchParams.set('applyReplaygain', enableReplayGain.toString());
         let response: Response | null = null;
         for(let i = 0; i<MAX_TRIES; i++){
