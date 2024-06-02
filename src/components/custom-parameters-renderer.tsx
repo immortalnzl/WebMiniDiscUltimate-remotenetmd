@@ -3,11 +3,13 @@ import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import TextField from '@mui/material/TextField';
 import { CustomParameterInfo, CustomParameterType } from '../custom-parameters';
+import { Button, Tooltip } from '@mui/material';
 
 export function renderCustomParameter(
     parameter: CustomParameterInfo,
     value: any,
-    parameterChangeCallback: (varName: string, newValue: any) => void
+    parameterChangeCallback: (varName: string, newValue: any) => void,
+    customClass?: string,
 ) {
     const handleParameterChange = (event: any, type: CustomParameterType, name: string) => {
         parameterChangeCallback(
@@ -22,6 +24,7 @@ export function renderCustomParameter(
         case 'boolean':
             return (
                 <FormControlLabel
+                    className={customClass}
                     control={<Checkbox checked={value} onChange={e => handleParameterChange(e, parameter.type, parameter.varName)} />}
                     label={parameter.userFriendlyName}
                     style={fullWidth}
@@ -31,6 +34,7 @@ export function renderCustomParameter(
         case 'string':
             return (
                 <TextField
+                    className={customClass}
                     key={parameter.varName}
                     label={parameter.userFriendlyName}
                     error={parameter.validator ? !parameter.validator(value) : false}
@@ -42,6 +46,7 @@ export function renderCustomParameter(
         case 'number':
             return (
                 <TextField
+                    className={customClass}
                     label={parameter.userFriendlyName}
                     error={parameter.validator ? !parameter.validator(value) : false}
                     type="number"
@@ -51,5 +56,28 @@ export function renderCustomParameter(
                     key={parameter.varName}
                 />
             );
+        case 'hostDirPath':
+        case 'hostFilePath':
+            return (
+                <FormControlLabel
+                    classes={{ root: customClass }}
+                    control={
+                        <Tooltip title={value || '<NONE>'}>
+                            <Button style={{color: !(parameter.validator?.(value) ?? true) ? 'red' : undefined}} onClick={() => {
+                                window.native?.openFileHostDialog?.([{ name: 'All files', extensions: ['*'] }], parameter.type === 'hostDirPath')?.then(e => {
+                                    parameterChangeCallback(parameter.varName, e ?? ''); 
+                                });
+                            }}>
+                                Choose {parameter.type === 'hostDirPath' ? 'Directory' : 'File'}
+                            </Button>
+                        </Tooltip>
+                    }
+                    label={parameter.userFriendlyName}
+                    labelPlacement='start'
+                    style={{...fullWidth, justifyContent: 'space-between'}}
+                    key={parameter.varName}
+                />
+            )
+        default: throw new Error("Cannot render property - is your setup correct?");
     }
 }

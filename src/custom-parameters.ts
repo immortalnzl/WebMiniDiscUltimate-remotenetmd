@@ -1,5 +1,5 @@
 export type CustomParameters = { [key: string]: string | number | boolean };
-export type CustomParameterType = 'string' | 'number' | 'boolean';
+export type CustomParameterType = 'string' | 'number' | 'boolean' | 'hostFilePath' | 'hostDirPath';
 export type CustomParameterInfo = {
     userFriendlyName: string;
     varName: string;
@@ -28,6 +28,10 @@ function getDefaultForType(type: CustomParameterType) {
             return '';
         case 'number':
             return 0;
+        case 'hostFilePath':
+            return '';
+        case 'hostDirPath':
+            return '';
     }
 }
 

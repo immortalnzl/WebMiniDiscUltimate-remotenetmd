@@ -13,7 +13,6 @@ import Slide, { SlideProps } from '@mui/material/Slide';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import FormControl from '@mui/material/FormControl';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import Switch from '@mui/material/Switch';
@@ -23,6 +22,7 @@ import { makeStyles } from 'tss-react/mui';
 import { AudioServices } from '../services/audio-export-service-manager';
 import { renderCustomParameter } from './custom-parameters-renderer';
 import { initializeParameters, isAllValid } from '../custom-parameters';
+import { SettingInterface } from '../bridge-types';
 
 const Transition = React.forwardRef(function Transition(
     props: SlideProps,
@@ -82,6 +82,13 @@ const useStyles = makeStyles()(theme => ({
         marginBottom: theme.spacing(2),
         marginTop: theme.spacing(2),
     },
+    marginApply: {
+        marginLeft: theme.spacing(2),
+        paddingRight: theme.spacing(2),
+    },
+    noLeftMargin: {
+        marginLeft: 0,
+    }
 }));
 
 const SimpleField = ({
@@ -118,6 +125,59 @@ const SimpleField = ({
     } else {
         return element;
     }
+};
+
+const NativeFields = ({ section, classes }: { section: string, classes: any }) => {
+    if(!window.native?.getSettings) return <></>;
+
+    const [settings, setSettings] = useState<SettingInterface[]>([]);
+    const [_state, _updateState] = useState({});
+    useEffect(() => {
+        (async () => {
+            const settings = await window.native!.getSettings!();
+            setSettings(settings);
+        })();
+    }, [_state]);
+
+    const filtered = settings.filter(e => e.family === section);
+    const updateState = () => _updateState({});
+
+    return filtered.map(entry => {
+        if(entry.type === 'action') {
+            return (
+                <SimpleField
+                    name={entry.name}
+                    classes={classes}
+                    formControl={true}
+                    key={entry.family + entry.name}
+                >
+                    <Button onClick={() => entry.update(true)}>Go</Button>
+                </SimpleField>
+            )
+        } else if(entry.type === 'boolean') {
+            return (
+                <SimpleField
+                    name={entry.name}
+                    classes={classes}
+                    formControl={true}
+                    key={entry.family + entry.name}
+                >
+                    <Switch checked={entry.state as boolean} onChange={(e) => entry.update(!entry.state).then(updateState)} />
+                </SimpleField>
+            );
+        } else {
+            return renderCustomParameter(
+                {
+                    type: entry.type,
+                    userFriendlyName: entry.name,
+                    varName: entry.family + entry.name
+                },
+                entry.state,
+                (_, nv) => entry.update(nv).then(updateState),
+                classes.marginApply
+            );
+        }
+    });
 };
 
 export const SettingsDialog = (props: {}) => {
@@ -270,6 +330,7 @@ export const SettingsDialog = (props: {}) => {
                 <SimpleField name="Stretch Web Minidisc Pro to fill the screen horizontally" classes={classes} formControl={true}>
                     <Switch checked={pageFullWidth} onChange={handlePageFullWidthChange} />
                 </SimpleField>
+                <NativeFields classes={classes} section='Appearance'/>
 
                 <DialogContentText className={classes.header}>Functionality</DialogContentText>
                 <SimpleField
@@ -315,6 +376,7 @@ export const SettingsDialog = (props: {}) => {
                 >
                     <Switch checked={factoryModeNERAWDownload} onChange={handleToggleFactoryModeNERAWDownload} />
                 </SimpleField>
+                <NativeFields classes={classes} section='Functionality'/>
 
                 <DialogContentText className={classes.header}>Encoding</DialogContentText>
                 <SimpleField name="Encoder to use" classes={classes}>
@@ -329,9 +391,10 @@ export const SettingsDialog = (props: {}) => {
                 <Typography className={classes.encoderDescription}>{currentService.description}</Typography>
                 <Box className={classes.fieldMargin}>
                     {currentService.customParameters?.map(n =>
-                        renderCustomParameter(n, currentExportServiceConfig![n.varName], handleExportServiceParameterChange)
+                        renderCustomParameter(n, currentExportServiceConfig![n.varName], handleExportServiceParameterChange, classes.noLeftMargin)
                     )}
                 </Box>
+                <NativeFields classes={classes} section='Encoding'/>
             </DialogContent>
             <DialogActions>
                 <Button disabled={!verifyIfInputsValid()} onClick={handleClose}>
