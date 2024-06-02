@@ -33,7 +33,7 @@
     "@reduxjs/toolkit": "^2.2.3",
     "buffer": "^6.0.3",
     "clsx": "^2.1.0",
-    "himd-js": "^0.2.0-alpha.2",
+    "himd-js": "^0.2.0-alpha.4",
     "husky": "^9.0.11",
     "jconv": "^0.1.5",
     "jszip": "^3.10.1",

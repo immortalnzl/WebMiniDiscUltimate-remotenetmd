@@ -19,7 +19,7 @@ import {
     HiMDFile,
     HiMDWriteStream,
     uploadMacDependent,
-    UMSCHiMDSession,
+    HiMDSecureSession,
     generateCodecInfo,
     HiMDKBPSToFrameSize,
     HiMDError,
@@ -433,7 +433,7 @@ export class HiMDRestrictedService extends NetMDService {
 
 export class HiMDFullService extends HiMDRestrictedService {
     protected worker: CryptoProvider | null = null;
-    protected session: UMSCHiMDSession | null = null;
+    protected session: HiMDSecureSession | null = null;
     protected fsDriver?: UMSCHiMDFilesystem;
     constructor(p: { debug: boolean }) {
         super(p);
@@ -478,7 +478,7 @@ export class HiMDFullService extends HiMDRestrictedService {
                 console.log(
                     "NOTICE: It's impossible to re-sign MP3 audio.\nMP3s need to instead be re-encrypted.\nPlease download the MP3 files from the working disc, and reupload them here"
                 );
-                const session = new UMSCHiMDSession(this.fsDriver!.driver, this.himd!);
+                const session = new HiMDSecureSession(this.himd!, this.fsDriver!.driver);
                 await session.performAuthentication();
                 console.log('Authenticated');
                 for (let i = 0; i < this.himd!.getTrackCount(); i++) {
@@ -534,7 +534,7 @@ export class HiMDFullService extends HiMDRestrictedService {
         const allTrackSlots = indexes.map(e => this.himd!.trackIndexToTrackSlot(e));
         await deleteTracks(this.himd!, indexes);
         // Re-sign the disc
-        const session = new UMSCHiMDSession(this.fsDriver!.driver, this.himd!);
+        const session = new HiMDSecureSession(this.himd!, this.fsDriver!.driver);
         await session.performAuthentication();
         for(let trackSlot of allTrackSlots) {
             session.allMacs!.set(new Uint8Array(8).fill(0), (trackSlot - 1) * 8);
@@ -554,7 +554,7 @@ export class HiMDFullService extends HiMDRestrictedService {
             await super.upload(title, fullWidthTitle, data, format, progressCallback);
         } else {
             if (!this.session) {
-                this.session = new UMSCHiMDSession(this.fsDriver!.driver, this.himd!);
+                this.session = new HiMDSecureSession(this.himd!, this.fsDriver!.driver);
                 await this.session.performAuthentication();
             }
             const stream = new HiMDWriteStream(this.himd!, this.atdata!, true);
