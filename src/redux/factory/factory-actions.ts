@@ -205,9 +205,10 @@ export function uploadToc(file: File) {
 }
 export type BadSectorResponse = Promised<ReturnType<AtracRecoveryConfig['handleBadSector'] extends infer R | undefined ? R : never>>;
 
-let badSectorPromise: ((a: { response: BadSectorResponse; rememberForTheRestOfDownload: boolean }) => void) | null = null;
+let badSectorPromise: ((a: { response: BadSectorResponse; rememberForTheRestOfDownload: boolean; rememberForTheRestOfSession: boolean; }) => void) | null = null;
+let sessionStoredBadSectorHandling: null | BadSectorResponse = null;
 
-export function reportBadSectorReponse(response: BadSectorResponse, rememberForTheRestOfDownload: boolean) {
+export function reportBadSectorReponse(response: BadSectorResponse, rememberForTheRestOfDownload: boolean, rememberForTheRestOfSession: boolean) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         if (!badSectorPromise) {
             throw new Error('Invalid state!');
@@ -215,6 +216,7 @@ export function reportBadSectorReponse(response: BadSectorResponse, rememberForT
         badSectorPromise({
             response,
             rememberForTheRestOfDownload,
+            rememberForTheRestOfSession,
         });
         badSectorPromise = null;
         dispatch(factoryBadSectorDialogActions.setVisible(false));
@@ -304,11 +306,13 @@ export function exploitDownloadTracks(
                 },
                 {
                     shouldCancelImmediately: () => getState().factoryProgressDialog.cancelled,
-                    handleBadSector: async (address: string, count: number) => {
+                    handleBadSector: async (address: string, count: number, seconds: number) => {
+                        if (sessionStoredBadSectorHandling !== null) return sessionStoredBadSectorHandling;
                         if (storedBadSectorHandling !== null) return storedBadSectorHandling;
                         dispatch(
                             batchActions([
                                 factoryBadSectorDialogActions.setAddress(address),
+                                factoryBadSectorDialogActions.setSeconds(seconds),
                                 factoryBadSectorDialogActions.setCount(count),
                                 factoryBadSectorDialogActions.setVisible(true),
                             ])
@@ -316,9 +320,13 @@ export function exploitDownloadTracks(
                         const result = await new Promise<{
                             response: BadSectorResponse;
                             rememberForTheRestOfDownload: boolean;
+                            rememberForTheRestOfSession: boolean;
                         }>(res => (badSectorPromise = res));
                         if (result.rememberForTheRestOfDownload) {
                             storedBadSectorHandling = result.response;
+                        }
+                        if (result.rememberForTheRestOfSession) {
+                            sessionStoredBadSectorHandling = result.response;
                         }
                         return result.response;
                     },

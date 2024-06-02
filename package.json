@@ -39,7 +39,7 @@
     "jszip": "^3.10.1",
     "lint-staged": "^15.2.2",
     "music-metadata-browser": "^2.5.9",
-    "netmd-exploits": "^0.5.5",
+    "netmd-exploits": "^0.5.6",
     "netmd-js": "^4.1.8",
     "netmd-tocmanip": "^0.1.5",
     "prettier": "^3.2.5",

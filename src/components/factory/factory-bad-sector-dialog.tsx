@@ -16,6 +16,7 @@ import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import { useDispatch } from '../../frontend-utils';
 import { BadSectorResponse, reportBadSectorReponse } from '../../redux/factory/factory-actions';
+import { formatTimeFromSeconds } from '../../utils';
 
 const Transition = React.forwardRef(function Transition(
     props: SlideProps,
@@ -27,18 +28,28 @@ const Transition = React.forwardRef(function Transition(
 export const FactoryModeBadSectorDialog = (props: {}) => {
     const dispatch = useDispatch();
 
-    const { visible, address, count, remember } = useShallowEqualSelector(state => state.factoryBadSectorDialog);
+    const { visible, address, count, remember, rememberForRestOfSession, seconds } = useShallowEqualSelector(state => state.factoryBadSectorDialog);
 
     const handleReturnValue = useCallback(
         (data: BadSectorResponse) => {
-            dispatch(reportBadSectorReponse(data, remember));
+            dispatch(reportBadSectorReponse(data, remember, rememberForRestOfSession));
         },
-        [dispatch, remember]
+        [dispatch, remember, rememberForRestOfSession]
     );
 
     const handleRememberChoiceChange = useCallback(
         (e: any) => {
             dispatch(factoryBadSectorDialogActions.setRememberChoice(e.target.checked));
+            if(!e.target.checked){
+                dispatch(factoryBadSectorDialogActions.setRememberChoiceForRestOfSession(false));
+            }
+        },
+        [dispatch]
+    );
+
+    const handleRememberChoiceRestOfSessionChange = useCallback(
+        (e: any) => {
+            dispatch(factoryBadSectorDialogActions.setRememberChoiceForRestOfSession(e.target.checked));
         },
         [dispatch]
     );
@@ -55,13 +66,21 @@ export const FactoryModeBadSectorDialog = (props: {}) => {
             <DialogTitle id="factory-bad-sector-dialog-slide-title">Bad Sector Encountered!</DialogTitle>
             <DialogContent>
                 <DialogContentText id="factory-bad-sector-dialog-slide-description">
-                    A bad sector was encountered on address {address} ({count} sector of this block)
+                    A bad sector was encountered on address {address}
+                </DialogContentText>
+                <DialogContentText id="factory-bad-sector-dialog-slide-extended-description">
+                    That address is the {count}. sector of this block, around {formatTimeFromSeconds(seconds, false)}
                 </DialogContentText>
                 <Box>
                     <FormControl>
-                        <FormControlLabel
+                    <FormControlLabel
                             control={<Checkbox checked={remember} onChange={handleRememberChoiceChange} />}
                             label="Remember my choice"
+                        />
+                        <FormControlLabel
+                            control={<Checkbox checked={rememberForRestOfSession} onChange={handleRememberChoiceRestOfSessionChange} />}
+                            disabled={!remember}
+                            label="Remember my choice for the rest of this session"
                         />
                     </FormControl>
                 </Box>
