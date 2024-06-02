@@ -1,6 +1,7 @@
 import { CustomParameterInfo, CustomParameters } from '../custom-parameters';
 import { AtracdencAudioExportService } from './audio/atracdenc-export';
 import { AudioExportService } from './audio/audio-export';
+import { LocalAtracExportService } from './audio/ewmd-local-atrac-export';
 import { RemoteAtracExportService } from './audio/remote-atrac-export';
 
 interface AudioServicePrototype<T extends AudioExportService> {
@@ -39,3 +40,20 @@ export const AudioServices: AudioServicePrototype<AudioExportService>[] = [
             'A separate high-quality ATRAC encoder hosted on another server (as defined by https://github.com/thinkbrown/atrac-api)',
     },
 ];
+
+if(window.native?.invokeLocalEncoder) {
+    AudioServices.push({
+        name: 'Local ATRAC Encoder',
+        create: LocalAtracExportService,
+        description: 'A local copy of the high-quality Sony encoder. Warning: Requires FFMPEG to be present in $PATH!',
+        customParameters: [
+            {
+                userFriendlyName: 'Windows Executable Path',
+                type: 'hostFilePath',
+                varName: 'exe',
+                defaultValue: '',
+                validator: content => !!content,
+            },
+        ]
+    });
+}
