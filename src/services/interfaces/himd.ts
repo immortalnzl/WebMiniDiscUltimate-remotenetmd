@@ -61,10 +61,23 @@ export class HiMDSpec implements MinidiscSpec {
     public readonly defaultFormat: Codec = this.unrestricted ? { codec: 'A3+', bitrate: 256 } : { codec: 'MP3', bitrate: 192 };
     public readonly specName: string;
 
-    async getRemainingCharactersForTitles(_service: NetMDService): Promise<{ halfWidth: number; fullWidth: number }> {
-        const service = _service as HiMDRestrictedService;
-        const freelistAmt = service.himd!.countFreeStringChunks();
-        return { halfWidth: freelistAmt * 14, fullWidth: 0 };
+    getRemainingCharactersForTitles(disc: Disc): { halfWidth: number; fullWidth: number } {
+        const ALL_CHARACTERS = 0x1000 * 14;
+        const t = (x: string) => Math.floor((x.length + 13) / 14) * 14;
+        let amt = 0;
+        // TODO: this can be integrated into himd-js at some point...
+        for(let group of disc.groups){
+            if(group.title){
+                amt += t(group.title);
+            }
+            for(let track of group.tracks){
+                if(track.title) amt += t(track.title);
+                if(track.album) amt += t(track.album);
+                if(track.artist) amt += t(track.artist);        
+            }
+        }
+        if(disc.title) amt += t(disc.title);
+        return { halfWidth: ALL_CHARACTERS - amt, fullWidth: 0 };
     }
 
     getCharactersForTitle(track: Track): { halfWidth: number; fullWidth: number } {

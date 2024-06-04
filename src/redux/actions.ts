@@ -1469,7 +1469,7 @@ export function convertAndUpload(
         let {
             halfWidth: availableHalfWidthCharacters,
             fullWidth: availableFullWidthCharacters,
-        } = await netmdSpec!.getRemainingCharactersForTitles(serviceRegistry.netmdService!);
+        } = netmdSpec!.getRemainingCharactersForTitles(disc!);
 
         let error: any;
         let errorMessage = ``;
