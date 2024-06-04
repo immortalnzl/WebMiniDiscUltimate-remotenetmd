@@ -61,14 +61,19 @@ export class HiMDSpec implements MinidiscSpec {
     public readonly defaultFormat: Codec = this.unrestricted ? { codec: 'A3+', bitrate: 256 } : { codec: 'MP3', bitrate: 192 };
     public readonly specName: string;
 
-    getRemainingCharactersForTitles(disc: Disc): { halfWidth: number; fullWidth: number } {
-        // FIXME
-        return { halfWidth: 99999, fullWidth: 99999 };
+    async getRemainingCharactersForTitles(_service: NetMDService): Promise<{ halfWidth: number; fullWidth: number }> {
+        const service = _service as HiMDRestrictedService;
+        const freelistAmt = service.himd!.countFreeStringChunks();
+        return { halfWidth: freelistAmt * 14, fullWidth: 0 };
     }
 
     getCharactersForTitle(track: Track): { halfWidth: number; fullWidth: number } {
-        // FIXME
-        return { halfWidth: 0, fullWidth: 0 };
+        const t = (x: string) => Math.floor((x.length + 13) / 14) * 14;
+        let amt = 0;
+        if(track.title) amt += t(track.title);
+        if(track.album) amt += t(track.album);
+        if(track.artist) amt += t(track.artist);
+        return { halfWidth: amt, fullWidth: 0 };
     }
 
     translateDefaultMeasuringModeTo(codec: Codec, defaultMeasuringModeDuration: number): number {
@@ -107,7 +112,7 @@ export class HiMDSpec implements MinidiscSpec {
 export class HiMDRestrictedService extends NetMDService {
     private logger?: Logger;
     public mutex = new Mutex();
-    protected himd?: HiMD;
+    public himd?: HiMD;
     protected cachedDisc?: Disc;
     protected atdata: HiMDFile | null = null;
     protected fsDriver?: HiMDFilesystem;

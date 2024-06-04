@@ -133,7 +133,7 @@ export interface MinidiscSpec {
     readonly specName: string;
     sanitizeHalfWidthTitle(title: string): string;
     sanitizeFullWidthTitle(title: string): string;
-    getRemainingCharactersForTitles(disc: Disc): { halfWidth: number; fullWidth: number };
+    getRemainingCharactersForTitles(service: NetMDService): Promise<{ halfWidth: number; fullWidth: number }>;
     getCharactersForTitle(track: Track): { halfWidth: number; fullWidth: number };
     translateDefaultMeasuringModeTo(mode: Codec, defaultMeasuringModeDuration: number): number;
     translateToDefaultMeasuringModeFrom(mode: Codec, defaultMeasuringModeDuration: number): number;
@@ -165,7 +165,8 @@ export class DefaultMinidiscSpec implements MinidiscSpec {
         return { codec: codec.bitrate === 66 ? 'LP4' : 'LP2' };
     }
 
-    getRemainingCharactersForTitles(disc: Disc) {
+    async getRemainingCharactersForTitles(service: NetMDService) {
+        const disc = await service.listContent();
         return getRemainingCharactersForTitles(convertDiscToNJS(disc));
     }
 

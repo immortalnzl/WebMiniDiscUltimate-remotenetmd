@@ -42,10 +42,10 @@ export const Services: ServicePrototype[] = [
             if(window.native?.himdFullInterface){
                 return window.native?.himdFullInterface;
             }
-            if(confirm("Warning: For Full HiMD mode, it is recommended to use ElectronWMD instead! Continue?")) {
-                return new HiMDFullService({ debug: true });
+            if(!confirm("Warning: For Full HiMD mode, it is recommended to use ElectronWMD instead! Continue?")) {
+                return null;
             }
-            return null;
+            return new HiMDFullService({ debug: true });
         },
         spec: new HiMDSpec(true),
         requiresChrome: true,
@@ -81,11 +81,6 @@ export const Services: ServicePrototype[] = [
                 varName: 'friendlyName',
                 type: 'string',
             },
-            /*{
-                userFriendlyName: 'Use chunked transfers for LP (needs a fast network)',
-                varName: 'useChunkedTransfersForLP',
-                type: 'boolean',
-            },*/
         ],
     },
     {
