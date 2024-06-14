@@ -158,6 +158,13 @@ const useStyles = makeStyles()(theme => ({
     fixedTable: {
         tableLayout: 'fixed',
     },
+    topbarButton: {
+        marginRight: theme.spacing(0.5),
+    },
+    topbarLargeButton: {
+        marginRight: theme.spacing(0.5),
+        minWidth: 'min-content',
+    },
 }));
 
 function getTrackStatus(track: Track, deviceStatus: DeviceStatus | null): 'playing' | 'paused' | 'none' {
@@ -583,6 +590,7 @@ export const Main = (props: {}) => {
                     <React.Fragment>
                         <Tooltip title={`${isCapable(Capability.trackDownload) ? 'Download' : 'Record'} from MD`}>
                             <Button
+                                className={classes.topbarLargeButton}
                                 color="inherit"
                                 aria-label={isCapable(Capability.trackDownload) || factoryModeRippingInMainUi ? 'Download' : 'Record'}
                                 onClick={handleShowDumpDialog}
@@ -596,7 +604,12 @@ export const Main = (props: {}) => {
                 {selectedCount > 0 ? (
                     <Tooltip title="Delete">
                         <span>
-                            <IconButton aria-label="delete" disabled={!isCapable(Capability.metadataEdit)} onClick={handleDeleteSelected}>
+                            <IconButton
+                                className={classes.topbarButton}
+                                aria-label="delete"
+                                disabled={!isCapable(Capability.metadataEdit)}
+                                onClick={handleDeleteSelected}
+                            >
                                 <DeleteIcon />
                             </IconButton>
                         </span>
@@ -607,6 +620,7 @@ export const Main = (props: {}) => {
                     <Tooltip title={canGroup ? 'Group' : ''}>
                         <span>
                             <IconButton
+                                className={classes.topbarButton}
                                 aria-label="group"
                                 disabled={!canGroup || !isCapable(Capability.metadataEdit)}
                                 onClick={handleGroupTracks}
@@ -621,6 +635,7 @@ export const Main = (props: {}) => {
                     <Tooltip title="Rename">
                         <span>
                             <IconButton
+                                className={classes.topbarButton}
                                 aria-label="rename"
                                 disabled={selectedCount !== 1 || !isCapable(Capability.metadataEdit)}
                                 onClick={handleRenameActionClick}
@@ -635,6 +650,7 @@ export const Main = (props: {}) => {
                     <Tooltip title="Ungroup">
                         <span>
                             <IconButton
+                                className={classes.topbarButton}
                                 aria-label="ungroup"
                                 disabled={!isCapable(Capability.metadataEdit)}
                                 onClick={handleDeleteSelectedGroups}
@@ -649,6 +665,7 @@ export const Main = (props: {}) => {
                     <Tooltip title="Rename Group">
                         <span>
                             <IconButton
+                                className={classes.topbarButton}
                                 aria-label="rename group"
                                 disabled={!isCapable(Capability.metadataEdit) || selectedGroupsCount !== 1}
                                 onClick={e => handleRenameGroup(e, selectedGroups[0])}
