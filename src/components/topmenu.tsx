@@ -450,16 +450,16 @@ export const TopMenu = function(props: { tracksSelected?: number[]; onClick?: ()
             <ListItemText>Settings</ListItemText>
         </MenuItem>
     );
-    if (mainView === 'MAIN') {
-        menuItems.push(
-            <MenuItem key="vintageMode" onClick={handleVintageMode}>
-                <ListItemIcon className={classes.listItemIcon}>
-                    <img alt="Windows 95" src={Win95Icon} width="24px" height="24px" />
-                </ListItemIcon>
-                <ListItemText>Retro Mode (beta)</ListItemText>
-            </MenuItem>
-        );
+    menuItems.push(
+        <MenuItem key="vintageMode" onClick={handleVintageMode}>
+            <ListItemIcon className={classes.listItemIcon}>
+                <img alt="Windows 95" src={Win95Icon} width="24px" height="24px" />
+            </ListItemIcon>
+            <ListItemText>Retro Mode (beta)</ListItemText>
+        </MenuItem>
+    );
 
+    if (mainView === 'MAIN') {
         if (isShiftDown) {
             menuItems.push(
                 <MenuItem key="test" onClick={handleSelfTest}>

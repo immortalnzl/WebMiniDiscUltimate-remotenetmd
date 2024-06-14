@@ -30,7 +30,6 @@ import { makeStyles } from 'tss-react/mui';
 import FormControl from '@mui/material/FormControl';
 import ToggleButton from '@mui/lab/ToggleButton';
 import ToggleButtonGroup from '@mui/lab/ToggleButtonGroup';
-import { TransitionProps } from '@mui/material/transitions';
 import Typography from '@mui/material/Typography';
 import Select from '@mui/material/Select';
 import Input from '@mui/material/Input';
@@ -46,7 +45,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
-import TitleIcon from '@mui/icons-material/Title';
+import EditIcon from '@mui/icons-material/Edit';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
@@ -208,6 +207,9 @@ const useStyles = makeStyles()(theme => ({
     forcedEncodingLabel: {
         color: theme.palette.warning.main,
     },
+    iconButton: {
+        marginRight: theme.spacing(1),
+    }
 }));
 
 type FileWithMetadata = {
@@ -1023,11 +1025,11 @@ export const ConvertDialog = (props: { files: File[] }) => {
                             <IconButton edge="start" aria-label="add track" onClick={open}>
                                 <AddIcon />
                             </IconButton>
-                            <IconButton edge="start" aria-label="remove track" onClick={handleRemoveSelectedTrack} disabled={disableRemove}>
+                            <IconButton className={classes.iconButton} edge="start" aria-label="remove track" onClick={handleRemoveSelectedTrack} disabled={disableRemove}>
                                 <RemoveIcon />
                             </IconButton>
-                            <IconButton edge="start" aria-label="rename track" onClick={handleRenameSelectedTrack} disabled={disableRemove}>
-                                <TitleIcon />
+                            <IconButton className={classes.iconButton} edge="start" aria-label="rename track" onClick={handleRenameSelectedTrack} disabled={disableRemove}>
+                                <EditIcon />
                             </IconButton>
                             <div className={classes.spacer}></div>
                             <IconButton edge="end" aria-label="move up" onClick={moveFileDown}>
