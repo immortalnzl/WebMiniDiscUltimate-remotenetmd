@@ -581,7 +581,7 @@ export const Main = (props: {}) => {
                 )}
                 {selectedCount > 0 ? (
                     <React.Fragment>
-                        <Tooltip title="Record from MD">
+                        <Tooltip title={`${isCapable(Capability.trackDownload) ? 'Download' : 'Record'} from MD`}>
                             <Button
                                 color="inherit"
                                 aria-label={isCapable(Capability.trackDownload) || factoryModeRippingInMainUi ? 'Download' : 'Record'}
