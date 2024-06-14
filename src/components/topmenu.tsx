@@ -430,14 +430,17 @@ export const TopMenu = function(props: { tracksSelected?: number[]; onClick?: ()
             );
         }
     }
-    menuItems.push(
-        <MenuItem key="exit" onClick={handleExit}>
-            <ListItemIcon className={classes.listItemIcon}>
-                <ExitToAppIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Exit</ListItemText>
-        </MenuItem>
-    );
+
+    if (mainView !== 'WELCOME') {
+        menuItems.push(
+            <MenuItem key="exit" onClick={handleExit}>
+                <ListItemIcon className={classes.listItemIcon}>
+                    <ExitToAppIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Exit</ListItemText>
+            </MenuItem>
+        );
+    }
 
     menuItems.push(
         <MenuItem key="settings" onClick={handleShowSettings}>
