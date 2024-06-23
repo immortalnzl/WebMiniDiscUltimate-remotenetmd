@@ -325,7 +325,7 @@ export const SettingsDialog = (props: {}) => {
         if (isRestartRequired()) {
             saveBeforeReset();
             // Trigger a reset.
-            dispatch(appActions.setMainView('WELCOME'));
+            window.reload();
         } else {
             dispatch(appActions.showSettingsDialog(false));
         }

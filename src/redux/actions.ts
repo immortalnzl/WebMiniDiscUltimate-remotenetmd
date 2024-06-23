@@ -809,7 +809,7 @@ export function selfTest() {
         }
         alert('All tests have passed. The page will now reload');
         await sleep(1000);
-        window.location.reload();
+        window.reload();
         dispatch(recordDialogAction.setVisible(false));
     };
 }
