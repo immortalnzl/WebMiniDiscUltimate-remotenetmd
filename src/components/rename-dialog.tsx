@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useDispatch, batchActions } from '../frontend-utils';
-import { useShallowEqualSelector } from "../frontend-utils";
+import { useShallowEqualSelector } from '../frontend-utils';
 import { actions as renameDialogActions, RenameType } from '../redux/rename-dialog-feature';
 import { actions as appActions } from '../redux/app-feature';
 import {
@@ -27,14 +27,11 @@ import Typography from '@mui/material/Typography';
 import { W95RenameDialog } from './win95/rename-dialog';
 import { Capability } from '../services/interfaces/netmd';
 
-const Transition = React.forwardRef(function Transition(
-    props: SlideProps,
-    ref: React.Ref<unknown>
-) {
+const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const useStyles = makeStyles()(theme => ({
+const useStyles = makeStyles()((theme) => ({
     marginUpDown: {
         marginTop: theme.spacing(1.5),
         marginBottom: theme.spacing(1.5),
@@ -57,11 +54,11 @@ export const RenameDialog = (props: {}) => {
     const { classes } = useStyles();
 
     const { fullWidthTitle, himdAlbum, himdArtist, himdTitle, index, renameType, title, visible } = useShallowEqualSelector(
-        state => state.renameDialog
+        (state) => state.renameDialog
     );
-    const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
-    
-    const allowFullWidth = useShallowEqualSelector(state => state.appState.fullWidthSupport);
+    const { deviceCapabilities } = useShallowEqualSelector((state) => state.main);
+
+    const allowFullWidth = useShallowEqualSelector((state) => state.appState.fullWidthSupport);
 
     const what = nameMap[renameType];
 
@@ -206,7 +203,7 @@ export const RenameDialog = (props: {}) => {
     );
     // /HIMD
 
-    const { vintageMode } = useShallowEqualSelector(state => state.appState);
+    const { vintageMode } = useShallowEqualSelector((state) => state.appState);
     if (vintageMode) {
         const p = {
             renameDialogVisible: visible,
@@ -235,9 +232,9 @@ export const RenameDialog = (props: {}) => {
                 deviceCapabilities.includes(Capability.fullWidthSupport) &&
                 title
                     .split('')
-                    .map(n => n.charCodeAt(0))
+                    .map((n) => n.charCodeAt(0))
                     .filter(
-                        n =>
+                        (n) =>
                             (n >= 0x3040 && n <= 0x309f) || // Hiragana
                             (n >= 0x4e00 && n <= 0x9faf) || // Kanji
                             (n >= 0x3400 && n <= 0x4dbf) // Rare kanji

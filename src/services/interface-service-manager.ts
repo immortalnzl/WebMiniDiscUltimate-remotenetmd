@@ -39,10 +39,10 @@ export const Services: ServicePrototype[] = [
         name: 'HiMD (Full)',
         getConnectName: () => 'Connect to HiMD (Full)',
         create: () => {
-            if(window.native?.himdFullInterface){
+            if (window.native?.himdFullInterface) {
                 return window.native?.himdFullInterface;
             }
-            if(!confirm("Warning: For Full HiMD mode, it is recommended to use ElectronWMD instead! Continue?")) {
+            if (!confirm('Warning: For Full HiMD mode, it is recommended to use ElectronWMD instead! Continue?')) {
                 return null;
             }
             return new HiMDFullService({ debug: true });
@@ -52,14 +52,14 @@ export const Services: ServicePrototype[] = [
     },
     {
         name: 'Remote NetMD',
-        getConnectName: parameters => `Connect to ${parameters!.friendlyName || parameters!.serverAddress}`,
+        getConnectName: (parameters) => `Connect to ${parameters!.friendlyName || parameters!.serverAddress}`,
         description: React.createElement(
             'p',
             null,
             'Connect to a remote NetMD device with the help of ',
             React.createElement('a', { href: 'https://github.com/asivery/remote-netmd-server' }, 'Remote NetMD')
         ),
-        create: parameters => new NetMDRemoteService({ debug: true, ...parameters } as any),
+        create: (parameters) => new NetMDRemoteService({ debug: true, ...parameters } as any),
         spec: new DefaultMinidiscSpec(),
         requiresChrome: false,
         customParameters: [
@@ -67,7 +67,7 @@ export const Services: ServicePrototype[] = [
                 userFriendlyName: 'Server Address',
                 varName: 'serverAddress',
                 type: 'string',
-                validator: content => {
+                validator: (content) => {
                     try {
                         const asURL = new URL(content);
                         return asURL.pathname === '/';
@@ -87,7 +87,7 @@ export const Services: ServicePrototype[] = [
         name: 'MockMD',
         getConnectName: () => 'Connect to MockMD',
         description: React.createElement('p', null, 'Test NetMD interface. It does nothing'),
-        create: parameters => {
+        create: (parameters) => {
             console.log(`Given parameters: ${JSON.stringify(parameters)}`);
             return new NetMDMockService(parameters);
         },
@@ -156,13 +156,13 @@ export const Services: ServicePrototype[] = [
 ];
 
 export function getSimpleServices() {
-    return Services.filter(n => !n.customParameters).map(n => ({
+    return Services.filter((n) => !n.customParameters).map((n) => ({
         name: n.name,
     }));
 }
 
 function getPrototypeByName(name: string) {
-    return Services.find(n => n.name === name) || null;
+    return Services.find((n) => n.name === name) || null;
 }
 
 export function filterOutCorrupted(savedCustomServices: ServiceConstructionInfo[]) {
@@ -175,7 +175,7 @@ export function filterOutCorrupted(savedCustomServices: ServiceConstructionInfo[
         if (!requiredParameters) continue; // The service cannot be a custom service - no props to set.
         if (requiredParameters.length !== parameterKeys.length) continue; // Invalid config.
         if (
-            requiredParameters.filter(n => parameterKeys.includes(n.varName) && typeof info.parameters![n.varName] === n.type).length !==
+            requiredParameters.filter((n) => parameterKeys.includes(n.varName) && typeof info.parameters![n.varName] === n.type).length !==
             requiredParameters.length
         )
             continue; // The service's parameters differ from the prototype's declaration.

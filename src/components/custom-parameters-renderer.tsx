@@ -9,7 +9,7 @@ export function renderCustomParameter(
     parameter: CustomParameterInfo,
     value: any,
     parameterChangeCallback: (varName: string, newValue: any) => void,
-    customClass?: string,
+    customClass?: string
 ) {
     const handleParameterChange = (event: any, type: CustomParameterType, name: string) => {
         parameterChangeCallback(
@@ -25,7 +25,7 @@ export function renderCustomParameter(
             return (
                 <FormControlLabel
                     className={customClass}
-                    control={<Checkbox checked={value} onChange={e => handleParameterChange(e, parameter.type, parameter.varName)} />}
+                    control={<Checkbox checked={value} onChange={(e) => handleParameterChange(e, parameter.type, parameter.varName)} />}
                     label={parameter.userFriendlyName}
                     style={fullWidth}
                     key={parameter.varName}
@@ -39,7 +39,7 @@ export function renderCustomParameter(
                     label={parameter.userFriendlyName}
                     error={parameter.validator ? !parameter.validator(value) : false}
                     value={value || ''}
-                    onChange={e => handleParameterChange(e, parameter.type, parameter.varName)}
+                    onChange={(e) => handleParameterChange(e, parameter.type, parameter.varName)}
                     style={fullWidth}
                 />
             );
@@ -51,7 +51,7 @@ export function renderCustomParameter(
                     error={parameter.validator ? !parameter.validator(value) : false}
                     type="number"
                     value={value || 0}
-                    onChange={e => handleParameterChange(e, parameter.type, parameter.varName)}
+                    onChange={(e) => handleParameterChange(e, parameter.type, parameter.varName)}
                     style={fullWidth}
                     key={parameter.varName}
                 />
@@ -63,21 +63,27 @@ export function renderCustomParameter(
                     classes={{ root: customClass }}
                     control={
                         <Tooltip title={value || '<NONE>'}>
-                            <Button style={{color: !(parameter.validator?.(value) ?? true) ? 'red' : undefined}} onClick={() => {
-                                window.native?.openFileHostDialog?.([{ name: 'All files', extensions: ['*'] }], parameter.type === 'hostDirPath')?.then(e => {
-                                    parameterChangeCallback(parameter.varName, e ?? ''); 
-                                });
-                            }}>
+                            <Button
+                                style={{ color: !(parameter.validator?.(value) ?? true) ? 'red' : undefined }}
+                                onClick={() => {
+                                    window.native
+                                        ?.openFileHostDialog?.([{ name: 'All files', extensions: ['*'] }], parameter.type === 'hostDirPath')
+                                        ?.then((e) => {
+                                            parameterChangeCallback(parameter.varName, e ?? '');
+                                        });
+                                }}
+                            >
                                 Choose {parameter.type === 'hostDirPath' ? 'Directory' : 'File'}
                             </Button>
                         </Tooltip>
                     }
                     label={parameter.userFriendlyName}
-                    labelPlacement='start'
-                    style={{...fullWidth, justifyContent: 'space-between'}}
+                    labelPlacement="start"
+                    style={{ ...fullWidth, justifyContent: 'space-between' }}
                     key={parameter.varName}
                 />
-            )
-        default: throw new Error("Cannot render property - is your setup correct?");
+            );
+        default:
+            throw new Error('Cannot render property - is your setup correct?');
     }
 }

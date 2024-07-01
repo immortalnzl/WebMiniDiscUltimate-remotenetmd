@@ -1,6 +1,6 @@
 import React, { ReactElement, useCallback, useEffect, useMemo, useState } from 'react';
 import { batchActions, useDispatch } from '../frontend-utils';
-import { forAnyDesktop, forWideDesktop, useShallowEqualSelector } from "../frontend-utils";
+import { forAnyDesktop, forWideDesktop, useShallowEqualSelector } from '../frontend-utils';
 
 import { actions as appActions } from '../redux/app-feature';
 
@@ -25,10 +25,7 @@ import { initializeParameters, isAllValid } from '../custom-parameters';
 import { SettingInterface } from '../bridge-types';
 import { LibraryServices } from '../services/library-services';
 
-const Transition = React.forwardRef(function Transition(
-    props: SlideProps,
-    ref: React.Ref<unknown>
-) {
+const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
@@ -48,7 +45,7 @@ function deepCompare<T>(a: T, b: T) {
     return true;
 }
 
-const useStyles = makeStyles()(theme => ({
+const useStyles = makeStyles()((theme) => ({
     main: {
         [forAnyDesktop(theme)]: {
             height: 600,
@@ -89,7 +86,7 @@ const useStyles = makeStyles()(theme => ({
     },
     noLeftMargin: {
         marginLeft: 0,
-    }
+    },
 }));
 
 const SimpleField = ({
@@ -128,8 +125,8 @@ const SimpleField = ({
     }
 };
 
-const NativeFields = ({ section, classes }: { section: string, classes: any }) => {
-    if(!window.native?.getSettings) return <></>;
+const NativeFields = ({ section, classes }: { section: string; classes: any }) => {
+    if (!window.native?.getSettings) return <></>;
 
     const [settings, setSettings] = useState<SettingInterface[]>([]);
     const [_state, _updateState] = useState({});
@@ -140,29 +137,19 @@ const NativeFields = ({ section, classes }: { section: string, classes: any }) =
         })();
     }, [_state]);
 
-    const filtered = settings.filter(e => e.family === section);
+    const filtered = settings.filter((e) => e.family === section);
     const updateState = () => _updateState({});
 
-    return filtered.map(entry => {
-        if(entry.type === 'action') {
+    return filtered.map((entry) => {
+        if (entry.type === 'action') {
             return (
-                <SimpleField
-                    name={entry.name}
-                    classes={classes}
-                    formControl={true}
-                    key={entry.family + entry.name}
-                >
+                <SimpleField name={entry.name} classes={classes} formControl={true} key={entry.family + entry.name}>
                     <Button onClick={() => entry.update(true)}>Go</Button>
                 </SimpleField>
-            )
-        } else if(entry.type === 'boolean') {
+            );
+        } else if (entry.type === 'boolean') {
             return (
-                <SimpleField
-                    name={entry.name}
-                    classes={classes}
-                    formControl={true}
-                    key={entry.family + entry.name}
-                >
+                <SimpleField name={entry.name} classes={classes} formControl={true} key={entry.family + entry.name}>
                     <Switch checked={entry.state as boolean} onChange={(e) => entry.update(!entry.state).then(updateState)} />
                 </SimpleField>
             );
@@ -171,7 +158,7 @@ const NativeFields = ({ section, classes }: { section: string, classes: any }) =
                 {
                     type: entry.type,
                     userFriendlyName: entry.name,
-                    varName: entry.family + entry.name
+                    varName: entry.family + entry.name,
                 },
                 entry.state,
                 (_, nv) => entry.update(nv).then(updateState),
@@ -185,16 +172,20 @@ export const SettingsDialog = (props: {}) => {
     const dispatch = useDispatch();
     const { classes } = useStyles();
 
-    const visible = useShallowEqualSelector(state => state.appState.settingsDialogVisible);
+    const visible = useShallowEqualSelector((state) => state.appState.settingsDialogVisible);
 
     // Appearance properties
-    const { colorTheme, pageFullHeight, pageFullWidth } = useShallowEqualSelector(state => state.appState);
+    const { colorTheme, pageFullHeight, pageFullWidth } = useShallowEqualSelector((state) => state.appState);
 
     // Functionality properties
-    const { fullWidthSupport } = useShallowEqualSelector(state => state.appState);
-    const { archiveDiscCreateZip, factoryModeUseSlowerExploit, factoryModeShortcuts, factoryModeNERAWDownload, discProtectedDialogDisabled } = useShallowEqualSelector(
-        state => state.appState
-    );
+    const { fullWidthSupport } = useShallowEqualSelector((state) => state.appState);
+    const {
+        archiveDiscCreateZip,
+        factoryModeUseSlowerExploit,
+        factoryModeShortcuts,
+        factoryModeNERAWDownload,
+        discProtectedDialogDisabled,
+    } = useShallowEqualSelector((state) => state.appState);
 
     // Encoder properties
     const {
@@ -202,7 +193,7 @@ export const SettingsDialog = (props: {}) => {
         audioExportServiceConfig: globalStateAudioExportServiceConfig,
         libraryService: globalStateLibraryService,
         libraryServiceConfig: globalStateLibraryServiceConfig,
-    } = useShallowEqualSelector(state => state.appState);
+    } = useShallowEqualSelector((state) => state.appState);
     const [currentExportService, setCurrentExportService] = useState(globalStateAudioExportService);
     const [currentExportServiceConfig, setExportServiceConfig] = useState(globalStateAudioExportServiceConfig);
     const [currentLibraryService, setCurrentLibraryService] = useState(globalStateLibraryService);
@@ -289,36 +280,33 @@ export const SettingsDialog = (props: {}) => {
     }, [dispatch, factoryModeNERAWDownload]);
 
     //Encoder configuration
-    const handleExportServiceChanges = useCallback(
-        (event: any) => {
+    const handleExportServiceChanges = useCallback((event: any) => {
         const serviceId = event.target.value as number;
         setCurrentExportService(serviceId);
         setExportServiceConfig(initializeParameters(AudioServices[serviceId].customParameters));
     }, []);
 
     const handleExportServiceParameterChange = useCallback((varName: string, value: string | number | boolean) => {
-        setExportServiceConfig(oldData => {
+        setExportServiceConfig((oldData) => {
             const newData = { ...oldData };
             newData[varName] = value;
             return newData;
         });
     }, []);
-    const handleLibraryServiceChanges = useCallback(
-        (event: any) => {
+    const handleLibraryServiceChanges = useCallback((event: any) => {
         const serviceId = event.target.value as number;
         setCurrentLibraryService(serviceId);
-        if(serviceId === -1) return;
+        if (serviceId === -1) return;
         setLibraryServiceConfig(initializeParameters(LibraryServices[serviceId].customParameters));
     }, []);
 
     const handleLibraryServiceParameterChange = useCallback((varName: string, value: string | number | boolean) => {
-        setLibraryServiceConfig(oldData => {
+        setLibraryServiceConfig((oldData) => {
             const newData = { ...oldData };
             newData[varName] = value;
             return newData;
         });
     }, []);
-
 
     const handleClose = useCallback(() => {
         setInitialState(null);
@@ -356,7 +344,7 @@ export const SettingsDialog = (props: {}) => {
                 <SimpleField name="Stretch Web Minidisc Pro to fill the screen horizontally" classes={classes} formControl={true}>
                     <Switch checked={pageFullWidth} onChange={handlePageFullWidthChange} />
                 </SimpleField>
-                <NativeFields classes={classes} section='Appearance'/>
+                <NativeFields classes={classes} section="Appearance" />
 
                 <DialogContentText className={classes.header}>Functionality</DialogContentText>
                 <SimpleField
@@ -402,7 +390,7 @@ export const SettingsDialog = (props: {}) => {
                 >
                     <Switch checked={factoryModeNERAWDownload} onChange={handleToggleFactoryModeNERAWDownload} />
                 </SimpleField>
-                <NativeFields classes={classes} section='Functionality'/>
+                <NativeFields classes={classes} section="Functionality" />
 
                 <DialogContentText className={classes.header}>Encoding</DialogContentText>
                 <SimpleField name="Encoder to use" classes={classes}>
@@ -416,15 +404,22 @@ export const SettingsDialog = (props: {}) => {
                 </SimpleField>
                 <Typography className={classes.encoderDescription}>{currentService.description}</Typography>
                 <Box className={classes.fieldMargin}>
-                    {currentService.customParameters?.map(n =>
-                        renderCustomParameter(n, currentExportServiceConfig![n.varName], handleExportServiceParameterChange, classes.noLeftMargin)
+                    {currentService.customParameters?.map((n) =>
+                        renderCustomParameter(
+                            n,
+                            currentExportServiceConfig![n.varName],
+                            handleExportServiceParameterChange,
+                            classes.noLeftMargin
+                        )
                     )}
                 </Box>
 
                 <DialogContentText className={classes.header}>Library</DialogContentText>
                 <SimpleField name="Library to use" classes={classes}>
                     <Select className={classes.wider} value={currentLibraryService} onChange={handleLibraryServiceChanges}>
-                        <MenuItem value={-1} key="library-none">None</MenuItem>
+                        <MenuItem value={-1} key="library-none">
+                            None
+                        </MenuItem>
                         {LibraryServices.map((n, i) => (
                             <MenuItem value={i} key={`lib-${i}`}>
                                 {n.name}
@@ -436,13 +431,18 @@ export const SettingsDialog = (props: {}) => {
                     <>
                         <Typography className={classes.encoderDescription}>{currentLibrary.description}</Typography>
                         <Box className={classes.fieldMargin}>
-                            {currentLibrary.customParameters?.map(n =>
-                                renderCustomParameter(n, currentLibraryServiceConfig![n.varName], handleLibraryServiceParameterChange, classes.noLeftMargin)
+                            {currentLibrary.customParameters?.map((n) =>
+                                renderCustomParameter(
+                                    n,
+                                    currentLibraryServiceConfig![n.varName],
+                                    handleLibraryServiceParameterChange,
+                                    classes.noLeftMargin
+                                )
                             )}
                         </Box>
                     </>
                 )}
-                <NativeFields classes={classes} section='Encoding'/>
+                <NativeFields classes={classes} section="Encoding" />
             </DialogContent>
             <DialogActions>
                 <Button disabled={!verifyIfInputsValid()} onClick={handleClose}>

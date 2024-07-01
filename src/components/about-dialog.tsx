@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDispatch } from '../frontend-utils';
-import { useShallowEqualSelector } from "../frontend-utils";
+import { useShallowEqualSelector } from '../frontend-utils';
 
 import { actions as appActions } from '../redux/app-feature';
 
@@ -15,18 +15,15 @@ import Link from '@mui/material/Link';
 import { W95AboutDialog } from './win95/about-dialog';
 import { GIT_DIFF, GIT_HASH, BUILD_DATE } from '../version-info';
 
-const Transition = React.forwardRef(function Transition(
-    props: SlideProps,
-    ref: React.Ref<unknown>
-) {
+const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
 export const AboutDialog = (props: {}) => {
     const dispatch = useDispatch();
 
-    const visible = useShallowEqualSelector(state => state.appState.aboutDialogVisible);
-    const vintageMode = useShallowEqualSelector(state => state.appState.vintageMode);
+    const visible = useShallowEqualSelector((state) => state.appState.aboutDialogVisible);
+    const vintageMode = useShallowEqualSelector((state) => state.appState.vintageMode);
 
     const handleClose = () => {
         dispatch(appActions.showAboutDialog(false));

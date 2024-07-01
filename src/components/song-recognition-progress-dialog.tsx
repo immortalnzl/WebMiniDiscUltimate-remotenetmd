@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useDispatch } from '../frontend-utils';
-import { useShallowEqualSelector } from "../frontend-utils";
+import { useShallowEqualSelector } from '../frontend-utils';
 
 import { actions as songRecognitionDialogActions } from '../redux/song-recognition-progress-dialog-feature';
 
@@ -19,7 +19,7 @@ import StepLabel from '@mui/material/StepLabel';
 import Typography from '@mui/material/Typography';
 import { makeStyles } from 'tss-react/mui';
 
-const useStyles = makeStyles()(theme => ({
+const useStyles = makeStyles()((theme) => ({
     progressPerc: {
         marginTop: theme.spacing(1),
     },
@@ -37,10 +37,7 @@ const useStyles = makeStyles()(theme => ({
     },
 }));
 
-const Transition = React.forwardRef(function Transition(
-    props: SlideProps,
-    ref: React.Ref<unknown>
-) {
+const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
@@ -57,7 +54,7 @@ export const SongRecognitionProgressDialog = (props: {}) => {
 
         currentStepCurrent,
         currentStepTotal,
-    } = useShallowEqualSelector(state => state.songRecognitionProgressDialog);
+    } = useShallowEqualSelector((state) => state.songRecognitionProgressDialog);
 
     const handleCancel = useCallback(() => {
         dispatch(songRecognitionDialogActions.setCancelled(true));

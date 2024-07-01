@@ -26,7 +26,7 @@ export const AudioServices: AudioServicePrototype<AudioExportService>[] = [
                 varName: 'address',
                 type: 'string',
                 defaultValue: 'https://atrac.minidisc.wiki/',
-                validator: content => {
+                validator: (content) => {
                     try {
                         new URL(content);
                         return true;
@@ -41,7 +41,7 @@ export const AudioServices: AudioServicePrototype<AudioExportService>[] = [
     },
 ];
 
-if(window.native?.invokeLocalEncoder) {
+if (window.native?.invokeLocalEncoder) {
     AudioServices.push({
         name: 'Local ATRAC Encoder',
         create: LocalAtracExportService,
@@ -52,15 +52,15 @@ if(window.native?.invokeLocalEncoder) {
                 type: 'hostFilePath',
                 varName: 'ffmpeg',
                 defaultValue: '',
-                validator: content => !!content,
+                validator: (content) => !!content,
             },
             {
                 userFriendlyName: 'psp_at3tool Path',
                 type: 'hostFilePath',
                 varName: 'exe',
                 defaultValue: '',
-                validator: content => !!content,
+                validator: (content) => !!content,
             },
-        ]
+        ],
     });
 }

@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { useDispatch, batchActions } from '../frontend-utils';
 import { deleteService, pair } from '../redux/actions';
 
-import { useShallowEqualSelector } from "../frontend-utils";
+import { useShallowEqualSelector } from '../frontend-utils';
 
 import { makeStyles } from 'tss-react/mui';
 import Typography from '@mui/material/Typography';
@@ -21,7 +21,14 @@ import ChromeIconPath from '../images/chrome-icon.svg';
 import { W95Welcome } from './win95/welcome';
 
 import SplitButton, { OptionType } from './split-button';
-import { createService, doesServiceRequireChrome, getConnectButtonName, getServiceSpec, getSimpleServices, Services } from '../services/interface-service-manager';
+import {
+    createService,
+    doesServiceRequireChrome,
+    getConnectButtonName,
+    getServiceSpec,
+    getSimpleServices,
+    Services,
+} from '../services/interface-service-manager';
 
 import { OtherDeviceDialog } from './other-device-dialog';
 import { SettingsDialog } from './settings-dialog';
@@ -32,7 +39,7 @@ import { actions as otherDialogActions } from '../redux/other-device-feature';
 import { actions as appActions } from '../redux/app-feature';
 import { initializeParameters } from '../custom-parameters';
 
-const useStyles = makeStyles()(theme => ({
+const useStyles = makeStyles()((theme) => ({
     main: {
         position: 'relative',
         flex: '1 1 auto',
@@ -90,15 +97,8 @@ const useStyles = makeStyles()(theme => ({
 export const Welcome = (props: {}) => {
     const { classes } = useStyles();
     const dispatch = useDispatch();
-    const {
-        browserSupported,
-        runningChrome,
-        availableServices,
-        pairingFailed,
-        pairingMessage,
-        vintageMode,
-        lastSelectedService,
-    } = useShallowEqualSelector(state => state.appState);
+    const { browserSupported, runningChrome, availableServices, pairingFailed, pairingMessage, vintageMode, lastSelectedService } =
+        useShallowEqualSelector((state) => state.appState);
     const simpleServicesLength = getSimpleServices().length;
     if (pairingMessage.toLowerCase().match(/denied/)) {
         // show linux instructions
@@ -122,7 +122,7 @@ export const Welcome = (props: {}) => {
     const forceContinue = (event: React.SyntheticEvent) => {
         event.preventDefault();
         dispatch(appActions.setBrowserSupported(true));
-    }
+    };
 
     if (vintageMode) {
         const p = {
@@ -141,7 +141,7 @@ export const Welcome = (props: {}) => {
         switchTo: true,
         handler: () => {
             const instance = createService(availableServices[i]);
-            if(instance){
+            if (instance) {
                 dispatch(appActions.setLastSelectedService(i));
                 dispatch(pair(instance, getServiceSpec(availableServices[i])!));
             }
@@ -150,7 +150,7 @@ export const Welcome = (props: {}) => {
         disabled: !runningChrome && doesServiceRequireChrome(availableServices[i]),
     }));
 
-    const firstService = Services.find(n => n.customParameters);
+    const firstService = Services.find((n) => n.customParameters);
     if (firstService) {
         options.push({
             name: 'Add Custom Device',
@@ -170,7 +170,7 @@ export const Welcome = (props: {}) => {
     const mapToEntry = (option: OptionType) => {
         return option.id >= simpleServicesLength ? (
             <React.Fragment>
-                <IconButton aria-label="delete" className={classes.deleteButton} size="small" onClick={e => deleteCustom(e, option.id)}>
+                <IconButton aria-label="delete" className={classes.deleteButton} size="small" onClick={(e) => deleteCustom(e, option.id)}>
                     <DeleteIcon />
                 </IconButton>
                 {option.name}
@@ -255,8 +255,11 @@ export const Welcome = (props: {}) => {
                         </Typography>
 
                         <Typography component="p" variant="subtitle1" align="center" className={classes.spacing}>
-                            If you want to connect to a remote device,
-                            click <Link rel="noopener noreferrer" href="#" onClick={forceContinue}>here</Link> to load the app anyway.
+                            If you want to connect to a remote device, click{' '}
+                            <Link rel="noopener noreferrer" href="#" onClick={forceContinue}>
+                                here
+                            </Link>{' '}
+                            to load the app anyway.
                         </Typography>
 
                         {showWhyUnsupported ? (

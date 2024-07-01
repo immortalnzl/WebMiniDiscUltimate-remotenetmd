@@ -23,7 +23,7 @@ import factoryBadSectorDialog from './factory/factory-bad-sector-dialog-feature'
 import main from './main-feature';
 import { BatchAction, batchActions, batchDispatchMiddleware } from 'redux-batched-actions';
 
-const errorCatcher: Middleware = store => next => async action => {
+const errorCatcher: Middleware = (store) => (next) => async (action) => {
     try {
         await next(action);
     } catch (e) {
@@ -59,7 +59,7 @@ const reducer = combineReducers({
 
 const resetStateAction = appActions.setMainView.toString();
 const resetStatePayload = 'WELCOME';
-const resetStateReducer: typeof reducer = function(...args) {
+const resetStateReducer: typeof reducer = function (...args) {
     const action = args[1];
     if (action.type === resetStateAction && action.payload === resetStatePayload) {
         // RunningChrome must reflect the actual browser type
@@ -75,7 +75,7 @@ const resetStateReducer: typeof reducer = function(...args) {
 
 export const store = configureStore({
     reducer: resetStateReducer,
-    middleware: getDefaultMiddleware => getDefaultMiddleware().prepend(errorCatcher).concat(batchDispatchMiddleware),
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware().prepend(errorCatcher).concat(batchDispatchMiddleware),
 });
 
 const initialState = Object.freeze(store.getState());

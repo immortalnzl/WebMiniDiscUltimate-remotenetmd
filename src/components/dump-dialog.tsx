@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useDispatch } from '../frontend-utils';
-import { useShallowEqualSelector } from "../frontend-utils";
+import { useShallowEqualSelector } from '../frontend-utils';
 
 import { downloadTracks, recordTracks } from '../redux/actions';
 import { actions as dumpDialogActions } from '../redux/dump-dialog-feature';
@@ -19,14 +19,11 @@ import { W95DumpDialog } from './win95/dump-dialog';
 import { exploitDownloadTracks } from '../redux/factory/factory-actions';
 import { LineInDeviceSelect } from './line-in-helpers';
 
-const Transition = React.forwardRef(function Transition(
-    props: SlideProps,
-    ref: React.Ref<unknown>
-) {
+const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const useStyles = makeStyles()(theme => ({
+const useStyles = makeStyles()((theme) => ({
     head: {
         textShadow: '0px 0px 12px rgba(150, 150, 150, 1)',
         fontSize: theme.typography.h2.fontSize,
@@ -49,8 +46,8 @@ export const DumpDialog = ({
 
     const [inputDeviceId, setInputDeviceId] = useState<string>('');
 
-    const { visible } = useShallowEqualSelector(state => state.dumpDialog);
-    const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
+    const { visible } = useShallowEqualSelector((state) => state.dumpDialog);
+    const { deviceCapabilities } = useShallowEqualSelector((state) => state.main);
 
     const handleClose = useCallback(() => {
         setInputDeviceId('');
@@ -86,7 +83,7 @@ export const DumpDialog = ({
         [trackIndexes, dispatch, handleClose, isExploitDownload]
     );
 
-    const vintageMode = useShallowEqualSelector(state => state.appState.vintageMode);
+    const vintageMode = useShallowEqualSelector((state) => state.appState.vintageMode);
 
     if (vintageMode) {
         const p = {

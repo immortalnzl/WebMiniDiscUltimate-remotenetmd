@@ -3,7 +3,7 @@ import { batchActions as _batchActions } from 'redux-batched-actions';
 import { Theme } from '@mui/material';
 import {  useEffect, useMemo, useState } from 'react';
 import type { AppDispatch, RootState } from './redux/store';
-import { AnyAction, UnknownAction } from '@reduxjs/toolkit';
+import { UnknownAction } from '@reduxjs/toolkit';
 import { Capability } from './services/interfaces/netmd';
 
 type CapabilityKey = keyof typeof Capability;
@@ -50,7 +50,7 @@ export const batchActions = _batchActions as unknown as (actions: UnknownAction[
 
 export function useDeviceCapabilities(){
     const deviceCapabilities = useShallowEqualSelector((state) => state.main.deviceCapabilities);
-    
+
      return useMemo<ComputedCapabilities>(() => {
         return Object.fromEntries(
             Object.entries(Capability)

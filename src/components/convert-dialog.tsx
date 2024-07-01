@@ -8,13 +8,9 @@ import {
     getATRACOMAEncoding,
     getChannelsFromAEA,
     acceptedTypes,
-    AdaptiveFile
+    AdaptiveFile,
 } from '../utils';
-import {
-    belowDesktop,
-    useShallowEqualSelector,
-    batchActions
-} from "../frontend-utils";
+import { belowDesktop, useShallowEqualSelector, batchActions } from '../frontend-utils';
 
 import { actions as convertDialogActions, ForcedEncodingFormat, TitleFormatType } from '../redux/convert-dialog-feature';
 import { actions as renameDialogActions, RenameType } from '../redux/rename-dialog-feature';
@@ -68,10 +64,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import { LeftInNondefaultCodecs } from './main-rows';
 
-const Transition = React.forwardRef(function Transition(
-    props: SlideProps,
-    ref: React.Ref<unknown>
-) {
+const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
@@ -89,7 +82,7 @@ function TooltipOrDefault(params: { children: any; title: any; arrow: boolean; t
 
 // TODO jss-to-tss-react codemod: Unable to handle style definition reliably. Unsupported arrow function syntax.
 //Unexpected value type of ConditionalExpression.
-const useStyles = makeStyles()(theme => ({
+const useStyles = makeStyles()((theme) => ({
     container: {
         display: 'flex',
         flexDirection: 'row',
@@ -144,13 +137,13 @@ const useStyles = makeStyles()(theme => ({
     toolbarHighlight:
         theme.palette.mode === 'light'
             ? {
-                color: theme.palette.secondary.main,
-                backgroundColor: lighten(theme.palette.secondary.light, 0.85),
-            }
+                  color: theme.palette.secondary.main,
+                  backgroundColor: lighten(theme.palette.secondary.light, 0.85),
+              }
             : {
-                color: theme.palette.text.primary,
-                backgroundColor: theme.palette.secondary.dark,
-            },
+                  color: theme.palette.text.primary,
+                  backgroundColor: theme.palette.secondary.dark,
+              },
     trackList: {
         flex: '1 1 auto',
     },
@@ -210,7 +203,7 @@ const useStyles = makeStyles()(theme => ({
     },
     iconButton: {
         marginRight: theme.spacing(1),
-    }
+    },
 }));
 
 type FileWithMetadata = {
@@ -233,7 +226,8 @@ function createForcedEncodingText(selectedCodec: Codec, file: { forcedEncoding: 
         'AT3@132kbps': 'LP2',
     };
     if (!file.forcedEncoding) return '';
-    const fullCodecName = file.forcedEncoding.codec + (file.forcedEncoding?.bitrate ? `@${Math.round(file.forcedEncoding.bitrate!)}kbps` : '');
+    const fullCodecName =
+        file.forcedEncoding.codec + (file.forcedEncoding?.bitrate ? `@${Math.round(file.forcedEncoding.bitrate!)}kbps` : '');
     if (file.forcedEncoding.codec === 'MP3' && selectedCodec.codec !== 'MP3') {
         return '';
     }
@@ -241,13 +235,13 @@ function createForcedEncodingText(selectedCodec: Codec, file: { forcedEncoding: 
 }
 
 // `files` always appends to the list
-export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
+export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
     const dispatch = useDispatch();
     const { classes, cx } = useStyles();
 
-    const { visible, format, titleFormat, titles } = useShallowEqualSelector(state => state.convertDialog);
-    const { fullWidthSupport } = useShallowEqualSelector(state => state.appState);
-    const { disc, deviceCapabilities } = useShallowEqualSelector(state => state.main);
+    const { visible, format, titleFormat, titles } = useShallowEqualSelector((state) => state.convertDialog);
+    const { fullWidthSupport } = useShallowEqualSelector((state) => state.appState);
+    const { disc, deviceCapabilities } = useShallowEqualSelector((state) => state.main);
     const minidiscSpec = serviceRegistry.netmdSpec!;
 
     const [files, setFiles] = useState<FileWithMetadata[]>([]);
@@ -269,18 +263,18 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
         return (
             files
                 .map(
-                    e =>
+                    (e) =>
                         (e.title + e.album + e.artist)
                             .split('')
-                            .map(n => n.charCodeAt(0))
+                            .map((n) => n.charCodeAt(0))
                             .filter(
-                                n =>
+                                (n) =>
                                     (n >= 0x3040 && n <= 0x309f) || // Hiragana
                                     (n >= 0x4e00 && n <= 0x9faf) || // Kanji
                                     (n >= 0x3400 && n <= 0x4dbf) // Rare kanji
                             ).length
                 )
-                .filter(e => e > 0).length > 0
+                .filter((e) => e > 0).length > 0
         );
     }, [files]);
 
@@ -290,84 +284,84 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
     const thisSpecFormat = useMemo(() => format[minidiscSpec.specName] ?? minidiscSpec.defaultFormat, [minidiscSpec, format]);
 
     const loadMetadataFromFiles = useMemo(
-        () => async (files: (File | AdaptiveFile)[]): Promise<FileWithMetadata[]> => {
-            setLoadingMetadata(true);
-            const titledFiles: FileWithMetadata[] = [];
-            for (const _file of files) {
-                // If the file is an adaptive file...:
-                if((_file as any).getForEncoding){
-                    const file = _file as AdaptiveFile;
-                    titledFiles.push({
-                        album: file.album,
-                        artist: file.artist,
-                        title: file.title,
-                        duration: file.duration,
-
-                        file: file,
-
-                        // TODO: Should the local library allow upload of preencoded ATRAC files?
-                        bytesToSkip: 0,
-                        forcedEncoding: null,
-                    });
-                    continue;
-                } else {
-                    const file = _file as File;
-                    const metadata = await getMetadataFromFile(file);
-                    let forcedEncoding: null | 'ILLEGAL' | { format: ForcedEncodingFormat; headerLength: number } = await getATRACWAVEncoding(
-                        file
-                    );
-                    if (file.name.toLowerCase().endsWith('.aea')) {
-                        const channels = await getChannelsFromAEA(file);
-                        if (channels === 1 || channels === 2) {
-                            forcedEncoding = {
-                                format: { codec: channels === 1 ? 'SPM' : 'SPS' },
-                                headerLength: 2048,
-                            };
-                            metadata.duration = (((file.size - 2048) / 212) * 11.6) / 1000 / channels;
-                        }
-                    } else if (file.name.toLowerCase().endsWith('.mp3')) {
-                        // FIXME: Check by file magic instead
-                        forcedEncoding = {
-                            format: { codec: 'MP3', bitrate: metadata.bitrate },
-                            headerLength: 0,
-                        };
-                    }
-                    if (forcedEncoding === null) {
-                        forcedEncoding = await getATRACOMAEncoding(file);
-                    }
-    
-                    if (forcedEncoding !== null && forcedEncoding !== 'ILLEGAL') {
-                        // There's an encoding forced by either the SP upload functionality or OMA
-                        let asCodec: CodecFamily;
-                        if (['SPS', 'SPM'].includes(forcedEncoding.format!.codec)) asCodec = 'SP';
-                        else asCodec = forcedEncoding.format!.codec as CodecFamily;
-                        const isIllegalForThisFormat = () => !minidiscSpec.availableFormats.some(e => e.codec === asCodec);
-                        if (isIllegalForThisFormat()) {
-                            // HACK - replace LP2 / LP4 with AT3 with custom bitrate
-                            if (asCodec === 'AT3') {
-                                if (forcedEncoding.format!.bitrate === 66) asCodec = 'LP4';
-                                else if (forcedEncoding.format!.bitrate === 132) asCodec = 'LP2';
-                            }
-                            // If it's still invalid, do not force an encoding
-                            if (isIllegalForThisFormat()) forcedEncoding = null;
-                        }
-                    }
-    
-                    if (forcedEncoding === 'ILLEGAL') {
-                        window.alert(`Cannot transfer file ${file.name}.`);
-                    } else {
+        () =>
+            async (files: (File | AdaptiveFile)[]): Promise<FileWithMetadata[]> => {
+                setLoadingMetadata(true);
+                const titledFiles: FileWithMetadata[] = [];
+                for (const _file of files) {
+                    // If the file is an adaptive file...:
+                    if ((_file as any).getForEncoding) {
+                        const file = _file as AdaptiveFile;
                         titledFiles.push({
-                            file,
-                            ...metadata,
-                            forcedEncoding: forcedEncoding?.format ?? null,
-                            bytesToSkip: forcedEncoding?.headerLength ?? 0,
+                            album: file.album,
+                            artist: file.artist,
+                            title: file.title,
+                            duration: file.duration,
+
+                            file: file,
+
+                            // TODO: Should the local library allow upload of preencoded ATRAC files?
+                            bytesToSkip: 0,
+                            forcedEncoding: null,
                         });
-                    }    
+                        continue;
+                    } else {
+                        const file = _file as File;
+                        const metadata = await getMetadataFromFile(file);
+                        let forcedEncoding: null | 'ILLEGAL' | { format: ForcedEncodingFormat; headerLength: number } =
+                            await getATRACWAVEncoding(file);
+                        if (file.name.toLowerCase().endsWith('.aea')) {
+                            const channels = await getChannelsFromAEA(file);
+                            if (channels === 1 || channels === 2) {
+                                forcedEncoding = {
+                                    format: { codec: channels === 1 ? 'SPM' : 'SPS' },
+                                    headerLength: 2048,
+                                };
+                                metadata.duration = (((file.size - 2048) / 212) * 11.6) / 1000 / channels;
+                            }
+                        } else if (file.name.toLowerCase().endsWith('.mp3')) {
+                            // FIXME: Check by file magic instead
+                            forcedEncoding = {
+                                format: { codec: 'MP3', bitrate: metadata.bitrate },
+                                headerLength: 0,
+                            };
+                        }
+                        if (forcedEncoding === null) {
+                            forcedEncoding = await getATRACOMAEncoding(file);
+                        }
+
+                        if (forcedEncoding !== null && forcedEncoding !== 'ILLEGAL') {
+                            // There's an encoding forced by either the SP upload functionality or OMA
+                            let asCodec: CodecFamily;
+                            if (['SPS', 'SPM'].includes(forcedEncoding.format!.codec)) asCodec = 'SP';
+                            else asCodec = forcedEncoding.format!.codec as CodecFamily;
+                            const isIllegalForThisFormat = () => !minidiscSpec.availableFormats.some((e) => e.codec === asCodec);
+                            if (isIllegalForThisFormat()) {
+                                // HACK - replace LP2 / LP4 with AT3 with custom bitrate
+                                if (asCodec === 'AT3') {
+                                    if (forcedEncoding.format!.bitrate === 66) asCodec = 'LP4';
+                                    else if (forcedEncoding.format!.bitrate === 132) asCodec = 'LP2';
+                                }
+                                // If it's still invalid, do not force an encoding
+                                if (isIllegalForThisFormat()) forcedEncoding = null;
+                            }
+                        }
+
+                        if (forcedEncoding === 'ILLEGAL') {
+                            window.alert(`Cannot transfer file ${file.name}.`);
+                        } else {
+                            titledFiles.push({
+                                file,
+                                ...metadata,
+                                forcedEncoding: forcedEncoding?.format ?? null,
+                                bytesToSkip: forcedEncoding?.headerLength ?? 0,
+                            });
+                        }
+                    }
                 }
-            }
-            setLoadingMetadata(false);
-            return titledFiles;
-        },
+                setLoadingMetadata(false);
+                return titledFiles;
+            },
         [minidiscSpec.availableFormats]
     );
 
@@ -391,18 +385,17 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
         // Trigger a reset if needed
         const newFiles = Array.from(props.files);
         loadMetadataFromFiles(newFiles)
-            .then(withMetadata => {
+            .then((withMetadata) => {
                 setFiles(withMetadata);
             })
             .catch(console.error);
     }, [props.files, loadMetadataFromFiles, resetDialog]);
 
-
     const refreshTitledFiles = useCallback(
         (files: FileWithMetadata[], format: TitleFormatType) => {
             dispatch(
                 convertDialogActions.setTitles(
-                    files.map(file => {
+                    files.map((file) => {
                         let rawTitle = '';
                         switch (format) {
                             case 'title': {
@@ -511,7 +504,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
             if (newFormat === null) {
                 return;
             }
-            const formatDeclaration = minidiscSpec.availableFormats.find(e => e.codec === newFormat)!;
+            const formatDeclaration = minidiscSpec.availableFormats.find((e) => e.codec === newFormat)!;
             if (formatDeclaration.availableBitrates) {
                 dispatch(
                     convertDialogActions.updateFormatForSpec({
@@ -557,13 +550,13 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
 
     const [tracksOrderVisible, setTracksOrderVisible] = useState(false);
     const handleToggleTracksOrder = useCallback(() => {
-        setTracksOrderVisible(tracksOrderVisible => !tracksOrderVisible);
+        setTracksOrderVisible((tracksOrderVisible) => !tracksOrderVisible);
     }, [setTracksOrderVisible]);
 
     const [enableReplayGain, setEnableReplayGain] = useState(false);
 
     const handleToggleReplayGain = useCallback(() => {
-        setEnableReplayGain(enableReplayGain => !enableReplayGain);
+        setEnableReplayGain((enableReplayGain) => !enableReplayGain);
     }, [setEnableReplayGain]);
 
     const handleToggleFullWidthSupport = useCallback(() => {
@@ -574,7 +567,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
         if (!disc) return;
 
         const testedDisc = JSON.parse(JSON.stringify(disc)) as Disc;
-        let ungrouped = testedDisc.groups.find(n => n.title === null);
+        let ungrouped = testedDisc.groups.find((n) => n.title === null);
         if (!ungrouped) {
             ungrouped = {
                 title: null,
@@ -675,8 +668,8 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
                             currentSeconds <= 0
                                 ? classes.durationNotFit
                                 : currentHalfWidthTextLeft < 0 || currentFullWidthTextLeft < 0
-                                    ? classes.nameNotFit
-                                    : undefined
+                                  ? classes.nameNotFit
+                                  : undefined
                         }
                         primary={`${file.fullWidthTitle && file.fullWidthTitle + ' / '}${file.title}`}
                         secondary={
@@ -730,8 +723,8 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
                         currentSeconds <= 0
                             ? classes.durationNotFit
                             : currentHalfWidthTextLeft < 0 || currentFullWidthTextLeft < 0
-                                ? classes.nameNotFit
-                                : undefined
+                              ? classes.nameNotFit
+                              : undefined
                     }
                 >
                     <TableCell className={classes.selectCheckboxTableCell}>
@@ -771,11 +764,11 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
     const onDrop = useCallback(
         (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
             const bannedTypes = ['audio/mpegurl', 'audio/x-mpegurl'];
-            const accepted = acceptedFiles.filter(n => !bannedTypes.includes(n.type));
+            const accepted = acceptedFiles.filter((n) => !bannedTypes.includes(n.type));
             if (accepted.length > 0) {
                 loadMetadataFromFiles(accepted)
-                    .then(acceptedTitledFiles => {
-                        setFiles(files => files.slice().concat(acceptedTitledFiles));
+                    .then((acceptedTitledFiles) => {
+                        setFiles((files) => files.slice().concat(acceptedTitledFiles));
                     })
                     .catch(console.error);
             }
@@ -795,10 +788,10 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
         if (selectedTrackIndex >= newFileArray.length) {
             setSelectedTrack(newFileArray.length - 1);
         }
-        if(newFileArray.length === 0) handleClose();
+        if (newFileArray.length === 0) handleClose();
     }, [selectedTrackIndex, files, setFiles, handleClose]);
 
-    const dialogVisible = useShallowEqualSelector(state => state.convertDialog.visible);
+    const dialogVisible = useShallowEqualSelector((state) => state.convertDialog.visible);
 
     const handleConvert = useCallback(() => {
         handleClose();
@@ -823,9 +816,9 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
 
     const isSelectedMediocre = serviceRegistry.audioExportService!.getSupport(thisSpecFormat.codec) === 'mediocre';
     const isSelectedUnsupported = serviceRegistry.audioExportService!.getSupport(thisSpecFormat.codec) === 'unsupported';
-    const formatsSupport = minidiscSpec.availableFormats.map(e => serviceRegistry.audioExportService!.getSupport(e.codec));
+    const formatsSupport = minidiscSpec.availableFormats.map((e) => serviceRegistry.audioExportService!.getSupport(e.codec));
 
-    const vintageMode = useShallowEqualSelector(state => state.appState.vintageMode);
+    const vintageMode = useShallowEqualSelector((state) => state.appState.vintageMode);
     if (vintageMode) {
         const p = {
             visible,
@@ -934,8 +927,8 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
                                         onChange={handleChangeBitrate}
                                     >
                                         {minidiscSpec.availableFormats
-                                            .find(e => e.codec === format[minidiscSpec.specName].codec)!
-                                            .availableBitrates!.map(e => (
+                                            .find((e) => e.codec === format[minidiscSpec.specName].codec)!
+                                            .availableBitrates!.map((e) => (
                                                 <MenuItem value={e} key={`bitratesel-${e}`}>
                                                     {e} Kbps
                                                 </MenuItem>
@@ -956,7 +949,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
                 >
                     Warning: You have used up all the available{' '}
                     {[availableCharacters.halfWidth > 0 ? 'half' : null, availableCharacters.fullWidth > 0 ? 'full' : null]
-                        .filter(n => n !== null)
+                        .filter((n) => n !== null)
                         .join(' and ')}{' '}
                     width characters. Some titles might get cut off.
                 </Typography>
@@ -976,16 +969,15 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
                     style={{ marginTop: '1em' }}
                     align="center"
                 >
-                    Warning: You are using a mediocre encoder. The resulting audio is not going to be perfect. Alternative encoders are available in the settings.
+                    Warning: You are using a mediocre encoder. The resulting audio is not going to be perfect. Alternative encoders are
+                    available in the settings.
                 </Typography>
                 <span className={classes.durationsSpan}>
                     <Typography component="h3" align="center" hidden={loadingMetadata}>
                         Total:{' '}
                         <TooltipOrDefault
                             tooltipEnabled={minidiscSpec.availableFormats.length > 1}
-                            title={
-                                LeftInNondefaultCodecs((disc?.left ?? 0) - availableSPSeconds)
-                            }
+                            title={LeftInNondefaultCodecs((disc?.left ?? 0) - availableSPSeconds)}
                             arrow
                         >
                             <span className={cx({ [classes.timeTooltip]: minidiscSpec.availableFormats.length > 1 })}>
@@ -1004,7 +996,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
                             tooltipEnabled={minidiscSpec.availableFormats.length > 1}
                             title={
                                 <React.Fragment>
-                                    {minidiscSpec.availableFormats.map(e =>
+                                    {minidiscSpec.availableFormats.map((e) =>
                                         e.codec === minidiscSpec.defaultFormat.codec ? null : (
                                             <React.Fragment key={`totalrem-${e.codec}`}>
                                                 <span>{`${secondsToNormal(
@@ -1050,17 +1042,34 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]}) => {
                     <div {...getRootProps()} style={{ outline: 'none' }}>
                         <Toolbar variant="dense" className={classes.toolbarHighlight}>
                             {serviceRegistry.libraryService && (
-                                <IconButton className={classes.iconButton} edge="start" aria-label="add track from local library" onClick={handleOpenLocalLibrary}>
+                                <IconButton
+                                    className={classes.iconButton}
+                                    edge="start"
+                                    aria-label="add track from local library"
+                                    onClick={handleOpenLocalLibrary}
+                                >
                                     <CloudDownload />
                                 </IconButton>
                             )}
                             <IconButton className={classes.iconButton} edge="start" aria-label="add track" onClick={open}>
                                 <AddIcon />
                             </IconButton>
-                            <IconButton className={classes.iconButton} edge="start" aria-label="remove track" onClick={handleRemoveSelectedTrack} disabled={disableRemove}>
+                            <IconButton
+                                className={classes.iconButton}
+                                edge="start"
+                                aria-label="remove track"
+                                onClick={handleRemoveSelectedTrack}
+                                disabled={disableRemove}
+                            >
                                 <RemoveIcon />
                             </IconButton>
-                            <IconButton className={classes.iconButton} edge="start" aria-label="rename track" onClick={handleRenameSelectedTrack} disabled={disableRemove}>
+                            <IconButton
+                                className={classes.iconButton}
+                                edge="start"
+                                aria-label="rename track"
+                                onClick={handleRenameSelectedTrack}
+                                disabled={disableRemove}
+                            >
                                 <EditIcon />
                             </IconButton>
                             <div className={classes.spacer}></div>

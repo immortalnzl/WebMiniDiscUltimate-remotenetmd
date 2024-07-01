@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch, batchActions } from '../frontend-utils';
-import { useShallowEqualSelector } from "../frontend-utils";
+import { useShallowEqualSelector } from '../frontend-utils';
 import { actions as otherDeviceActions } from '../redux/other-device-feature';
 
 import { makeStyles } from 'tss-react/mui';
@@ -18,14 +18,11 @@ import { addService } from '../redux/actions';
 import { isAllValid, initializeParameters } from '../custom-parameters';
 import { renderCustomParameter } from './custom-parameters-renderer';
 
-const Transition = React.forwardRef(function Transition(
-    props: SlideProps,
-    ref: React.Ref<unknown>
-) {
+const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const useStyles = makeStyles()(theme => ({
+const useStyles = makeStyles()((theme) => ({
     marginUpDown: {
         marginTop: theme.spacing(3),
         marginBottom: theme.spacing(3),
@@ -43,11 +40,11 @@ export const OtherDeviceDialog = (props: {}) => {
     const dispatch = useDispatch();
     const { classes } = useStyles();
 
-    const otherDeviceDialogVisible = useShallowEqualSelector(state => state.otherDeviceDialog.visible);
-    const otherDeviceDialogSelectedServiceIndex = useShallowEqualSelector(state => state.otherDeviceDialog.selectedServiceIndex);
-    const otherDeviceDialogCustomParameters = useShallowEqualSelector(state => state.otherDeviceDialog.customParameters);
+    const otherDeviceDialogVisible = useShallowEqualSelector((state) => state.otherDeviceDialog.visible);
+    const otherDeviceDialogSelectedServiceIndex = useShallowEqualSelector((state) => state.otherDeviceDialog.selectedServiceIndex);
+    const otherDeviceDialogCustomParameters = useShallowEqualSelector((state) => state.otherDeviceDialog.customParameters);
 
-    const customServices = Services.filter(n => n.customParameters);
+    const customServices = Services.filter((n) => n.customParameters);
     const currentService = customServices[otherDeviceDialogSelectedServiceIndex];
 
     const handleClose = useCallback(() => {
@@ -71,7 +68,9 @@ export const OtherDeviceDialog = (props: {}) => {
             dispatch(
                 batchActions([
                     otherDeviceActions.setSelectedServiceIndex(event.target.value as number),
-                    otherDeviceActions.setCustomParameters(initializeParameters(customServices[event.target.value as number].customParameters)),
+                    otherDeviceActions.setCustomParameters(
+                        initializeParameters(customServices[event.target.value as number].customParameters)
+                    ),
                 ])
             );
         },
@@ -87,10 +86,10 @@ export const OtherDeviceDialog = (props: {}) => {
         [dispatch, otherDeviceDialogCustomParameters]
     );
 
-    useEffect(() => setAddButtonDisabled(!isAllValid(currentService.customParameters!, otherDeviceDialogCustomParameters)), [
-        otherDeviceDialogCustomParameters,
-        currentService.customParameters,
-    ]);
+    useEffect(
+        () => setAddButtonDisabled(!isAllValid(currentService.customParameters!, otherDeviceDialogCustomParameters)),
+        [otherDeviceDialogCustomParameters, currentService.customParameters]
+    );
 
     return (
         <Dialog
@@ -117,7 +116,7 @@ export const OtherDeviceDialog = (props: {}) => {
                 </Select>
                 {currentService.description}
                 <div className={classes.fullWidth}>
-                    {currentService.customParameters!.map(n =>
+                    {currentService.customParameters!.map((n) =>
                         renderCustomParameter(n, otherDeviceDialogCustomParameters[n.varName], handleParameterChange)
                     )}
                 </div>

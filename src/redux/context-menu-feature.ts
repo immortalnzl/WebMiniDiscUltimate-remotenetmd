@@ -4,13 +4,13 @@ import { Track } from '../services/interfaces/netmd';
 
 export interface ContextMenuState {
     visible: boolean;
-    track:Track | null;
+    track: Track | null;
     position: { x: number; y: number } | null;
 }
 
 const initialState: ContextMenuState = {
     visible: false,
-    track:null,
+    track: null,
     position: null,
 };
 
@@ -27,7 +27,7 @@ export const slice = createSlice({
         setPosition: (state, action: PayloadAction<{ x: number; y: number }>) => {
             state.position = action.payload;
         },
-        openContextMenu: (state, action: PayloadAction<{position: { x: number; y: number }, track:Track}>) => {
+        openContextMenu: (state, action: PayloadAction<{ position: { x: number; y: number }; track: Track }>) => {
             state.visible = true;
             state.position = action.payload.position;
             state.track = action.payload.track;
@@ -36,8 +36,7 @@ export const slice = createSlice({
             state.visible = false;
             state.position = null;
             state.track = null;
-        }
-
+        },
     },
 });
 

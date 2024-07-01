@@ -1,5 +1,5 @@
 import React from 'react';
-import { useShallowEqualSelector } from "../frontend-utils";
+import { useShallowEqualSelector } from '../frontend-utils';
 
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -13,7 +13,7 @@ import { makeStyles } from 'tss-react/mui';
 import { TransitionProps } from '@mui/material/transitions';
 import { W95RecordDialog } from './win95/record-dialog';
 
-const useStyles = makeStyles()(theme => ({
+const useStyles = makeStyles()((theme) => ({
     progressPerc: {
         marginTop: theme.spacing(1),
     },
@@ -22,21 +22,18 @@ const useStyles = makeStyles()(theme => ({
     },
 }));
 
-const Transition = React.forwardRef(function Transition(
-    props: SlideProps,
-    ref: React.Ref<unknown>
-) {
+const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
 export const RecordDialog = (props: {}) => {
     const { classes } = useStyles();
 
-    const { visible, trackTotal, trackDone, trackCurrent, titleCurrent } = useShallowEqualSelector(state => state.recordDialog);
+    const { visible, trackTotal, trackDone, trackCurrent, titleCurrent } = useShallowEqualSelector((state) => state.recordDialog);
 
     const progressValue = Math.round(trackCurrent);
 
-    const vintageMode = useShallowEqualSelector(state => state.appState.vintageMode);
+    const vintageMode = useShallowEqualSelector((state) => state.appState.vintageMode);
     if (vintageMode) {
         const p = {
             visible,

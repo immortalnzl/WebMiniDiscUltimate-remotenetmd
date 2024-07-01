@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useDispatch } from '../frontend-utils';
-import { useShallowEqualSelector } from "../frontend-utils";
+import { useShallowEqualSelector } from '../frontend-utils';
 
 import { actions as errorDialogActions } from '../redux/error-dialog-feature';
 
@@ -13,17 +13,14 @@ import Slide, { SlideProps } from '@mui/material/Slide';
 import Button from '@mui/material/Button';
 import { TransitionProps } from '@mui/material/transitions';
 
-const Transition = React.forwardRef(function Transition(
-    props: SlideProps,
-    ref: React.Ref<unknown>
-) {
+const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
 export const ErrorDialog = (props: {}) => {
     const dispatch = useDispatch();
 
-    const { visible, error } = useShallowEqualSelector(state => state.errorDialog);
+    const { visible, error } = useShallowEqualSelector((state) => state.errorDialog);
 
     const handleClose = useCallback(() => {
         dispatch(errorDialogActions.setVisible(false));

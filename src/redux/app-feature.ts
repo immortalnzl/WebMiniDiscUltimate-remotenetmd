@@ -135,10 +135,10 @@ export const slice = createSlice({
         },
         setAvailableServices: (state, action: PayloadAction<ServiceConstructionInfo[]>) => {
             state.availableServices = action.payload;
-            const simpleServices = getSimpleServices().map(n => n.name);
+            const simpleServices = getSimpleServices().map((n) => n.name);
             savePreference(
                 'customServices',
-                action.payload.filter(n => !simpleServices.includes(n.name))
+                action.payload.filter((n) => !simpleServices.includes(n.name))
             ); // Only write the custom services
         },
         setLastSelectedService: (state, action: PayloadAction<number>) => {

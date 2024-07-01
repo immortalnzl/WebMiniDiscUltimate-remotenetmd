@@ -73,7 +73,7 @@ export class HiMDSpec implements MinidiscSpec {
             for(let track of group.tracks){
                 if(track.title) amt += t(track.title);
                 if(track.album) amt += t(track.album);
-                if(track.artist) amt += t(track.artist);        
+                if(track.artist) amt += t(track.artist);
             }
         }
         if(disc.title) amt += t(disc.title);

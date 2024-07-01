@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useDispatch } from '../frontend-utils';
-import { useShallowEqualSelector } from "../frontend-utils";
+import { useShallowEqualSelector } from '../frontend-utils';
 
 import { actions as appActions } from '../redux/app-feature';
 
@@ -14,14 +14,11 @@ import Link from '@mui/material/Link';
 import { makeStyles } from 'tss-react/mui';
 import { W95ChangelogDialog } from './win95/changelog-dialog';
 
-const Transition = React.forwardRef(function Transition(
-    props: SlideProps,
-    ref: React.Ref<unknown>
-) {
+const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const useStyles = makeStyles()(theme => ({
+const useStyles = makeStyles()((theme) => ({
     container: {
         display: 'flex',
         flexDirection: 'row',
@@ -50,8 +47,8 @@ export const ChangelogDialog = (props: {}) => {
     const dispatch = useDispatch();
     const { classes } = useStyles();
 
-    const vintageMode = useShallowEqualSelector(state => state.appState.vintageMode);
-    const visible = useShallowEqualSelector(state => state.appState.changelogDialogVisible);
+    const vintageMode = useShallowEqualSelector((state) => state.appState.vintageMode);
+    const visible = useShallowEqualSelector((state) => state.appState.changelogDialogVisible);
 
     const handleClose = useCallback(() => {
         localStorage.setItem('version', (window as any).wmdVersion);
@@ -155,7 +152,10 @@ export const ChangelogDialog = (props: {}) => {
                 <li>Renamed 'Factory Mode' to 'Homebrew Mode'</li>
                 <li>Added track normalization</li>
                 <li>
-                    Added the ability to use a <Link onClick={handleOpenEncoderSettings} href="#">high quality LP encoder</Link>
+                    Added the ability to use a{' '}
+                    <Link onClick={handleOpenEncoderSettings} href="#">
+                        high quality LP encoder
+                    </Link>
                 </li>
                 <li>Added song recognition</li>
                 <li>Added CSV track list import and export</li>

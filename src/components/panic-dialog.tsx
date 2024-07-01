@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useDispatch } from '../frontend-utils';
-import { useShallowEqualSelector } from "../frontend-utils";
+import { useShallowEqualSelector } from '../frontend-utils';
 import { actions as panicDialogActions } from '../redux/panic-dialog-feature';
 
 import Dialog from '@mui/material/Dialog';
@@ -13,14 +13,11 @@ import Typography from '@mui/material/Typography';
 import { TransitionProps } from '@mui/material/transitions';
 import { makeStyles } from 'tss-react/mui';
 
-const Transition = React.forwardRef(function Transition(
-    props: SlideProps,
-    ref: React.Ref<unknown>
-) {
+const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const useStyles = makeStyles()(theme => ({
+const useStyles = makeStyles()((theme) => ({
     codeBlock: {
         marginTop: theme.spacing(3),
         fontFamily: 'monospace',
@@ -37,7 +34,7 @@ export const PanicDialog = (props: {}) => {
     const dispatch = useDispatch();
     const { classes } = useStyles();
 
-    const { visible, dismissed, errorProvided } = useShallowEqualSelector(state => state.panicDialog);
+    const { visible, dismissed, errorProvided } = useShallowEqualSelector((state) => state.panicDialog);
 
     const handleReloadApp = useCallback(() => {
         window.reload();

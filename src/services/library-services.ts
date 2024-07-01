@@ -1,7 +1,6 @@
-import { CustomParameterInfo, CustomParameters } from "../custom-parameters";
-import { LibraryService } from "./library/library";
-import { RemoteLibraryService } from "./library/remote-library";
-
+import { CustomParameterInfo, CustomParameters } from '../custom-parameters';
+import { LibraryService } from './library/library';
+import { RemoteLibraryService } from './library/remote-library';
 
 interface LibraryServicePrototype<T extends LibraryService> {
     create: new (parameters: CustomParameters) => T;
@@ -20,7 +19,7 @@ export const LibraryServices: LibraryServicePrototype<LibraryService>[] = [
                 varName: 'address',
                 type: 'string',
                 defaultValue: 'http://localhost:8000/',
-                validator: content => {
+                validator: (content) => {
                     try {
                         new URL(content);
                         return true;
@@ -33,5 +32,4 @@ export const LibraryServices: LibraryServicePrototype<LibraryService>[] = [
         description:
             'A remote library with an inbuilt encoder. Lets you cut down on bandwidth usage, by having the files sent to the local Web Minidisc instance preencoded.',
     },
-
-]
+];

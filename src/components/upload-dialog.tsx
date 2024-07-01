@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useDispatch } from '../frontend-utils';
-import { useShallowEqualSelector } from "../frontend-utils";
+import { useShallowEqualSelector } from '../frontend-utils';
 
 import { actions as uploadDialogActions } from '../redux/upload-dialog-feature';
 
@@ -19,7 +19,7 @@ import { makeStyles } from 'tss-react/mui';
 import { W95UploadDialog } from './win95/upload-dialog';
 import { setNotifyWhenFinished } from '../redux/actions';
 
-const useStyles = makeStyles()(theme => ({
+const useStyles = makeStyles()((theme) => ({
     progressPerc: {
         marginTop: theme.spacing(1),
     },
@@ -37,10 +37,7 @@ const useStyles = makeStyles()(theme => ({
     },
 }));
 
-const Transition = React.forwardRef(function Transition(
-    props: SlideProps,
-    ref: React.Ref<unknown>
-) {
+const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
@@ -60,8 +57,8 @@ export const UploadDialog = (props: {}) => {
         trackConverting,
         titleCurrent,
         titleConverting,
-    } = useShallowEqualSelector(state => state.uploadDialog);
-    const { vintageMode, notifyWhenFinished, hasNotificationSupport } = useShallowEqualSelector(state => state.appState);
+    } = useShallowEqualSelector((state) => state.uploadDialog);
+    const { vintageMode, notifyWhenFinished, hasNotificationSupport } = useShallowEqualSelector((state) => state.appState);
 
     const handleCancelUpload = useCallback(() => {
         dispatch(uploadDialogActions.setCancelUpload(true));

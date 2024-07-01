@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Capability } from '../services/interfaces/netmd';
-import { useShallowEqualSelector } from "../frontend-utils";
+import { useShallowEqualSelector } from '../frontend-utils';
 
 import FormHelperText from '@mui/material/FormHelperText';
 import { Controls } from './controls';
@@ -11,7 +11,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import { makeStyles } from 'tss-react/mui';
 
-const useStyles = makeStyles()(theme => ({
+const useStyles = makeStyles()((theme) => ({
     container: {
         display: 'flex',
         flexDirection: 'row',
@@ -35,7 +35,7 @@ const useStyles = makeStyles()(theme => ({
 export function LineInDeviceSelect({ handleChange, inputDeviceId }: { handleChange: (ev: any) => void; inputDeviceId: string }) {
     const { classes } = useStyles();
 
-    const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
+    const { deviceCapabilities } = useShallowEqualSelector((state) => state.main);
     const [devices, setInputDevices] = useState<{ deviceId: string; label: string }[]>([]);
 
     useEffect(() => {
@@ -43,8 +43,8 @@ export function LineInDeviceSelect({ handleChange, inputDeviceId }: { handleChan
             await navigator.mediaDevices.getUserMedia({ audio: true });
             const devices = await navigator.mediaDevices.enumerateDevices();
             const inputDevices = devices
-                .filter(device => device.kind === 'audioinput')
-                .map(device => ({ deviceId: device.deviceId, label: device.label }));
+                .filter((device) => device.kind === 'audioinput')
+                .map((device) => ({ deviceId: device.deviceId, label: device.label }));
             setInputDevices(inputDevices);
         }
         updateDeviceList();
@@ -76,7 +76,7 @@ export function LineInDeviceSelect({ handleChange, inputDeviceId }: { handleChan
                         <MenuItem value="" disabled>
                             Input Source
                         </MenuItem>
-                        {devices.map(device => (
+                        {devices.map((device) => (
                             <MenuItem key={device.deviceId} value={device.deviceId}>
                                 {device.label}
                             </MenuItem>

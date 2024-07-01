@@ -42,7 +42,7 @@ export default function SplitButton(props: SplitButtonProps) {
     };
 
     const handleToggle = () => {
-        setOpen(prevOpen => !prevOpen);
+        setOpen((prevOpen) => !prevOpen);
     };
 
     const handleClose = (event: any) => {
@@ -68,7 +68,7 @@ export default function SplitButton(props: SplitButtonProps) {
                     onClick={handleToggle}
                     style={{ minWidth: width ? width * 0.2 : undefined, background: '#e0e0e0' }}
                 >
-                    <ArrowDropDownIcon htmlColor='#000'/>
+                    <ArrowDropDownIcon htmlColor="#000" />
                 </Button>
             </ButtonGroup>
             <Popper
@@ -94,7 +94,7 @@ export default function SplitButton(props: SplitButtonProps) {
                                             key={`${index}-connect-button`}
                                             disabled={option.disabled}
                                             selected={index === selectedIndex}
-                                            onClick={event => handleMenuItemClick(event, index)}
+                                            onClick={(event) => handleMenuItemClick(event, index)}
                                         >
                                             {dropdownMapping ? dropdownMapping(option) : option.name}
                                         </MenuItem>

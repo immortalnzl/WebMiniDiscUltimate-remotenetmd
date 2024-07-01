@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, batchActions } from '../frontend-utils';
-import { belowDesktop, useShallowEqualSelector, forAnyDesktop, forWideDesktop } from "../frontend-utils";
+import { belowDesktop, useShallowEqualSelector, forAnyDesktop, forWideDesktop } from '../frontend-utils';
 
 import { actions as songRecognitionDialogActions, ImportMethod } from '../redux/song-recognition-dialog-feature';
 import { recognizeTracks, renameTrack } from '../redux/actions';
@@ -32,14 +32,11 @@ import { Capability } from '../services/interfaces/netmd';
 import serviceRegistry from '../services/registry';
 import { LineInDeviceSelect } from './line-in-helpers';
 
-const Transition = React.forwardRef(function Transition(
-    props: SlideProps,
-    ref: React.Ref<unknown>
-) {
+const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const useStyles = makeStyles()(theme => ({
+const useStyles = makeStyles()((theme) => ({
     dialog: {
         margin: 'auto',
         [forAnyDesktop(theme)]: {
@@ -130,9 +127,9 @@ export const SongRecognitionDialog = (props: {}) => {
     const dispatch = useDispatch();
     const { classes } = useStyles();
 
-    const { visible, titles, titleFormat, importMethod } = useShallowEqualSelector(state => state.songRecognitionDialog);
-    const { fullWidthSupport } = useShallowEqualSelector(state => state.appState);
-    const { deviceCapabilities, disc } = useShallowEqualSelector(state => state.main);
+    const { visible, titles, titleFormat, importMethod } = useShallowEqualSelector((state) => state.songRecognitionDialog);
+    const { fullWidthSupport } = useShallowEqualSelector((state) => state.appState);
+    const { deviceCapabilities, disc } = useShallowEqualSelector((state) => state.main);
 
     // Line in section
     const [inputDeviceId, setInputDeviceId] = useState<string>('');
@@ -147,8 +144,8 @@ export const SongRecognitionDialog = (props: {}) => {
     );
 
     const canApplyTitles = useMemo(() => {
-        const allSelected = titles.filter(e => e.selectedToRecognize);
-        return allSelected.every(e => e.alreadyRecognized) && allSelected.length > 0;
+        const allSelected = titles.filter((e) => e.selectedToRecognize);
+        return allSelected.every((e) => e.alreadyRecognized) && allSelected.length > 0;
     }, [titles]);
 
     const stopAudioInput = useCallback(() => {
@@ -183,8 +180,8 @@ export const SongRecognitionDialog = (props: {}) => {
         dispatch(
             renameTrack(
                 ...titles
-                    .filter(e => e.alreadyRecognized && e.selectedToRecognize && !e.recognizeFail)
-                    .map(e => ({ index: e.index, newName: e.newTitle, newFullWidthName: e.newFullWidthTitle }))
+                    .filter((e) => e.alreadyRecognized && e.selectedToRecognize && !e.recognizeFail)
+                    .map((e) => ({ index: e.index, newName: e.newTitle, newFullWidthName: e.newFullWidthTitle }))
             )
         );
     }, [dispatch, handleClose, titles]);
@@ -201,7 +198,7 @@ export const SongRecognitionDialog = (props: {}) => {
         (i: number) => {
             dispatch(
                 songRecognitionDialogActions.setTitles(
-                    titles.map(e => {
+                    titles.map((e) => {
                         return {
                             ...e,
                             selectedToRecognize: e.index === i ? !e.selectedToRecognize : e.selectedToRecognize,
@@ -214,10 +211,10 @@ export const SongRecognitionDialog = (props: {}) => {
     );
 
     const handleToggleSelectAll = useCallback(() => {
-        const selectedTitles = titles.filter(e => e.selectedToRecognize);
+        const selectedTitles = titles.filter((e) => e.selectedToRecognize);
         dispatch(
             songRecognitionDialogActions.setTitles(
-                titles.map(e => {
+                titles.map((e) => {
                     return {
                         ...e,
                         selectedToRecognize: selectedTitles.length <= titles.length / 2,
@@ -372,7 +369,7 @@ export const SongRecognitionDialog = (props: {}) => {
                     <TableHead>
                         <TableRow>
                             <TableCell className={classes.checkmarkCell}>
-                                <Checkbox checked={titles.every(e => e.selectedToRecognize)} onClick={handleToggleSelectAll} />
+                                <Checkbox checked={titles.every((e) => e.selectedToRecognize)} onClick={handleToggleSelectAll} />
                             </TableCell>
                             <TableCell className={classes.indexCell}>#</TableCell>
                             <TableCell>Original Title</TableCell>
@@ -380,8 +377,8 @@ export const SongRecognitionDialog = (props: {}) => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {titles.map(title => (
-                            <TableRow hover key={`title-${title.index}`} onClick={e => handleToggleRecognize(title.index)}>
+                        {titles.map((title) => (
+                            <TableRow hover key={`title-${title.index}`} onClick={(e) => handleToggleRecognize(title.index)}>
                                 <TableCell>
                                     <Checkbox checked={title.selectedToRecognize} />
                                 </TableCell>
@@ -401,9 +398,9 @@ export const SongRecognitionDialog = (props: {}) => {
                                     {title.recognizeFail
                                         ? 'Could not recognize'
                                         : !title.alreadyRecognized
-                                        ? 'Not recognized'
-                                        : (title.newTitle || 'No Title') +
-                                          (title.newFullWidthTitle && fullWidthSupport ? ` / ${title.newFullWidthTitle}` : '')}
+                                          ? 'Not recognized'
+                                          : (title.newTitle || 'No Title') +
+                                            (title.newFullWidthTitle && fullWidthSupport ? ` / ${title.newFullWidthTitle}` : '')}
                                     {title.unsanitizedTitle && (
                                         <span className={classes.originalUnsanitizedName}>[{title.unsanitizedTitle}]</span>
                                     )}
@@ -419,7 +416,7 @@ export const SongRecognitionDialog = (props: {}) => {
                     onClick={handleRecognize}
                     disabled={
                         canApplyTitles ||
-                        !titles.some(e => e.selectedToRecognize) ||
+                        !titles.some((e) => e.selectedToRecognize) ||
                         (importMethod === 'line-in' && inputDeviceId === '') ||
                         window.native?.unrestrictedFetchJSON === undefined
                     }
