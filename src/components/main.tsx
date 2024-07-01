@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import { useDispatch } from '../frontend-utils';
+import { useDeviceCapabilities, useDispatch } from '../frontend-utils';
 import { FileRejection, useDropzone } from 'react-dropzone';
 import {
     DragDropContext,
@@ -21,21 +21,8 @@ import { actions as contextMenuActions } from '../redux/context-menu-feature';
 import { DeviceStatus } from 'netmd-js';
 import { control, openLocalLibrary } from '../redux/actions';
 
-import {
-    formatTimeFromSeconds,
-    getGroupedTracks,
-    getSortedTracks,
-    isSequential,
-    acceptedTypes,
-    AdaptiveFile,
-} from '../utils';
-import {
-    belowDesktop,
-    forAnyDesktop,
-    useShallowEqualSelector,
-    themeSpacing,
-    batchActions
-} from '../frontend-utils';
+import { formatTimeFromSeconds, getGroupedTracks, getSortedTracks, isSequential, acceptedTypes, AdaptiveFile } from '../utils';
+import { belowDesktop, forAnyDesktop, useShallowEqualSelector, themeSpacing, batchActions } from '../frontend-utils';
 
 import { makeStyles } from 'tss-react/mui';
 import { alpha, lighten } from '@mui/material/styles';
@@ -76,7 +63,7 @@ import Button from '@mui/material/Button';
 import { W95Main } from './win95/main';
 import { useMemo } from 'react';
 import { ChangelogDialog } from './changelog-dialog';
-import { Capability, Track } from '../services/interfaces/netmd';
+import { Track } from '../services/interfaces/netmd';
 import { FactoryModeNoticeDialog } from './factory/factory-notice-dialog';
 import { FactoryModeProgressDialog } from './factory/factory-progress-dialog';
 import { SongRecognitionDialog } from './song-recognition-dialog';
@@ -193,7 +180,6 @@ export const Main = (props: {}) => {
     const flushable = useShallowEqualSelector((state) => state.main.flushable);
     const deviceName = useShallowEqualSelector((state) => state.main.deviceName);
     const deviceStatus = useShallowEqualSelector((state) => state.main.deviceStatus);
-    const deviceCapabilities = useShallowEqualSelector((state) => state.main.deviceCapabilities);
     const factoryModeRippingInMainUi = useShallowEqualSelector((state) => state.appState.factoryModeRippingInMainUi);
     const { vintageMode } = useShallowEqualSelector((state) => state.appState);
 
@@ -203,7 +189,7 @@ export const Main = (props: {}) => {
     const [lastClicked, setLastClicked] = useState(-1);
     const [moveMenuAnchorEl, setMoveMenuAnchorEl] = React.useState<null | HTMLElement>(null);
 
-    const isCapable = useCallback((capability: Capability) => deviceCapabilities.includes(capability), [deviceCapabilities]);
+    const deviceCapabilities = useDeviceCapabilities();
 
     const handleShowMoveMenu = useCallback(
         (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -448,7 +434,7 @@ export const Main = (props: {}) => {
 
     const handleRenameDisc = useCallback(
         (event: React.MouseEvent) => {
-            if (!isCapable(Capability.metadataEdit)) return;
+            if (!deviceCapabilities.metadataEdit) return;
             dispatch(
                 batchActions([
                     renameDialogActions.setVisible(true),
@@ -459,7 +445,7 @@ export const Main = (props: {}) => {
                 ])
             );
         },
-        [dispatch, isCapable, disc]
+        [deviceCapabilities.metadataEdit, dispatch, disc]
     );
 
     const handleTogglePlayPauseTrack = useCallback(
@@ -488,23 +474,25 @@ export const Main = (props: {}) => {
 
     const selectedCount = selected.length;
     const selectedGroupsCount = selectedGroups.length;
-    const usesHimdTracks = isCapable(Capability.himdTitles);
 
     const [uploadMenuAnchorEl, setUploadMenuAnchorEl] = React.useState<null | HTMLElement>(null);
 
-    const openUploadMenu = useCallback((ev: any) => {
-        if(serviceRegistry.libraryService) {
-            setUploadMenuAnchorEl(ev.currentTarget);
-        } else {
-            open();
-        }
-    }, [open, setUploadMenuAnchorEl]);
+    const openUploadMenu = useCallback(
+        (ev: any) => {
+            if (serviceRegistry.libraryService) {
+                setUploadMenuAnchorEl(ev.currentTarget);
+            } else {
+                open();
+            }
+        },
+        [open, setUploadMenuAnchorEl]
+    );
 
     const handleOpenLocalLibrary = useCallback(() => {
         setUploadedFiles([]);
         setUploadMenuAnchorEl(null);
         dispatch(openLocalLibrary());
-    }, [dispatch])
+    }, [dispatch]);
 
     if (vintageMode) {
         const p = {
@@ -539,8 +527,6 @@ export const Main = (props: {}) => {
             handleRenameTrack,
             handleSelectAllClick,
             handleSelectTrackClick,
-
-            isCapable,
         };
         return <W95Main {...p} />;
     }
@@ -552,7 +538,7 @@ export const Main = (props: {}) => {
                     {deviceName || `Loading...`}
                 </Typography>
                 <span>
-                    {isCapable(Capability.discEject) && (
+                    {deviceCapabilities.discEject && (
                         <IconButton
                             aria-label="actions"
                             aria-controls="actions-menu"
@@ -620,14 +606,14 @@ export const Main = (props: {}) => {
                 )}
                 {selectedCount > 0 ? (
                     <React.Fragment>
-                        <Tooltip title={`${isCapable(Capability.trackDownload) ? 'Download' : 'Record'} from MD`}>
+                        <Tooltip title={`${deviceCapabilities.trackDownload ? 'Download' : 'Record'} from MD`}>
                             <Button
                                 className={classes.topbarLargeButton}
                                 color="inherit"
-                                aria-label={isCapable(Capability.trackDownload) || factoryModeRippingInMainUi ? 'Download' : 'Record'}
+                                aria-label={deviceCapabilities.trackDownload || factoryModeRippingInMainUi ? 'Download' : 'Record'}
                                 onClick={handleShowDumpDialog}
                             >
-                                {isCapable(Capability.trackDownload) || factoryModeRippingInMainUi ? 'Download' : 'Record'}
+                                {deviceCapabilities.trackDownload || factoryModeRippingInMainUi ? 'Download' : 'Record'}
                             </Button>
                         </Tooltip>
                     </React.Fragment>
@@ -639,7 +625,7 @@ export const Main = (props: {}) => {
                             <IconButton
                                 className={classes.topbarButton}
                                 aria-label="delete"
-                                disabled={!isCapable(Capability.metadataEdit)}
+                                disabled={!deviceCapabilities.metadataEdit}
                                 onClick={handleDeleteSelected}
                             >
                                 <DeleteIcon />
@@ -654,7 +640,7 @@ export const Main = (props: {}) => {
                             <IconButton
                                 className={classes.topbarButton}
                                 aria-label="group"
-                                disabled={!canGroup || !isCapable(Capability.metadataEdit)}
+                                disabled={!canGroup || !deviceCapabilities.metadataEdit}
                                 onClick={handleGroupTracks}
                             >
                                 <CreateNewFolderIcon />
@@ -669,7 +655,7 @@ export const Main = (props: {}) => {
                             <IconButton
                                 className={classes.topbarButton}
                                 aria-label="rename"
-                                disabled={selectedCount !== 1 || !isCapable(Capability.metadataEdit)}
+                                disabled={selectedCount !== 1 || !deviceCapabilities.metadataEdit}
                                 onClick={handleRenameActionClick}
                             >
                                 <EditIcon />
@@ -684,7 +670,7 @@ export const Main = (props: {}) => {
                             <IconButton
                                 className={classes.topbarButton}
                                 aria-label="ungroup"
-                                disabled={!isCapable(Capability.metadataEdit)}
+                                disabled={!deviceCapabilities.metadataEdit}
                                 onClick={handleDeleteSelectedGroups}
                             >
                                 <DeleteIcon />
@@ -699,7 +685,7 @@ export const Main = (props: {}) => {
                             <IconButton
                                 className={classes.topbarButton}
                                 aria-label="rename group"
-                                disabled={!isCapable(Capability.metadataEdit) || selectedGroupsCount !== 1}
+                                disabled={!deviceCapabilities.metadataEdit || selectedGroupsCount !== 1}
                                 onClick={(e) => handleRenameGroup(e, selectedGroups[0])}
                             >
                                 <EditIcon />
@@ -708,7 +694,7 @@ export const Main = (props: {}) => {
                     </Tooltip>
                 ) : null}
             </Toolbar>
-            {isCapable(Capability.contentList) ? (
+            {deviceCapabilities.contentList ? (
                 <Box className={classes.main} {...getRootProps()} id="main">
                     <input {...getInputProps()} />
                     <Table size="small" className={classes.fixedTable}>
@@ -717,7 +703,7 @@ export const Main = (props: {}) => {
                                 <TableCell className={classes.dragHandleEmpty}></TableCell>
                                 <TableCell className={classes.indexCell}>#</TableCell>
                                 <TableCell>Title</TableCell>
-                                {usesHimdTracks && (
+                                {deviceCapabilities.himdTitles && (
                                     <>
                                         <TableCell>Album</TableCell>
                                         <TableCell>Artist</TableCell>
@@ -730,7 +716,7 @@ export const Main = (props: {}) => {
                             <TableBody>
                                 {groupedTracks.map((group, index) => (
                                     <TableRow key={`${index}`}>
-                                        <TableCell colSpan={4 + (usesHimdTracks ? 2 : 0)} style={{ padding: '0' }}>
+                                        <TableCell colSpan={4 + (deviceCapabilities.himdTitles ? 2 : 0)} style={{ padding: '0' }}>
                                             <Table size="small" className={classes.fixedTable}>
                                                 <Droppable droppableId={`${index}`} key={`${index}`}>
                                                     {(provided: DroppableProvided, snapshot: DroppableStateSnapshot) => (
@@ -739,15 +725,14 @@ export const Main = (props: {}) => {
                                                             ref={provided.innerRef}
                                                             className={cx({ [classes.hoveringOverGroup]: snapshot.isDraggingOver })}
                                                         >
-                                                            <MockTrackRow isHimdTrack={usesHimdTracks} />
+                                                            <MockTrackRow isHimdTrack={deviceCapabilities.himdTitles} />
                                                             {group.title !== null && (
                                                                 <GroupRow
-                                                                    usesHimdTracks={usesHimdTracks}
+                                                                    usesHimdTracks={deviceCapabilities.himdTitles}
                                                                     group={group}
                                                                     onRename={handleRenameGroup}
                                                                     onDelete={handleDeleteGroup}
                                                                     isSelected={selectedGroups.includes(group.index)}
-                                                                    isCapable={isCapable}
                                                                     onSelect={handleSelectGroupClick}
                                                                 />
                                                             )}
@@ -759,12 +744,12 @@ export const Main = (props: {}) => {
                                                                     draggableId={`${group.index}-${t.index}`}
                                                                     key={`t-${t.index}`}
                                                                     index={tidx}
-                                                                    isDragDisabled={!isCapable(Capability.metadataEdit)}
+                                                                    isDragDisabled={!deviceCapabilities.metadataEdit}
                                                                 >
                                                                     {(provided: DraggableProvided) => (
                                                                         <TrackRow
                                                                             track={t}
-                                                                            isHimdTrack={usesHimdTracks}
+                                                                            isHimdTrack={deviceCapabilities.himdTitles}
                                                                             draggableProvided={provided}
                                                                             inGroup={group.title !== null}
                                                                             isSelected={selected.includes(t.index)}
@@ -773,7 +758,6 @@ export const Main = (props: {}) => {
                                                                             onRename={handleRenameTrack}
                                                                             onTogglePlayPause={handleTogglePlayPauseTrack}
                                                                             onOpenContextMenu={(e) => handleOpenContextMenu(e, t)}
-                                                                            isCapable={isCapable}
                                                                         />
                                                                     )}
                                                                 </Draggable>
@@ -789,24 +773,27 @@ export const Main = (props: {}) => {
                             </TableBody>
                         </DragDropContext>
                     </Table>
-                    {isDragActive && isCapable(Capability.trackUpload) ? (
+                    {isDragActive && deviceCapabilities.trackUpload ? (
                         <Backdrop className={classes.backdrop} open={isDragActive}>
                             Drop your Music to Upload
                         </Backdrop>
                     ) : null}
                 </Box>
             ) : null}
-            {isCapable(Capability.trackUpload) ? (
+            {deviceCapabilities.trackUpload ? (
                 <Fab color="primary" aria-label="add" className={classes.add} onClick={openUploadMenu}>
                     <AddIcon />
                 </Fab>
             ) : null}
-            <Menu
-                anchorEl={uploadMenuAnchorEl}
-                open={Boolean(uploadMenuAnchorEl)}
-                onClose={() => setUploadMenuAnchorEl(null)}
-            >
-                <MenuItem onClick={() => {setUploadMenuAnchorEl(null); open();}}>Upload from this machine</MenuItem>
+            <Menu anchorEl={uploadMenuAnchorEl} open={Boolean(uploadMenuAnchorEl)} onClose={() => setUploadMenuAnchorEl(null)}>
+                <MenuItem
+                    onClick={() => {
+                        setUploadMenuAnchorEl(null);
+                        open();
+                    }}
+                >
+                    Upload from this machine
+                </MenuItem>
                 <MenuItem onClick={handleOpenLocalLibrary}>Upload from library</MenuItem>
             </Menu>
 
@@ -820,7 +807,7 @@ export const Main = (props: {}) => {
             <FactoryModeBadSectorDialog />
             <DumpDialog
                 trackIndexes={selected}
-                isCapableOfDownload={isCapable(Capability.trackDownload) || factoryModeRippingInMainUi}
+                isCapableOfDownload={deviceCapabilities.trackDownload || factoryModeRippingInMainUi}
                 isExploitDownload={factoryModeRippingInMainUi}
             />
             <SongRecognitionDialog />
@@ -829,13 +816,9 @@ export const Main = (props: {}) => {
             <AboutDialog />
             <ChangelogDialog />
             <SettingsDialog />
-            <LocalLibraryDialog setUploadedFiles={setUploadedFiles}/>
+            <LocalLibraryDialog setUploadedFiles={setUploadedFiles} />
             <PanicDialog />
-            <ContextMenu
-                onTogglePlayPause={handleTogglePlayPauseTrack}
-                onRename={handleRenameTrack}
-                onDelete={handleDeleteTrack}
-            />
+            <ContextMenu onTogglePlayPause={handleTogglePlayPauseTrack} onRename={handleRenameTrack} onDelete={handleDeleteTrack} />
         </React.Fragment>
     );
 };

@@ -1,13 +1,11 @@
 import React, { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 
-import { control } from '../redux/actions';
 import { actions } from '../redux/context-menu-feature';
 
-import { useShallowEqualSelector } from '../frontend-utils';
+import { useDeviceCapabilities, useShallowEqualSelector } from '../frontend-utils';
 import { makeStyles } from 'tss-react/mui';
 import { Box, Button, ButtonProps } from '@mui/material';
-import { Capability } from '../services/interfaces/netmd';
 import { Delete, Edit, PlayArrow } from '@mui/icons-material';
 
 interface ContextMenuProps {
@@ -93,9 +91,7 @@ export const ContextMenu = ({ onTogglePlayPause, onRename, onDelete }: ContextMe
     const isVisible = useShallowEqualSelector((state) => state.contextMenu.visible);
     const contextTrack = useShallowEqualSelector((state) => state.contextMenu.track);
 
-    const deviceCapabilities = useShallowEqualSelector((state) => state.main.deviceCapabilities);
-
-    const isCapable = useCallback((capability: Capability) => deviceCapabilities.includes(capability), [deviceCapabilities]);
+    const { metadataEdit: isEditCapable } = useDeviceCapabilities();
 
     const handlePlayTrack = useCallback(
         (e: React.MouseEvent) => {
@@ -152,18 +148,10 @@ export const ContextMenu = ({ onTogglePlayPause, onRename, onDelete }: ContextMe
                     <ContextButton icon={<PlayArrow sx={{ height: '16px' }} />} onClick={handlePlayTrack}>
                         Play / Pause
                     </ContextButton>
-                    <ContextButton
-                        icon={<Edit sx={{ height: '16px' }} />}
-                        disabled={!isCapable(Capability.metadataEdit)}
-                        onClick={handleRenameTrack}
-                    >
+                    <ContextButton icon={<Edit sx={{ height: '16px' }} />} disabled={!isEditCapable} onClick={handleRenameTrack}>
                         Rename
                     </ContextButton>
-                    <ContextButton
-                        icon={<Delete sx={{ height: '16px' }} />}
-                        disabled={!isCapable(Capability.metadataEdit)}
-                        onClick={handleDeleteTrack}
-                    >
+                    <ContextButton icon={<Delete sx={{ height: '16px' }} />} disabled={!isEditCapable} onClick={handleDeleteTrack}>
                         Delete
                     </ContextButton>
                 </Box>
