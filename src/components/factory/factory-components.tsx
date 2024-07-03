@@ -211,11 +211,11 @@ export const LabeledNumberInput = ({
     );
 };
 
-export const CellInput = ({ value, setValue }: { value: string; setValue: (newValue: string) => void }) => {
-    function backslashEscape(text: string) {
+export const CellInput = ({ value, setValue }: { value: number[]; setValue: (newValue: number[]) => void }) => {
+    function backslashEscape(text: number[]) {
         let ret = '';
-        for (const char of [...text]) {
-            const code = char.charCodeAt(0);
+        for (const code of text) {
+            const char = String.fromCharCode(code);
             if (code > 0xff) ret += '\\00';
             // Unicode non-ascii character.
             else if (code < 0x20 || code > 0x7e) {
@@ -229,8 +229,9 @@ export const CellInput = ({ value, setValue }: { value: string; setValue: (newVa
         return ret;
     }
 
-    function backslashToStandard(text: string) {
-        let raw = '';
+    function backslashToStandard(text: string): number[] {
+        const ALLOWED = '01234567889ABCDEFabcdef';
+        let raw: number[] = [];
         let sequence = false;
         let half = null;
         for (const char of [...text]) {
@@ -240,15 +241,17 @@ export const CellInput = ({ value, setValue }: { value: string; setValue: (newVa
             } else if (sequence && char === '\\') {
                 if (half !== null) throw new Error('Invalid sequence');
                 sequence = false;
-                raw += '\\';
+                raw.push('\\'.charCodeAt(0));
             } else if (sequence && half === null) {
                 half = char;
             } else if (sequence) {
-                raw += Buffer.from([parseInt(half + char, 16)]).toString();
+                const fullSequence = half + char;
+                if([...fullSequence].some(e => !ALLOWED.includes(e))) throw new Error('Invalid sequence');
+                raw.push(parseInt(half + char, 16));
                 half = null;
                 sequence = false;
             } else {
-                raw += char;
+                raw.push(char.charCodeAt(0));
             }
         }
         if (sequence) throw new Error('Terminated mid-sequence');

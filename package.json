@@ -21,7 +21,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "analyze": "source-map-explorer 'dist/assets/*.js'",
-    "update-version": "bash -c \"printf \\\"// This file has been auto-generated. Please do not modify.\\nexport const GIT_HASH = '$(git rev-parse --short --verify master)';\\nexport const GIT_DIFF = '$(git diff | wc -l)';\\nexport const BUILD_DATE = '$(date)';\\n\\\" > src/version-info.ts\""
+    "update-version": "bash -c \"printf \\\"// This file has been auto-generated. Please do not modify.\\nexport const GIT_HASH = '$(git rev-parse --short --verify master)';\\nexport const GIT_DIFF = '$(git diff | wc -l)';\\nexport const BUILD_DATE = '$(date)';\\n\\\" > src/version-info.ts\"",
+    "pretty": "prettier src/**/*.{ts,tsx} --write"
   },
   "dependencies": {
     "@emotion/react": "^11.11.1",
@@ -44,7 +45,7 @@
     "music-metadata-browser": "^2.5.9",
     "netmd-exploits": "^0.5.6",
     "netmd-js": "^4.1.8",
-    "netmd-tocmanip": "^0.1.7",
+    "netmd-tocmanip": "^0.1.8",
     "prettier": "^3.2.5",
     "react": "^18.2.0",
     "react-beautiful-dnd": "^13.1.1",

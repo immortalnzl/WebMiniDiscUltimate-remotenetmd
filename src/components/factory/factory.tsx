@@ -318,12 +318,12 @@ const Toc = () => {
                 break;
             case 1:
                 // Half-Width sector
-                applyParameters(newContents, toc?.titleCellList ?? [], e => e.title !== '\0\0\0\0\0\0\0', 'T', '#5ec8f9'); // Text
+                applyParameters(newContents, toc?.titleCellList ?? [], e => !e.title.every(e => e === 0), 'T', '#5ec8f9'); // Text
                 applyParameters(
                     newContents,
                     toc?.titleCellList ?? [],
                     (e, i) =>
-                        !toc?.titleMap.includes(i) && !toc?.titleCellList.map(n => n.link).includes(i) && e.title !== '\0\0\0\0\0\0\0',
+                        !toc?.titleMap.includes(i) && !toc?.titleCellList.map(n => n.link).includes(i) && !e.title.every(e => e === 0),
                     'U',
                     'red'
                 ); // Apply unlinked parameter
