@@ -552,7 +552,12 @@ export async function ffmpegTranscode(data: Uint8Array, inputFormat: string, out
 
     await ffmpegProcess.write(`audio.${inputFormat}`, data);
     try {
-        await ffmpegProcess.transcode(`audio.${inputFormat}`, `raw`, outputParameters);
+        let forcedInputFormat;
+        if(inputFormat === 'aea') forcedInputFormat = "aea";
+
+        const params = `${forcedInputFormat ? `-f ${forcedInputFormat} ` : ''}-i audio.${inputFormat} ${outputParameters} raw`;
+        console.log(`Running ffmpeg with args: ${params}`);
+        await ffmpegProcess.run(params);
     } catch (er) {
         console.log(er);
     }
