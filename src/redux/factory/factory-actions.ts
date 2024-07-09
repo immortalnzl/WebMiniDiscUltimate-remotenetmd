@@ -397,7 +397,8 @@ export function archiveDisc() {
         let zip: JSZip | null = null;
         if (archiveDiscCreateZip) {
             zip = new JSZip();
-            callback = (blob: Blob, fileName: string) => zip!.file(fileName.replace(/\//g, '-').replace('\\', '-'), blob);
+            const disallowedCharacters = /[<>:"/\\|?*]/g;
+            callback = (blob: Blob, fileName: string) => zip!.file(fileName.replace(disallowedCharacters, '_'), blob);
         }
         let toc = getState().factory.toc;
         if (!toc) {
