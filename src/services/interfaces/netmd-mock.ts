@@ -283,7 +283,7 @@ class NetMDMockService extends NetMDService {
     }
 
     async deleteTracks(indexes: number[]) {
-        indexes = indexes.sort();
+        indexes = indexes.sort((a, b) => a - b);
         indexes.reverse();
         for (const index of indexes) {
             this._groupsDef = recomputeGroupsAfterTrackMove(this._getDisc(), index, -1).groups.map(g => ({
