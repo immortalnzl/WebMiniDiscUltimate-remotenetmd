@@ -610,7 +610,7 @@ export class NetMDUSBService extends NetMDService {
         try {
             // await this.netmdInterface!.stop();
         } catch (ex) {}
-        indexes = indexes.sort();
+        indexes = indexes.sort((a, b) => a - b);
         indexes.reverse();
         let content = await this.listContentUsingCache();
         for (const index of indexes) {
