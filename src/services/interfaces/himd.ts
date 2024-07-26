@@ -232,7 +232,12 @@ export class HiMDRestrictedService extends NetMDService {
     }
 
     async listContent(dropCache?: boolean | undefined): Promise<Disc> {
-        if (!this.himd) {
+        if(dropCache && this.himd?.isDirty()) {
+            window.alert("You have changes not yet written to disc. Please apply changes first.");
+            await this.reloadCache();
+            return JSON.parse(JSON.stringify(this.cachedDisc!));
+        }
+        if (!this.himd || dropCache) {
             await this.initHiMD();
         }
         (window as any).himd = this.himd;
