@@ -418,7 +418,7 @@ export class NetMDUSBService extends NetMDService {
         const deviceName = this.netmdInterface?.netMd.getDeviceName();
         if (
             (deviceName?.includes('Sony') &&
-                (deviceName?.includes('MZ-N') || deviceName?.includes('MZ-S1') || deviceName.includes('MZ-RH') || deviceName.includes('MZ-DH10P'))) ||
+                (deviceName?.includes('MZ-N') || deviceName?.includes('MZ-S1') || deviceName.includes('MZ-RH') || deviceName.includes('MZ-DH10P') || deviceName?.includes('DS-HMD1'))) ||
             (deviceName?.includes('Aiwa') && deviceName?.includes('AM-NX')) ||
             deviceName?.includes('PCGA-MDN1')
         ) {
