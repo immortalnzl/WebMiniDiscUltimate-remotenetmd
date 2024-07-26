@@ -1,0 +1,13 @@
+diff --git a/node_modules/vite/dist/node/chunks/dep-C1-ZB6nQ.js b/node_modules/vite/dist/node/chunks/dep-C1-ZB6nQ.js
+index f78f95c..2aee15a 100644
+--- a/node_modules/vite/dist/node/chunks/dep-C1-ZB6nQ.js
++++ b/node_modules/vite/dist/node/chunks/dep-C1-ZB6nQ.js
+@@ -16698,7 +16698,7 @@ function isParentDirectory(dir, file) {
+ function isSameFileUri(file1, file2) {
+   return file1 === file2 || isCaseInsensitiveFS && file1.toLowerCase() === file2.toLowerCase();
+ }
+-const externalRE = /^(https?:)?\/\//;
++const externalRE = /^([a-z]+:)?\/\//;
+ const isExternalUrl = (url) => externalRE.test(url);
+ const dataUrlRE = /^\s*data:/i;
+ const isDataUrl = (url) => dataUrlRE.test(url);
