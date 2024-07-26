@@ -8,6 +8,8 @@ import { makeStyles } from 'tss-react/mui';
 import Typography from '@mui/material/Typography';
 import FormControl from '@mui/material/FormControl';
 import FormHelperText from '@mui/material/FormHelperText';
+import Alert from '@mui/material/Alert';
+import Tooltip from '@mui/material/Tooltip';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import IconButton from '@mui/material/IconButton';
@@ -64,6 +66,10 @@ const useStyles = makeStyles()((theme) => ({
     },
     spacing: {
         marginTop: theme.spacing(1),
+    },
+    notice: {
+        marginTop: theme.spacing(2),
+        backgroundColor: 'unset',
     },
     chromeLogo: {
         marginTop: theme.spacing(1),
@@ -223,6 +229,19 @@ export const Welcome = (props: {}) => {
                             >
                                 <FormHelperText>{pairingMessage}</FormHelperText>
                             </FormControl>
+                            { !window.native?.interface && (
+                                <Tooltip title={
+                                    <span>
+                                        Vivaldi's implementation of WebUSB is broken.<br/>
+                                        If you are using Vivaldi, most of this app's features will be broken.<br/>
+                                        Please switch to a different Chromium-based browser.
+                                    </span>
+                                }>
+                                    <Alert severity="info" className={classes.notice}>
+                                        <b>Notice for users of the Vivaldi web browser</b> <br/>
+                                    </Alert>
+                                </Tooltip>
+                            )}
                         </div>
                         <div>
                             <Typography component="h2" variant="subtitle1" align="center" className={classes.spacing}>
