@@ -927,7 +927,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                                         onChange={handleChangeBitrate}
                                     >
                                         {minidiscSpec.availableFormats
-                                            .find((e) => e.codec === format[minidiscSpec.specName].codec)!
+                                            .find((e) => e.codec === thisSpecFormat.codec)!
                                             .availableBitrates!.map((e) => (
                                                 <MenuItem value={e} key={`bitratesel-${e}`}>
                                                     {e} Kbps
