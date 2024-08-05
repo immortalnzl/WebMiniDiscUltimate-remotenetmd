@@ -298,20 +298,11 @@ export class HiMDRestrictedService extends NetMDService {
     }
 
     async deleteTracks(indexes: number[]): Promise<void> {
-        window.alert('Not yet available in HiMD');
+        window.alert('Unavailable in restricted mode');
     }
 
     async wipeDisc(): Promise<void> {
-        const space = await this.fsDriver!.getTotalSpace();
-        // Recreate FS only on the 1GB discs
-        try{
-            await this.himd!.wipe(space > 500000000);
-            this.dropCachedContentList();
-        }catch(ex){
-            console.log(ex);
-            window.alert('Not yet available in HiMD');
-            return;
-        }
+        window.alert('Unavailable in restricted mode');
     }
 
     async moveTrack(src: number, dst: number, updateGroups?: boolean) {
@@ -623,5 +614,12 @@ export class HiMDFullService extends HiMDRestrictedService {
 
     isDeviceConnected(device: USBDevice){
         return this.fsDriver!.driver.isDeviceConnected(device);
+    }
+
+    async wipeDisc(): Promise<void> {
+        const space = await this.fsDriver!.getTotalSpace();
+        // Recreate FS only on the 1GB discs
+        await this.himd!.wipe(space > 500000000);
+        this.dropCachedContentList();
     }
 }

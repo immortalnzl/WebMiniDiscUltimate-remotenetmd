@@ -323,7 +323,7 @@ export const TopMenu = function (props: { tracksSelected?: number[]; onClick?: (
                 <ListItemIcon className={classes.listItemIcon}>
                     <ArrowUpwardIcon fontSize="small" />
                 </ListItemIcon>
-                <ListItemText>Switch to HiMD unrestricted mode</ListItemText>
+                <ListItemText>Switch to HiMD full mode</ListItemText>
             </MenuItem>
         );
     }
