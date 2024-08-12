@@ -31,6 +31,7 @@ import { FactoryTopMenu } from './factory-topmenu';
 import { FactoryModeBadSectorDialog } from './factory-bad-sector-dialog';
 import { SettingsDialog } from '../settings-dialog';
 import { AppDispatch } from '../../redux/store';
+import { getDeviceNameFromTOCSignature } from '../../utils';
 
 const useStyles = makeStyles()(theme => ({
     tocTable: {
@@ -554,6 +555,7 @@ const Toc = () => {
                                         setValue={e => handleUpdateTOCSpace('signature', e)}
                                         name="Signature"
                                         bytes={2}
+                                        additionalAnnotation={getDeviceNameFromTOCSignature(toc.timestampList[selectedTile - 256].signature)}
                                     />
                                 </React.Fragment>
                             )}

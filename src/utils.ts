@@ -6,6 +6,7 @@ import { createWorker } from '@ffmpeg/ffmpeg';
 import { ForcedEncodingFormat } from './redux/convert-dialog-feature';
 import { HiMDKBPSToFrameSize } from 'himd-js';
 import { ExportParams } from './services/audio/audio-export';
+import { SIGNATURES } from 'netmd-tocmanip';
 
 export type Promised<R> = R extends Promise<infer Q> ? Q : never;
 
@@ -579,6 +580,11 @@ export function dispatchQueue(
             await entry(dispatch, getState);
         }
     };
+}
+
+export function getDeviceNameFromTOCSignature(deviceId: number){
+    let signature = SIGNATURES[deviceId];
+    return `${signature || "Unknown device"} (0x${deviceId.toString(16).padStart(4, '0')})`;
 }
 
 declare let process: any;

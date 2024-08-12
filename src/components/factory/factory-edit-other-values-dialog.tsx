@@ -12,6 +12,8 @@ import Button from '@mui/material/Button';
 import { actions as factoryEditOtherValuesDialogActions } from '../../redux/factory/factory-edit-other-values-dialog-feature';
 import { actions as factoryActions } from '../../redux/factory/factory-feature';
 import { ToC } from 'netmd-tocmanip';
+import { Typography } from '@mui/material';
+import { getDeviceNameFromTOCSignature } from '../../utils';
 
 const Transition = React.forwardRef(function Transition(
     props: SlideProps,
@@ -30,6 +32,33 @@ const useStyles = makeStyles()(theme => ({
 function asByte(e: any, callback: (e: number) => void) {
     const asNumber = parseInt(e.target.value);
     if (asNumber >= 0 && asNumber < 256) callback(asNumber);
+    if(isNaN(asNumber)) callback(0);
+}
+
+function asWord(e: any, callback: (e: number) => void) {
+    const asNumber = parseInt(e.target.value);
+    if (asNumber >= 0 && asNumber < 65536) callback(asNumber);
+    if(isNaN(asNumber)) callback(0);
+}
+
+const AnnotatedTextField = ({ label, className, value, onChange, annotation }: {
+    label: string;
+    className: string;
+    value?: number,
+    onChange: (e: any) => void,
+    annotation?: string
+}) => {
+    return <div style={{display: 'flex', alignItems: 'center'}}>
+        <TextField
+            label={label}
+            className={className}
+            fullWidth
+            value={value}
+            onChange={onChange}
+            style={{flexGrow: 1}}
+        />
+        <Typography style={{textWrap: 'nowrap'}}>{annotation}</Typography>
+    </div>
 }
 
 export const FactoryModeEditOtherValuesDialog = (props: {}) => {
@@ -75,13 +104,13 @@ export const FactoryModeEditOtherValuesDialog = (props: {}) => {
                     value={tocWorkingCopy?.nTracks}
                     onChange={e => asByte(e, e => setTocWorkingCopy({ ...tocWorkingCopy!, nTracks: e }))}
                 />
-                <TextField
+                <AnnotatedTextField
                     label="The last ToC writer's signature"
                     className={classes.marginUpDown}
-                    fullWidth
+                    annotation={`Device Name: ${getDeviceNameFromTOCSignature(tocWorkingCopy?.deviceSignature ?? -1)}`}
                     value={tocWorkingCopy?.deviceSignature}
-                    onChange={e => asByte(e, e => setTocWorkingCopy({ ...tocWorkingCopy!, deviceSignature: e }))}
-                />
+                    onChange={e => asWord(e, e => setTocWorkingCopy({ ...tocWorkingCopy!, deviceSignature: e }))}
+                    />
                 <TextField
                     label="Disc nonempty flag"
                     className={classes.marginUpDown}

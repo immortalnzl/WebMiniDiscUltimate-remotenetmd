@@ -176,11 +176,13 @@ export const LabeledNumberInput = ({
     setValue,
     name,
     bytes,
+    additionalAnnotation,
 }: {
     value: number;
     setValue: (newValue: number) => void;
     name: string;
     bytes?: number;
+    additionalAnnotation?: string;
 }) => {
     const { classes } = useStyles();
     const maxValue = useMemo(() => Math.pow(2, 8 * (bytes ?? 1)) - 1, [bytes]);
@@ -207,6 +209,7 @@ export const LabeledNumberInput = ({
                 {name}:
             </Typography>
             <TextField value={localValue} onChange={handleChange} onBlur={handleFocusLost} className={classes.linkInput} />
+            {additionalAnnotation && <Typography variant="body2">{additionalAnnotation}</Typography>}
         </div>
     );
 };
