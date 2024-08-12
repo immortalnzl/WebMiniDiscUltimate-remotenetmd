@@ -69,6 +69,7 @@ export enum Capability {
     factoryMode,
     himdTitles,
     fullWidthSupport,
+    nativeMonoUpload,
 
     requiresManualFlush,
 }
@@ -425,6 +426,13 @@ export class NetMDUSBService extends NetMDService {
         ) {
             // Only Sony (and Aiwa since it's the same thing) portables have the factory mode.
             basic.push(Capability.factoryMode);
+        }
+
+        const deviceFlags = this.netmdInterface?.netMd.getDeviceFlags();
+        if(deviceFlags) {
+            if(deviceFlags.nativeMonoUpload) {
+                basic.push(Capability.nativeMonoUpload);
+            }
         }
 
         try {

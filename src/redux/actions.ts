@@ -1279,7 +1279,7 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
 
         const { audioExportService, netmdService, netmdSpec } = serviceRegistry;
         let { netmdFactoryService } = serviceRegistry;
-        if (format.codec === 'MONO') {
+        if (format.codec === 'MONO' && !deviceCapabilities.includes(Capability.nativeMonoUpload)) {
             // SP MONO is a homebrew feature
             if (!deviceCapabilities.includes(Capability.factoryMode)) {
                 window.alert('Sorry! Your device cannot enter the factory mode. SP MONO upload is not possible');
@@ -1574,7 +1574,7 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
         }
         await netmdService?.finalizeUpload();
 
-        if (format.codec === 'MONO') {
+        if (format.codec === 'MONO' && !deviceCapabilities.includes(Capability.nativeMonoUpload)) {
             netmdFactoryService!.enableMonoUpload(false);
         }
 
