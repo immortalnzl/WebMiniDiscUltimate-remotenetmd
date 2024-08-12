@@ -5,7 +5,7 @@ export const CHANGELOG: ChangelogVersion[] = [
         name: "Version 1.5.0",
         contents: [
             "Overhauled UI - updated all outdated dependencies",
-            ["I now have a ", { type: 'link', url: 'xxxxx', content: "Ko-Fi" }, " - if you're enjoying this software, please send me a tip :)"],
+            ["I now have a ", { type: 'link', url: 'https://ko-fi.com/asivery', content: "Ko-Fi" }, " - if you're enjoying this software, please send me a tip :)"],
             "Unlocked mono upload for some non-exploitable devices (Sony decks and some Panasonic portables)",
             "Added a device name field in homebrew mode",
             "Added unrecoverable error handling",

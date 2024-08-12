@@ -49,14 +49,12 @@ declare global {
     interface Window {
         // ElectronWMD bridge
         native?: {
-            // Required:
-            unrestrictedFetchJSON: (url: string, parameters?: any) => any;
-
             // Services:
             interface?: NetMDService;
             himdFullInterface?: NetMDService;
 
             // Optional:
+            unrestrictedFetchJSON: (url: string, parameters?: any) => any;
             reload?: () => void;
             wrapperChangelog?: ChangelogVersionInjection[];
 
