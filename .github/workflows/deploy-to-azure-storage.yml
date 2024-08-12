@@ -23,11 +23,10 @@ jobs:
     - name: checkout
       uses: actions/checkout@v2.3.1   
 
-  # needs to be node 14 due to node-gyp issue
     - name: change node version
       uses: actions/setup-node@v2
       with:
-        node-version: '14'  
+        node-version: '22'  
 
   # 'do not treat warnings as errors' per 'deploy-to-gh-pages.yml'
     - name: install and build
@@ -37,6 +36,7 @@ jobs:
         npm run build
       env:
         CI: false
+        PUBLIC_URL: https://web.minidisc.wiki/
 
   # clears the storage account before uploading new version
     - name: Purge blob storage
@@ -45,12 +45,12 @@ jobs:
         inlineScript: |
             az storage blob delete-batch --account-name wmdpro --auth-mode key --account-key ${{ secrets.AZURE_STORAGEKEY_WMDFILES }} -s '$web'
 
-  # uploads the contents of the 'build/' folder to the '$web/ folder on the 'wmdpro' storage account using the key held in GH secrets
+  # uploads the contents of the 'dist/' folder to the '$web/ folder on the 'wmdpro' storage account using the key held in GH secrets
     - name: Upload to blob storage  
       uses: azure/CLI@v1
       with:
         inlineScript: |
-            az storage blob upload-batch --overwrite --account-name wmdpro --auth-mode key --account-key ${{ secrets.AZURE_STORAGEKEY_WMDFILES }} -d '$web' -s 'build/'
+            az storage blob upload-batch --overwrite --account-name wmdpro --auth-mode key --account-key ${{ secrets.AZURE_STORAGEKEY_WMDFILES }} -d '$web' -s 'dist/'
 
   # clears everything on CDN profile 'wmd' endpoint 'web' which is inside resource group 'WMDpro'
     - name: Purge CDN endpoint    
