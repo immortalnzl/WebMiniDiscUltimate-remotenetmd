@@ -5,6 +5,10 @@ export const CHANGELOG: ChangelogVersion[] = [
         name: "Version 1.5.0",
         contents: [
             "Overhauled UI - updated all outdated dependencies",
+            ["I now have a ", { type: 'link', url: 'xxxxx', content: "Ko-Fi" }, " - if you're enjoying this software, please send me a tip :)"],
+            "Unlocked mono upload for some non-exploitable devices (Sony decks and some Panasonic portables)",
+            "Added a device name field in homebrew mode",
+            "Added unrecoverable error handling",
             "Added support for remote libraries",
             {
                 type: 'sublist',
@@ -20,9 +24,7 @@ export const CHANGELOG: ChangelogVersion[] = [
                 content: ["Increased RH1 exploits compatibility"]
             },
             "Fixed UI inconsistencies",
-            "Fixed numerous bugs regarding communication with Sharp and some Sony devices",
-            "Unlocked mono upload for some non-exploitable devices (Sony decks and some Panasonic portables)",
-            ["I now have a ", { type: 'link', url: 'xxxxx', content: "Ko-Fi" }, " - if you're enjoying this software, please send me a tip :)"]
+            "Fixed numerous bugs regarding communication with Sharp and some Sony devices"
         ]
     },
     {

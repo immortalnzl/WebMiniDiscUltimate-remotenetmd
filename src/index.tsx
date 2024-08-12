@@ -17,6 +17,7 @@ import { MediaRecorderService } from './services/browserintegration/mediarecorde
 import { BrowserMediaSessionService } from './services/browserintegration/media-session';
 import { listContent } from './redux/actions';
 import { sleep } from './utils';
+import { SettingsResetErrorBoundary } from './components/settings-reset-error-boundary';
 serviceRegistry.mediaRecorderService = new MediaRecorderService();
 serviceRegistry.mediaSessionService = new BrowserMediaSessionService(store);
 
@@ -141,7 +142,9 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
 const root = createRoot(document.getElementById('root')!);
 root.render(
     <Provider store={store}>
-        <App />
+        <SettingsResetErrorBoundary>
+            <App />
+        </SettingsResetErrorBoundary>
     </Provider>
 );
 
