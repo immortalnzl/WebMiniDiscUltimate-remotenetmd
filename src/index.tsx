@@ -21,7 +21,7 @@ serviceRegistry.mediaRecorderService = new MediaRecorderService();
 serviceRegistry.mediaSessionService = new BrowserMediaSessionService(store);
 
 Object.defineProperty(window, 'wmdVersion', {
-    value: '1.4.2',
+    value: '1.5.0',
     writable: false,
 });
 

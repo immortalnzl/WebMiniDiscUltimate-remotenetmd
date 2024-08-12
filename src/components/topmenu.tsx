@@ -22,6 +22,7 @@ import { makeStyles } from 'tss-react/mui';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import EditIcon from '@mui/icons-material/Edit';
 import GitHubIcon from '@mui/icons-material/GitHub';
+import DonateIcon from '@mui/icons-material/MonetizationOn';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
@@ -78,6 +79,7 @@ export const TopMenu = function (props: { tracksSelected?: number[]; onClick?: (
 
     const githubLinkRef = React.useRef<null | HTMLAnchorElement>(null);
     const helpLinkRef = React.useRef<null | HTMLAnchorElement>(null);
+    const donateLinkRef = React.useRef<null | HTMLAnchorElement>(null);
     const hiddenFileInputRef = React.useRef<null | HTMLInputElement>(null);
     const [menuAnchorEl, setMenuAnchorEl] = React.useState<null | HTMLElement>(null);
     const [shortcutsAnchorEl, setShortcutsAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -182,6 +184,18 @@ export const TopMenu = function (props: { tracksSelected?: number[]; onClick?: (
             if (event.target !== helpLinkRef.current) {
                 // Prevent opening the link twice
                 helpLinkRef.current?.click();
+            }
+            handleMenuClose();
+        },
+        [handleMenuClose]
+    );
+
+    const handleDonateLink = useCallback(
+        (event: React.MouseEvent<HTMLElement>) => {
+            event.stopPropagation();
+            if (event.target !== donateLinkRef.current) {
+                // Prevent opening the link twice
+                donateLinkRef.current?.click();
             }
             handleMenuClose();
         },
@@ -519,6 +533,24 @@ export const TopMenu = function (props: { tracksSelected?: number[]; onClick?: (
                     onClick={handleGithubLink}
                 >
                     Fork me on GitHub
+                </Link>
+            </ListItemText>
+        </MenuItem>
+    );
+    menuItems.push(
+        <MenuItem key="donate" onClick={handleDonateLink}>
+            <ListItemIcon className={classes.listItemIcon}>
+                <DonateIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>
+                <Link
+                    rel="noopener noreferrer"
+                    href="https://ko-fi.com/asivery"
+                    target="_blank"
+                    ref={donateLinkRef}
+                    onClick={handleDonateLink}
+                >
+                    Donate
                 </Link>
             </ListItemText>
         </MenuItem>
