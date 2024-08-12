@@ -25,6 +25,26 @@ export interface SettingInterface extends NormalSetting {
     update(newValue: boolean | string | number): Promise<void>;
 }
 
+export type InlineChangelogEntry = 
+    | string
+    | { type: 'code', content: string }
+    | { type: 'link', url?: string, clickHandler?: 'openSettings', content: string }
+
+export type ChangelogEntry = 
+    | InlineChangelogEntry
+    | InlineChangelogEntry[]
+    | { type: 'sublist', name: string, content: ChangelogEntry[] }
+
+export interface ChangelogVersion {
+    name: string;
+    contents: ChangelogEntry[]
+}
+
+export interface ChangelogVersionInjection {
+    entry: ChangelogVersion;
+    before: string | null;
+}
+
 declare global {
     interface Window {
         // ElectronWMD bridge
@@ -38,6 +58,7 @@ declare global {
 
             // Optional:
             reload?: () => void;
+            wrapperChangelog?: ChangelogVersionInjection[];
 
             // Settings API:
             getSettings?: () => Promise<SettingInterface[]>;
