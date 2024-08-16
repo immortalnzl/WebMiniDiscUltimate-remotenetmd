@@ -369,7 +369,7 @@ export function himdRenameTrack(...entries: { index: number; title?: string; alb
         dispatch(batchActions([renameDialogActions.setVisible(false), appStateActions.setLoading(true)]));
         try {
             for (const { index, title, album, artist } of entries) {
-                netmdService!.renameTrack(index, { title, album, artist });
+                await netmdService!.renameTrack(index, { title, album, artist });
             }
         } catch (err) {
             console.error(err);
