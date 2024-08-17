@@ -190,6 +190,7 @@ export const Main = (props: {}) => {
     const [moveMenuAnchorEl, setMoveMenuAnchorEl] = React.useState<null | HTMLElement>(null);
 
     const deviceCapabilities = useDeviceCapabilities();
+    const minidiscSpec = serviceRegistry.netmdSpec;
 
     const handleShowMoveMenu = useCallback(
         (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -566,7 +567,7 @@ export const Main = (props: {}) => {
                     <React.Fragment>
                         <span>{`${formatTimeFromSeconds(disc.left)} left of ${formatTimeFromSeconds(disc.total)} `}</span>
                         <Tooltip title={LeftInNondefaultCodecs(disc.left)} arrow>
-                            <span className={classes.remainingTimeTooltip}>SP Mode</span>
+                            <span className={classes.remainingTimeTooltip}>{minidiscSpec?.defaultFormat?.codec ?? '?'} Mode</span>
                         </Tooltip>
                         <div className={classes.spacing} />
                         <LinearProgress
