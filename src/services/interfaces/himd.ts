@@ -50,7 +50,7 @@ export class HiMDSpec implements MinidiscSpec {
     constructor(private unrestricted: boolean = false) {
         this.specName = unrestricted ? 'HiMD_full' : 'HiMD_restricted';
     }
-    public readonly availableFormats: RecordingCodec[] = this.unrestricted
+    public availableFormats: RecordingCodec[] = this.unrestricted
         ? [
               { codec: 'A3+', availableBitrates: [352, 256, 192, 64, 48], defaultBitrate: 256 },
               { codec: 'AT3', availableBitrates: [132, 105, 66], defaultBitrate: 132 },
@@ -58,8 +58,16 @@ export class HiMDSpec implements MinidiscSpec {
               { codec: 'PCM' },
           ]
         : [{ codec: 'MP3', availableBitrates: [320, 256, 192, 128, 96, 64], defaultBitrate: 192 }];
-    public readonly defaultFormat: Codec = this.unrestricted ? { codec: 'A3+', bitrate: 256 } : { codec: 'MP3', bitrate: 192 };
-    public readonly specName: string;
+    public defaultFormat: Codec = this.unrestricted ? { codec: 'A3+', bitrate: 256 } : { codec: 'MP3', bitrate: 192 };
+    public specName: string;
+
+    public static derive(name: string, formats: RecordingCodec[], defaultFormat: Codec) {
+        const instance = new HiMDSpec(true);
+        instance.specName = name;
+        instance.defaultFormat = defaultFormat;
+        instance.availableFormats = formats;
+        return instance;
+    }
 
     getRemainingCharactersForTitles(disc: Disc): { halfWidth: number; fullWidth: number } {
         const ALL_CHARACTERS = 0x1000 * 14;
@@ -613,7 +621,7 @@ export class HiMDFullService extends HiMDRestrictedService {
     }
 
     isDeviceConnected(device: USBDevice){
-        return this.fsDriver!.driver.isDeviceConnected(device);
+        return this.fsDriver?.driver.isDeviceConnected(device) ?? false;
     }
 
     async wipeDisc(): Promise<void> {

@@ -52,6 +52,7 @@ declare global {
             // Services:
             interface?: NetMDService;
             himdFullInterface?: NetMDService;
+            nwInterface?: NetMDService;
 
             // Optional:
             unrestrictedFetchJSON: (url: string, parameters?: any) => any;

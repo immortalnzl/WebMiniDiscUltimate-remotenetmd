@@ -155,6 +155,19 @@ export const Services: ServicePrototype[] = [
     },
 ];
 
+if(window.native?.nwInterface) {
+    Services.push({
+        name: 'NetworkWM',
+        requiresChrome: true,
+        spec: HiMDSpec.derive('NetworkWM', [
+            { codec: 'AT3', availableBitrates: [132, 105, 66], defaultBitrate: 132 },
+            { codec: 'A3+', availableBitrates: [352, 256, 192, 64, 48], defaultBitrate: 256 },
+        ], { codec: 'A3+', bitrate: 256 }),
+        getConnectName: () => 'Connect to Network Walkman',
+        create: () => window.native?.nwInterface!,
+    });
+}
+
 export function getSimpleServices() {
     return Services.filter((n) => !n.customParameters).map((n) => ({
         name: n.name,

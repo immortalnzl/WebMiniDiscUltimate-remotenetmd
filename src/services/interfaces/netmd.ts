@@ -794,7 +794,7 @@ export class NetMDUSBService extends NetMDService {
     }
 
     isDeviceConnected(device: USBDevice){
-        return this.netmdInterface!.netMd.isDeviceConnected(device);
+        return this.netmdInterface?.netMd.isDeviceConnected(device) ?? false;
     }
 }
 
