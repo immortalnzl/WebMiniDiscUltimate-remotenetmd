@@ -104,8 +104,10 @@ export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pa
 
 export function renameGroup({ groupIndex, newName, newFullWidthName }: { groupIndex: number; newName: string; newFullWidthName?: string }) {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
+        dispatch(appStateActions.setLoading(true));
         await serviceRegistry!.netmdService?.renameGroup(groupIndex, newName, newFullWidthName);
         listContent()(dispatch);
+        dispatch(appStateActions.setLoading(false));
     };
 }
 
