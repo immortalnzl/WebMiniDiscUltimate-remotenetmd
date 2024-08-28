@@ -248,7 +248,7 @@ export const Controls = () => {
             setIsSeeking((wasSeeking) => {
                 if (wasSeeking) {
                     setTimeout(() => setIsSeekingProgressLocked(false), 1000);
-                    if (!deviceStatus?.track) return false;
+                    if (deviceStatus?.track === null || deviceStatus?.track === undefined) return false;
                     const track = tracks[deviceStatus.track];
                     // Hack:
                     setTrackPercentage((trackPercentage: number) => {
