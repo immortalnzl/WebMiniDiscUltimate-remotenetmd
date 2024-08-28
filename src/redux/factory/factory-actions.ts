@@ -8,7 +8,7 @@ import serviceRegistry from '../../services/registry';
 import { convertToWAV, createDownloadTrackName, downloadBlob, getTracks, Promised } from '../../utils';
 import { concatUint8Arrays } from 'netmd-js/dist/utils';
 import { NetMDFactoryService, ExploitCapability, Capability } from '../../services/interfaces/netmd';
-import { parseTOC, getTitleByTrackNumber, reconstructTOC, updateFlagAllFragmentsOfTrack, ModeFlag } from 'netmd-tocmanip';
+import { parseTOC, getTitleByTrackNumber, reconstructTOC, updateFlagAllFragmentsOfTrack, ModeFlag, ToC } from 'netmd-tocmanip';
 import { downloadTracks, exportCSV } from '../actions';
 import JSZip from 'jszip';
 import { AtracRecoveryConfig } from 'netmd-exploits';
@@ -453,4 +453,24 @@ export function enterHiMDUnrestrictedMode() {
         window.alert('Loaded. Please insert a HiMD disc.');
         dispatch(appStateActions.setMainView('WELCOME'));
     };
+}
+
+export function toggleDiscSwapDetection() {
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        const deviceDiscSwapDetectionDisabled = getState().factory.deviceDiscSwapDetectionDisabled;
+        dispatch(appStateActions.setLoading(true));
+        await serviceRegistry.netmdFactoryService!.setDiscSwapDetection(!deviceDiscSwapDetectionDisabled);
+        dispatch(appStateActions.setLoading(false));
+        dispatch(factoryActions.setDiscSwapDetectionDisabled(!deviceDiscSwapDetectionDisabled));
+    };
+}
+
+export function writeRecoveryTOC() {
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        const toc: ToC = JSON.parse(JSON.stringify(getState().factory.toc));
+        toc.nTracks = 1;
+        toc.discNonEmpty = 1;
+        toc.nextFreeTrackSlot = 2;
+        toc.trackMap[1] = 1;
+    }
 }

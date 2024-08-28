@@ -19,6 +19,7 @@ import {
     toggleSPUploadSpeedup,
     stripTrProtect,
     enterHiMDUnrestrictedMode,
+    toggleDiscSwapDetection,
 } from '../../redux/factory/factory-actions';
 import { actions as appActions } from '../../redux/app-feature';
 import { actions as factoryEditOtherValuesDialogActions } from '../../redux/factory/factory-edit-other-values-dialog-feature';
@@ -45,6 +46,7 @@ import NoEncryptionIcon from '@mui/icons-material/NoEncryption';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import SettingsIcon from '@mui/icons-material/Settings';
+import DiscFullIcon from '@mui/icons-material/DiscFull';
 
 import { Capability, ExploitCapability } from '../../services/interfaces/netmd';
 
@@ -62,7 +64,7 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
     const { classes } = useStyles();
     const dispatch = useDispatch();
 
-    const { exploitCapabilities, spUploadSpeedupActive } = useShallowEqualSelector(state => state.factory);
+    const { exploitCapabilities, spUploadSpeedupActive, deviceDiscSwapDetectionDisabled } = useShallowEqualSelector(state => state.factory);
     const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
 
     const githubLinkRef = React.useRef<null | HTMLAnchorElement>(null);
@@ -196,6 +198,11 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
 
     const handleToggleSPUploadSpeedup = useCallback(() => {
         dispatch(toggleSPUploadSpeedup());
+        handleMenuClose();
+    }, [dispatch, handleMenuClose]);
+
+    const handleToggleDiscSwapDetection = useCallback(() => {
+        dispatch(toggleDiscSwapDetection());
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
@@ -385,6 +392,18 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
                 <ArchiveIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Archive Disc</ListItemText>
+        </MenuItem>
+    );
+    submenuItems.push(
+        <MenuItem
+            key="disable-disc-swap"
+            onClick={handleToggleDiscSwapDetection}
+            disabled={!(exploitCapabilities.includes(ExploitCapability.disableDiscSwapDetection))}
+        >
+            <ListItemIcon className={classes.listItemIcon}>
+                {deviceDiscSwapDetectionDisabled ? <ToggleOnIcon fontSize="small" /> : <ToggleOffIcon fontSize="small" />}
+            </ListItemIcon>
+            <ListItemText>{deviceDiscSwapDetectionDisabled ? 'Enable' : 'Disable'} disc swap detection</ListItemText>
         </MenuItem>
     );
 

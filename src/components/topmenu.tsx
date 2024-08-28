@@ -47,6 +47,7 @@ import { ExploitCapability } from '../services/interfaces/netmd';
 
 import {
     archiveDisc,
+    toggleDiscSwapDetection,
     enableFactoryRippingModeInMainUi,
     enterHiMDUnrestrictedMode,
     initializeFactoryMode,
@@ -73,7 +74,7 @@ export const TopMenu = function (props: { tracksSelected?: number[]; onClick?: (
 
     const { mainView, vintageMode, factoryModeRippingInMainUi, factoryModeShortcuts } = useShallowEqualSelector((state) => state.appState);
     const { disc } = useShallowEqualSelector((state) => state.main);
-    const { spUploadSpeedupActive } = useShallowEqualSelector((state) => state.factory);
+    const { spUploadSpeedupActive, deviceDiscSwapDetectionDisabled } = useShallowEqualSelector((state) => state.factory);
     const discTitle = useShallowEqualSelector((state) => state.main.disc?.title ?? ``);
     const fullWidthDiscTitle = useShallowEqualSelector((state) => state.main.disc?.fullWidthTitle ?? ``);
 
@@ -274,6 +275,11 @@ export const TopMenu = function (props: { tracksSelected?: number[]; onClick?: (
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
+    const handleToggleDiscSwapDetection = useCallback(() => {
+        dispatch(toggleDiscSwapDetection());
+        handleMenuClose();
+    }, [dispatch, handleMenuClose]);
+
     const noDisc = disc === null;
 
     shortcutsItems.push(
@@ -341,6 +347,19 @@ export const TopMenu = function (props: { tracksSelected?: number[]; onClick?: (
             </MenuItem>
         );
     }
+
+    shortcutsItems.push(
+        <MenuItem
+            key="short-disablediscswap"
+            onClick={handleToggleDiscSwapDetection}
+            disabled={!isExploitCapable(ExploitCapability.disableDiscSwapDetection)}
+        >
+            <ListItemIcon className={classes.listItemIcon}>
+                {deviceDiscSwapDetectionDisabled ? <ToggleOnIcon fontSize="small" /> : <ToggleOffIcon fontSize="small" />}
+            </ListItemIcon>
+            <ListItemText>{deviceDiscSwapDetectionDisabled ? 'Enable' : 'Disable'} disc swap detection</ListItemText>
+        </MenuItem>
+    );
 
     // END HOMEBREW / MAINUI BRIDGE
 

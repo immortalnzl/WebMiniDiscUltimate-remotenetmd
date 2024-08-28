@@ -9,6 +9,7 @@ export interface FactoryState {
     firmwareVersion: string;
     exploitCapabilities: ExploitCapability[];
     spUploadSpeedupActive: boolean;
+    deviceDiscSwapDetectionDisabled: boolean;
 }
 
 const initialState: FactoryState = {
@@ -16,6 +17,7 @@ const initialState: FactoryState = {
     firmwareVersion: '',
     exploitCapabilities: [],
     spUploadSpeedupActive: false,
+    deviceDiscSwapDetectionDisabled: false,
 };
 
 export const slice = createSlice({
@@ -37,6 +39,9 @@ export const slice = createSlice({
         setSPUploadSpedUp: (state, action: PayloadAction<boolean>) => {
             state.spUploadSpeedupActive = action.payload;
         },
+        setDiscSwapDetectionDisabled: (state, action: PayloadAction<boolean>) => {
+            state.deviceDiscSwapDetectionDisabled = action.payload;
+        }
     },
 });
 

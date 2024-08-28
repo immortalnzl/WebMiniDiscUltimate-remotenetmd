@@ -305,10 +305,12 @@ export function formatTimeFromSeconds(seconds: number, withHours = true) {
     const s = seconds % 60;
     seconds = (seconds - s) / 60; // min
 
-    const m = seconds % 60;
+    let m = seconds % 60;
     seconds = (seconds - m) / 60; // hour
 
     const h = seconds;
+
+    if(!withHours) m += h * 60;
 
     return (withHours ? `${pad(h, '00')}:` : '') + `${pad(m, '00')}:${pad(s, '00')}`;
 }
