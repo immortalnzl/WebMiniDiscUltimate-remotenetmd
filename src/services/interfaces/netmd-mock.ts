@@ -461,6 +461,7 @@ class NetMDMockService extends NetMDService {
 class NetMDFactoryMockService implements NetMDFactoryService {
     async prepareDownload(): Promise<void> {}
     async finalizeDownload(): Promise<void> {}
+    async setDiscSwapDetection(enable: boolean): Promise<void> {}
     async uploadSP(
         title: string,
         fullWidthTitle: string,
