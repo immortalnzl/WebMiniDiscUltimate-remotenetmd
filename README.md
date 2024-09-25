@@ -1,36 +1,40 @@
 # Web MiniDisc Pro
 
-*Brings NetMD Devices to the Web* - just with more features this time
+Copy audio to your NetMD MiniDisc device using only a web browser. Replace SonicStage, improve audio quality, and unlock new features. 
 
 Live @ [https://web.minidisc.wiki/](https://web.minidisc.wiki/).
 
+Full user guide @ [the MiniDisc Wiki](https://www.minidisc.wiki/guides/webminidisc/start)
+
 ## Requirements
 
-Requires *Chrome* or any other browser that supports both **WASM** and **WebUSB**
+- a NetMD recorder
+- USB cable (most use USB Mini-B)
+- Chromium web browser (Google Chrome, Microsoft Edge, Brave, etc.) or any other browser that supports both WASM and WebUSB
 
 ## Installation
 
 ### macOS
-_it just works ®_ ... no need to download or install any software.
+_it just works ®_ ... no need to download or install any software. Safari is not currently supported; please use a Chromium browser instead.
 
-For macOS developers, see [this](#development-on-macos)
+Some macOS-specific issues are documented in the [troubleshooting page](https://www.minidisc.wiki/guides/webminidisc/troubleshooting) of the user guide.
+
+For macOS developers, see [here](#development-on-macos).
 
 ### Linux
-Follow the instructions here [https://github.com/glaubitz/linux-minidisc/tree/master/netmd/etc](https://github.com/glaubitz/linux-minidisc/tree/master/netmd/etc) to grant your user access to the device. If you skip this step you'll likely get an *Access denied* message when trying to connect.
+Follow the instructions from the [user guide here](https://www.minidisc.wiki/guides/webminidisc/requirements#linux) or [the linux-minidisc project here](https://github.com/glaubitz/linux-minidisc/tree/master/netmd/etc) to grant your user access to the device. If you skip this step you'll likely get an *Access denied* message when trying to connect.
 
-*Ubuntu users* - Avoid using browsers installed via Snap as Snap's permission structure is different from traditionally installed applications and will lead to access denied errors. If you absolutely must use a Snap-packaged browser, run this command to let chromium access USB:
-```
-sudo snap connect chromium:raw-usb
-```
+If you use a "packaged" version of Chromium, such as from the Ubuntu Store, you will encounter more issues. [Refer to the user guide for more details.](https://www.minidisc.wiki/guides/webminidisc/requirements#packaged_browsers)
 
 ### Windows
-The Windows USB stack requires a driver to be installed to communicate with any USB device. The bad news is that there are no official Windows 10 drivers for NetMD devices. The good news is that we don't need it!
-We can just use a generic driver like *WinUSB* to access the device.
+The Windows USB stack requires a driver to be installed before using Web MiniDisc Pro. The driver installation requires Administrator privileges. 
 
-You can find installation instruction [here](https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/winusb-installation), but the easiest way to install is to use [Zadig](https://zadig.akeo.ie/).<br/> Note: you'll need to restart your browser after installation.
+[See the full details in the user guide here.](https://www.minidisc.wiki/guides/webminidisc/requirements#windows) - it is usually as simple as using [Zadig to install the driver.](https://zadig.akeo.ie/)
+
+Note: restart your browser after installation.
 
 ### Chrome OS
-Works without any addtional set up - tested with 91 stable (91.0.4472.102). If your user account or device is managed (by your school or company) you may run into some issues. If you are using a personal google account on a personal chromebook you should be good to go.
+Works without any addtional set up - tested with 91 stable (91.0.4472.102). If your user account or device is managed (by your school or company) you may run into issues. If you are using a personal Google account on a personal Chromebook you should be good to go.
 
 -----
 ## Differences between [Web Minidisc](https://github.com/cybercase/webminidisc) and Web Minidisc Pro
@@ -52,7 +56,7 @@ In addition to the standard NetMD features that Web MiniDisc provides, Web MiniD
 -----
 ## Development
 
-Development discussion and coordination happens through the [MiniDisc.wiki Discord](https://minidisc.wiki/discord) in the #research channel
+Development discussion and coordination happens through the [MiniDisc.wiki Discord server](https://minidisc.wiki/discord) in the #research channel
 
 ### How to build
 
@@ -82,11 +86,17 @@ In macOS Terminal: `brew install --build-from-source gcc`, wait for it to finish
 With the above prerequisites done, you can continue the build process as described in the [How to Build](#how-to-build) section
 
 -----
-### How to Contribute
+### How to contribute
 If there's a feature you'd like to see implemented in Web MiniDisc Pro, feel free to submit a pull request.
 
-### Bugs and Issues
+### Bugs and issues
 Feel free to submit any issues as a GitHub issue. Web MiniDisc Pro is a hobby project and the developers cannot make guarantees about timeliness of bugfixes. If you have the skills to implement fixes yourself, we're more than happy to review pull requests.
+
+### Forks
+Web MiniDisc Pro and its predecessors are GPL licensed. You are free to fork or clone and create your own instance. However we ask that you:
+- Change the name and description so that users do not confuse your fork with the upstream project
+- Update bug reporting links to your own repo rather than this upstream one
+- Remove the included reference to the LP encoding server provided by the MiniDisc Wiki project, or contact them for permission to include it
 
 ## Credits
 - [FFmpeg](https://www.ffmpeg.org/) *and* [ffmpegjs](https://github.com/ffmpegjs/FFmpeg) *to read audio files (wav, mp3, ogg, mp4, etc...).*
