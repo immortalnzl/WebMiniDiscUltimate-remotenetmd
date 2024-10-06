@@ -14,7 +14,7 @@ export function defaultSorter(a: File, b: File, by: string, asc: boolean){
 
     const aV = a.props?.[by],
           bV = b.props?.[by];
-    if(aV === undefined || bV === undefined) return 0;
+    if(aV === undefined || aV === null || bV === undefined || bV === null) return 0;
     if(typeof aV === 'string' && typeof bV === 'string') {
         return aV.localeCompare(bV) * ascMultiply;
     } else if(typeof aV === 'number' && typeof bV === 'number'){

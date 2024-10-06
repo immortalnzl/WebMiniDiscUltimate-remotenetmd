@@ -57,6 +57,7 @@ const useStyles = makeStyles()((theme, _params, classes) => ({
             height: '49%',
         },
         display: 'flex',
+        overflow: 'auto',
         flexDirection: 'column',
         height: '100%',
     },
@@ -107,7 +108,7 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
         setCurrentFileTree(convertToFileArray(database || {}, currentPath));
     }, [database, currentPath, setCurrentFileTree]);
 
-    const [selectedFiles, setSelectedFiles] = useState<{ path: string; album: string; artist: string; title: string; duration: number }[]>(
+    const [selectedFiles, setSelectedFiles] = useState<{ path: string; album: string; artist: string; title: string; duration: number, trackIndex?: number }[]>(
         []
     );
 
@@ -128,13 +129,14 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                 const artist = file.props!['artist'];
                 const title = file.props!['title'];
                 const duration = file.props!['duration'];
+                const trackIndex = file.props!['trackIndex'];
                 const indexFound = current.findIndex((e) => e.path === path);
                 if (indexFound !== -1) {
                     // Delete (unmark)
                     current.splice(indexFound, 1);
                 } else {
                     // Add (mark)
-                    current = [...current, { album, artist, path, title, duration }];
+                    current = [...current, { album, artist, path, title, duration, trackIndex }];
                 }
             }
             return current;
@@ -150,11 +152,12 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
     }, [addFiles, setCurrentPath]);
 
     const handleAddAllSelected = useCallback((files: File[]) => {
-        const process = (files: File[]): File[] => {
+        const process = (path: string[], files: File[]): File[] => {
             const finalFiles = [];
             for(let file of files){
                 if(file.type === FileType.Directory) {
-                    const subFiles = convertToFileArray(database ?? {}, [...currentPath, file.name]);
+                    const newPath = [...path, file.name];
+                    const subFiles = convertToFileArray(database ?? {}, newPath);
                     subFiles.sort((a, b) => {
                         const dirSortResult = dirSorter(a, b, '', false);
                         if(dirSortResult) return dirSortResult;
@@ -163,7 +166,7 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                         }
                         return a.name.localeCompare(b.name);
                     });
-                    finalFiles.push(...process(subFiles));
+                    finalFiles.push(...process(newPath, subFiles));
                 } else {
                     finalFiles.push(file);
                 }
@@ -171,7 +174,7 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
             return finalFiles;
         };
 
-        addFiles(process(files));
+        addFiles(process(currentPath, files));
         return true;
     }, [addFiles, database, currentPath]);
 
@@ -220,6 +223,7 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                                 manualName={true}
                                 allowMultifileSelection={true}
                                 defaultSorting={{ by: 'name', asc: false }}
+                                pathString={currentPath.join('/')}
                                 additionalColumns={[
                                     {
                                         name: 'trackIndex',
@@ -234,16 +238,16 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                                 ]}
                                 actions={[
                                     {
-                                        name: 'Root',
-                                        icon: <ArrowUpward />,
-                                        actionPossible: () => currentPath.length > 0,
-                                        handler: () => setCurrentPath([]),
-                                    },
-                                    {
                                         name: '',
                                         icon: <ArrowUpward />,
                                         actionPossible: () => currentPath.length > 0,
                                         handler: () => setCurrentPath(e => e.slice(0, -1)),
+                                    },
+                                    {
+                                        name: 'Root',
+                                        icon: <ArrowUpward />,
+                                        actionPossible: () => currentPath.length > 0,
+                                        handler: () => setCurrentPath([]),
                                     },
                                     {
                                         name: 'Add / Remove Selected',
@@ -261,6 +265,7 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                         <Table size="small" style={{ tableLayout: 'fixed' }}>
                             <TableHead>
                                 <TableRow>
+                                    <TableCell>Track #</TableCell>
                                     <TableCell>Title</TableCell>
                                     <TableCell>Album</TableCell>
                                     <TableCell>Artist</TableCell>
@@ -274,6 +279,7 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                                         className={classes.uploadRow}
                                         onClick={() => setSelectedFiles((old) => old.filter((z) => z !== e))}
                                     >
+                                        <TableCell>{e.trackIndex}</TableCell>
                                         <TableCell>{e.title}</TableCell>
                                         <TableCell>{e.album}</TableCell>
                                         <TableCell>{e.artist}</TableCell>

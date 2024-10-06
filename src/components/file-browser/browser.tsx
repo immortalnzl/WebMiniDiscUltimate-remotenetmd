@@ -34,6 +34,7 @@ export interface FileBrowserProps {
         actionButton?: string;
         actions?: string;
     };
+    pathString?: string;
     manualName?: boolean;
     columnNotFoundPlaceholder?: string;
     iconGenerator?: (file: File) => ReactElement;
