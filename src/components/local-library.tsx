@@ -12,7 +12,6 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Slide, { SlideProps } from '@mui/material/Slide';
 import Button from '@mui/material/Button';
-import { ChonkyActions, FileArray, FileData, FileHelper, FullFileBrowser } from 'chonky';
 import { useTheme } from '@mui/material/styles';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -24,39 +23,14 @@ import { makeStyles } from 'tss-react/mui';
 import serviceRegistry from '../services/registry';
 import { ExportParams } from '../services/audio/audio-export';
 import { LocalDatabase } from '../services/library/library';
-import { ChonkyIconFA } from 'chonky-icon-fontawesome';
+import { File, FileBrowser } from './file-browser/browser';
+import { Add, ArrowUpward } from '@mui/icons-material';
+import { dirSorter, FileType } from './file-browser/utils';
 
 const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const convertToChonkyFiles = (data: LocalDatabase, path: string[] = [], previousRoots: FileData[] = []): FileArray => {
-    return Object.entries(data).map(([key, value]) => {
-        const isFolder = !('artist' in value);
-
-        const file: FileData = {
-            id: [...path, key].join('/'),
-            name: key,
-            isDir: isFolder,
-        };
-
-        if (isFolder) {
-            let roots = [...previousRoots, file];
-            file.children = convertToChonkyFiles(value as LocalDatabase, [...path, key], roots);
-            file.chain = [
-                { id: 'root', name: '<root>', isDir: true, getSelf: () => null },
-                ...[...path, key].map((e, i, a) => ({ getSelf: () => roots[i], id: a.slice(0, i + 1).join('/'), name: e, isDir: true })),
-            ];
-        } else {
-            file.artist = (value as { artist: string; album: string; title: string }).artist;
-            file.album = (value as { artist: string; album: string; title: string }).album;
-            file.title = (value as { artist: string; album: string; title: string }).title;
-            file.duration = (value as { duration: number }).duration;
-        }
-
-        return file;
-    });
-};
 
 const useStyles = makeStyles()((theme, _params, classes) => ({
     uploadRow: {
@@ -91,9 +65,32 @@ const useStyles = makeStyles()((theme, _params, classes) => ({
         margin: 0,
         marginBottom: theme.spacing(2.5),
     },
+    trackIndexCol: {
+        width: 60,
+    }
 }));
 
 export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (files: AdaptiveFile[]) => void }) => {
+    const [currentPath, setCurrentPath] = useState<string[]>([]);
+    const convertToFileArray = (data: LocalDatabase, path: string[] = []): File[] => {
+        const originalPath = [...path];
+        path = [...path];
+        while(path.length){
+            data = data[path.splice(0, 1)[0]] as any;
+        }
+        return Object.entries(data).map(([key, value]) => {
+            const isFolder = !('artist' in value);
+            return {
+                name: key,
+                type: isFolder ? FileType.Directory : FileType.File,
+                props: isFolder ? {} : {
+                    ...value,
+                    id: [...originalPath, key].join('/'),
+                },
+            }
+        });
+    }
+
     const { classes } = useStyles();
     const dispatch = useDispatch();
     const theme = useTheme();
@@ -105,57 +102,78 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
         dispatch(localLibraryActions.setVisible(false));
     }, [dispatch]);
 
-    const [currentFolderId, setCurrentFolderId] = useState<string>('');
-    const [files, setFiles] = useState<FileArray>(convertToChonkyFiles(database || {}));
-    const [folderChain, setFolderChain] = useState<FileArray>([{ id: 'root', name: '<root>', isDir: true, getSelf: () => null }]);
+    const [currentFileTree, setCurrentFileTree] = useState<File[]>(convertToFileArray(database ?? {}));
+    useEffect(() => {
+        setCurrentFileTree(convertToFileArray(database || {}, currentPath));
+    }, [database, currentPath, setCurrentFileTree]);
+
     const [selectedFiles, setSelectedFiles] = useState<{ path: string; album: string; artist: string; title: string; duration: number }[]>(
         []
     );
 
     const resetToRoot = useMemo(
         () => () => {
-            setFiles(convertToChonkyFiles(database || {}));
-            setFolderChain([{ id: 'root', name: '<root>', isDir: true, getSelf: () => null }]);
-            setCurrentFolderId('root');
+            setCurrentPath([]);
         },
-        [database]
+        [database, setCurrentPath]
     );
 
-    useEffect(() => setFiles(convertToChonkyFiles(database || {})), [database]);
 
-    const handleFileAction = (data: any) => {
-        if (data.id === ChonkyActions.OpenFiles.id) {
-            let targetFile = data.payload.targetFile;
-            if (targetFile.getSelf) targetFile = targetFile.getSelf();
-            if (targetFile === null) {
-                resetToRoot();
+    const addFiles = useCallback((files: File[]) => {
+        setSelectedFiles((old) => {
+            let current = [...old];
+            for(let file of files) {
+                const path = file.props!['id'];
+                const album = file.props!['album'];
+                const artist = file.props!['artist'];
+                const title = file.props!['title'];
+                const duration = file.props!['duration'];
+                const indexFound = current.findIndex((e) => e.path === path);
+                if (indexFound !== -1) {
+                    // Delete (unmark)
+                    current.splice(indexFound, 1);
+                } else {
+                    // Add (mark)
+                    current = [...current, { album, artist, path, title, duration }];
+                }
             }
-            if (FileHelper.isDirectory(targetFile)) {
-                setCurrentFolderId(targetFile.id);
-                setFolderChain(targetFile.chain);
-                setFiles(targetFile.children || []);
-            } else {
-                const path = targetFile.id;
-                const album = targetFile.album;
-                const artist = targetFile.artist;
-                const title = targetFile.title;
-                const duration = targetFile.duration;
+            return current;
+        });
+    }, [setSelectedFiles]);
 
-                setSelectedFiles((old) => {
-                    const indexFound = old.findIndex((e) => e.path === path);
-                    if (indexFound !== -1) {
-                        // Delete (unmark)
-                        old = [...old];
-                        old.splice(indexFound, 1);
-                        return old;
-                    } else {
-                        // Add (mark)
-                        return [...old, { album, artist, path, title, duration }];
-                    }
-                });
-            }
+    const handleFileAction = useCallback((file: File) => {
+        if (file.type === FileType.Directory) {
+            setCurrentPath(e => [...e, file.name]);
+        } else {
+            addFiles([ file ]);
         }
-    };
+    }, [addFiles, setCurrentPath]);
+
+    const handleAddAllSelected = useCallback((files: File[]) => {
+        const process = (files: File[]): File[] => {
+            const finalFiles = [];
+            for(let file of files){
+                if(file.type === FileType.Directory) {
+                    const subFiles = convertToFileArray(database ?? {}, [...currentPath, file.name]);
+                    subFiles.sort((a, b) => {
+                        const dirSortResult = dirSorter(a, b, '', false);
+                        if(dirSortResult) return dirSortResult;
+                        if(a.props?.['trackIndex'] !== undefined && a.props?.['trackIndex'] !== undefined) {
+                            return a.props!['trackIndex'] - b.props!['trackIndex'];
+                        }
+                        return a.name.localeCompare(b.name);
+                    });
+                    finalFiles.push(...process(subFiles));
+                } else {
+                    finalFiles.push(file);
+                }
+            }
+            return finalFiles;
+        };
+
+        addFiles(process(files));
+        return true;
+    }, [addFiles, database, currentPath]);
 
     const handleForwardFiles = useCallback(() => {
         const adaptiveFiles: AdaptiveFile[] = selectedFiles.map((file) => {
@@ -180,7 +198,6 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
         resetToRoot();
     }, [convertDialogVisible, selectedFiles, dispatch, setUploadedFiles, resetToRoot]);
 
-    const TypescriptHackFullFileBrowser = FullFileBrowser as any;
     return (
         <Dialog
             open={visible}
@@ -196,15 +213,45 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                     <div className={classes.internalDiv}>
                         <DialogContentText>{status}&nbsp;</DialogContentText>
                         {visible && (
-                            <TypescriptHackFullFileBrowser
-                                files={files}
-                                folderChain={folderChain}
-                                onFileAction={handleFileAction}
-                                darkMode={theme.palette.mode === 'dark'}
-                                iconComponent={ChonkyIconFA}
-                                disableSelection={true}
-                                disableDragAndDrop={true}
-                                defaultFileViewActionId={ChonkyActions.EnableListView.id}
+                            <FileBrowser
+                                fileTree={currentFileTree}
+                                onFileDoubleClick={handleFileAction}
+                                columnNotFoundPlaceholder=''
+                                manualName={true}
+                                allowMultifileSelection={true}
+                                defaultSorting={{ by: 'name', asc: false }}
+                                additionalColumns={[
+                                    {
+                                        name: 'trackIndex',
+                                        overrideName: 'Track Index',
+                                        sortable: true,
+                                        class: classes.trackIndexCol,
+                                    },
+                                    {
+                                        name: 'name',
+                                        sortable: true,
+                                    },
+                                ]}
+                                actions={[
+                                    {
+                                        name: 'Root',
+                                        icon: <ArrowUpward />,
+                                        actionPossible: () => currentPath.length > 0,
+                                        handler: () => setCurrentPath([]),
+                                    },
+                                    {
+                                        name: '',
+                                        icon: <ArrowUpward />,
+                                        actionPossible: () => currentPath.length > 0,
+                                        handler: () => setCurrentPath(e => e.slice(0, -1)),
+                                    },
+                                    {
+                                        name: 'Add / Remove Selected',
+                                        icon: <Add />,
+                                        actionPossible: e => e.length > 0,
+                                        handler: e => handleAddAllSelected(e),
+                                    }
+                                ]}
                             />
                         )}
                     </div>
