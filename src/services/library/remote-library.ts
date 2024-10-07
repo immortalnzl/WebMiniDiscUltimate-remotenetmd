@@ -96,19 +96,20 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
             for(let i = 0; i<MAX_TRIES; i++){
                 try{
                     response = await fetch(encodingURL.href);
-                    break;
+                    if(response === null) {
+                        throw new Error("Failed to convert audio!");
+                    }
+                    const source = await response.arrayBuffer();
+                    const content = new Uint8Array(source);
+                    const file = new File([content], 'test.at3');
+                    const headerLength = (await getATRACWAVEncoding(file))!.headerLength;
+                    return source.slice(headerLength);
                 }catch(ex){
                     console.log("Error while fetching: " + ex);
                 }
             }
-            if(response === null) {
-                throw new Error("Failed to convert audio!");
-            }
-            const source = await response.arrayBuffer();
-            const content = new Uint8Array(source);
-            const file = new File([content], 'test.at3');
-            const headerLength = (await getATRACWAVEncoding(file))!.headerLength;
-            return source.slice(headerLength);
+
+            throw new Error("Failed to transcode audio!");
         }
     }
 }
