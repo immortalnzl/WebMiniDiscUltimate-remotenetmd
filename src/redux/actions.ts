@@ -1114,7 +1114,7 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
                 continue;
             }
             const SECONDS_TO_OFFSET = 10;
-            const TRY_COUNT = 2;
+            const TRY_COUNT = 3;
             const SECONDS_TO_READ = 16;
             const MIN_DURATION = 2 * (SECONDS_TO_OFFSET * TRY_COUNT + SECONDS_TO_READ);
 
@@ -1130,7 +1130,7 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
                 continue;
             }
 
-            for (let offset = 0; offset < SECONDS_TO_OFFSET * TRY_COUNT; offset += SECONDS_TO_OFFSET) {
+            for (let offset = 0; offset < 8 * TRY_COUNT; offset += 8) {
                 let rawSamples: Uint8Array;
                 dispatch(
                     batchActions([

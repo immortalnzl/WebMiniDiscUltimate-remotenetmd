@@ -55,7 +55,10 @@ export class RemoteAtracExportService extends DefaultFfmpegAudioExportService {
         let response: Response | null = null;
         for(let i = 0; i<MAX_TRIES; i++){
             try{
-                response = await fetch(encodingURL.href);
+                response = await fetch(encodingURL.href, {
+                    method: 'POST',
+                    body: payload,
+                });
                 if(response === null) {
                     throw new Error("Failed to convert audio!");
                 }
