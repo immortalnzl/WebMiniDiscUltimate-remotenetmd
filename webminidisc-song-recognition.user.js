@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Web Mindisc Song Recognition Enabler
+// @name         Web Minidisc Song Recognition Enabler
 // @description  This userscript lets you use the Song Recognition functionality of Web Minidisc Pro without ElectronWMD
 // @version      0.1.0
 // @namespace    http://tampermonkey.net/
