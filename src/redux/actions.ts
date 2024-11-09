@@ -1106,11 +1106,10 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
             await serviceRegistry.netmdFactoryService!.prepareDownload(getState().appState.factoryModeUseSlowerExploit);
         }
 
-        let i = 0;
-        let toRecognizeI = 0;
-        for (const trackEntry of trackEntries) {
+        let toRecognizeTrackCounter = -1;
+        for (let i = 0; i<trackEntries.length; i++) {
+            const trackEntry = trackEntries[i];
             if (!trackEntry.selectedToRecognize || trackEntry.alreadyRecognized) {
-                i++;
                 continue;
             }
             const SECONDS_TO_OFFSET = 10;
@@ -1120,7 +1119,6 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
 
             // TRY_COUNT tries to get the song right:
             const track = getTracks(getState().main.disc!).find((e) => e.index === trackEntry.index)!;
-            dispatch(songRecognitionProgressDialogActions.setCurrentTrack(toRecognizeI));
 
             if (track.duration < MIN_DURATION) {
                 trackEntries[i] = {
@@ -1129,6 +1127,8 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
                 };
                 continue;
             }
+            toRecognizeTrackCounter++;
+            dispatch(songRecognitionProgressDialogActions.setCurrentTrack(toRecognizeTrackCounter));
 
             for (let offset = 0; offset < 8 * TRY_COUNT; offset += 8) {
                 let rawSamples: Uint8Array;
@@ -1209,8 +1209,8 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
                 dispatch(batchActions([songRecognitionProgressDialogActions.setCurrentStepProgress(-1)]));
 
                 const samplesArray = [];
-                for (let i = 0; i < rawSamples.length / 2; i++) {
-                    samplesArray.push(rawSamples[2 * i] | (rawSamples[2 * i + 1] << 8));
+                for (let sample = 0; sample < rawSamples.length / 2; sample++) {
+                    samplesArray.push(rawSamples[2 * sample] | (rawSamples[2 * sample + 1] << 8));
                 }
                 const songData = await shazam.recognizeSong(samplesArray, (state) =>
                     dispatch(songRecognitionProgressDialogActions.setCurrentStep(state === 'generating' ? 1 : 2))
@@ -1235,8 +1235,6 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
                 if (getState().songRecognitionProgressDialog.cancelled) break;
             }
             if (getState().songRecognitionProgressDialog.cancelled) break;
-            i++;
-            toRecognizeI++;
         }
         if (mode === 'exploits') await serviceRegistry.netmdFactoryService!.finalizeDownload();
         dispatch(
