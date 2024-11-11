@@ -115,7 +115,7 @@ const Toc = () => {
     const [highlitedContents, setHighlitedContents] = useState<number[]>([]);
     const [contentCounter, setContentCounter] = useState<number>(0);
 
-    const junctionTables = useMemo(() => (toc ? [toc?.trackMap, toc?.titleMap, toc?.timestampMap] : []), [toc]);
+    const junctionTables = useMemo(() => (toc ? [toc?.trackMap, toc?.titleMap, toc?.timestampMap, toc?.fullWidthTitleMap] : []), [toc]);
     const counterResetValue = useMemo(() => {
         if (contentsTable.length === 0) return 0;
         const all = contentsTable.map(n => n.contents.length).reduce((a, b) => a * b, 1);
@@ -202,6 +202,17 @@ const Toc = () => {
                     i = toc!.titleCellList[i].link;
                     if (i === 0) break;
                 }
+            } else if (selectedTab === 3) {
+                const cellIndex = newIndex >= 256 ? newIndex - 256 : toc!.fullWidthTitleMap[newIndex];
+
+                lookBack(toc!.fullWidthTitleCellList, cellIndex);
+                // Look forward
+                let i = cellIndex;
+                while (!newHighlited.includes(i)) {
+                    newHighlited.push(i);
+                    i = toc!.fullWidthTitleCellList[i].link;
+                    if (i === 0) break;
+                }
             }
             setHighlitedContents(newHighlited);
         },
@@ -211,7 +222,7 @@ const Toc = () => {
     const handleUpdateLink = useCallback(
         (newLink: number) => {
             const newTOC = JSON.parse(JSON.stringify(toc)) as ToC;
-            [newTOC.trackMap, newTOC.titleMap, newTOC.timestampMap][selectedTab][selectedTile] = newLink;
+            [newTOC.trackMap, newTOC.titleMap, newTOC.timestampMap, newTOC.fullWidthTitleMap][selectedTab][selectedTile] = newLink;
             dispatch(batchActions([factoryActions.setToc(newTOC), factoryActions.setModified(true)]));
         },
         [dispatch, toc, selectedTab, selectedTile]
@@ -220,7 +231,7 @@ const Toc = () => {
     const handleUpdateTOCSpace = useCallback(
         (name: string, value: any) => {
             const newTOC = JSON.parse(JSON.stringify(toc)) as ToC;
-            ([newTOC.trackFragmentList, newTOC.titleCellList, newTOC.timestampList][selectedTab][selectedTile - 256] as any)[name] = value;
+            ([newTOC.trackFragmentList, newTOC.titleCellList, newTOC.timestampList, newTOC.fullWidthTitleCellList][selectedTab][selectedTile - 256] as any)[name] = value;
             dispatch(batchActions([factoryActions.setToc(newTOC), factoryActions.setModified(true)]));
         },
         [dispatch, toc, selectedTab, selectedTile]
@@ -338,6 +349,18 @@ const Toc = () => {
                     '#5ec8f9'
                 );
                 break;
+            case 3:
+                // Kanji sector
+                applyParameters(newContents, toc?.fullWidthTitleCellList ?? [], e => !e.title.every(e => e === 0), 'T', '#5ec8f9'); // Text
+                applyParameters(
+                    newContents,
+                    toc?.fullWidthTitleCellList ?? [],
+                    (e, i) =>
+                        !toc?.fullWidthTitleMap.includes(i) && !toc?.fullWidthTitleCellList.map(n => n.link).includes(i) && !e.title.every(e => e === 0),
+                    'U',
+                    'red'
+                ); // Apply unlinked parameter
+                break;
         }
 
         newContents.filter(n => n.contents.length === 0).forEach(n => (n.contents as any).push({ text: 'U', color: '' }));
@@ -406,6 +429,7 @@ const Toc = () => {
                 <Tab label="Position Sector" />
                 <Tab label="Half-Width Sector" />
                 <Tab label="Timestamp Sector" />
+                <Tab label="Full-Width Sector" />
             </Tabs>
             <Box className={`${classes.tocTable} ${classes.tocRoot}`}>
                 <TocTable
@@ -424,7 +448,7 @@ const Toc = () => {
                     selectedIndex={selectedTile - 256}
                     data={contentsTable}
                     contentCounter={contentCounter}
-                    name={['Track Fragment Map', 'Title Cells Map', 'Timestamps Map'][selectedTab]}
+                    name={['Track Fragment Map', 'Title Cells Map', 'Timestamps Map', 'Full Width Title Cells Map'][selectedTab]}
                 />
             </Box>
             {toc && (
@@ -472,6 +496,13 @@ const Toc = () => {
                                 <React.Fragment>
                                     <Typography className={classes.infoText} variant="body2">
                                         Full title: {getTitleByTrackNumber(toc, selectedTile)}
+                                    </Typography>
+                                </React.Fragment>
+                            )}
+                            {selectedTab === 3 && (
+                                <React.Fragment>
+                                    <Typography className={classes.infoText} variant="body2">
+                                        Full title: {getTitleByTrackNumber(toc, selectedTile, true)}
                                     </Typography>
                                 </React.Fragment>
                             )}
@@ -556,6 +587,21 @@ const Toc = () => {
                                         name="Signature"
                                         bytes={2}
                                         additionalAnnotation={getDeviceNameFromTOCSignature(toc.timestampList[selectedTile - 256].signature)}
+                                    />
+                                </React.Fragment>
+                            )}
+                            {selectedTab === 3 && (
+                                <React.Fragment>
+                                    <Typography variant="h5" className={classes.infoText}>
+                                        Cell {selectedTile - 256} (full-width SJIS)
+                                    </Typography>
+                                    <CellInput
+                                        value={toc.fullWidthTitleCellList[selectedTile - 256].title}
+                                        setValue={e => handleUpdateTOCSpace('title', e)}
+                                    />
+                                    <LinkSelector
+                                        value={toc.fullWidthTitleCellList[selectedTile - 256].link}
+                                        setValue={e => handleUpdateTOCSpace('link', e)}
                                     />
                                 </React.Fragment>
                             )}

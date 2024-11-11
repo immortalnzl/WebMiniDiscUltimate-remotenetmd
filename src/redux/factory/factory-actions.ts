@@ -39,7 +39,8 @@ export function readToc() {
         const newToc = parseTOC(
             await serviceRegistry.netmdFactoryService!.readUTOCSector(0),
             await serviceRegistry.netmdFactoryService!.readUTOCSector(1),
-            await serviceRegistry.netmdFactoryService!.readUTOCSector(2)
+            await serviceRegistry.netmdFactoryService!.readUTOCSector(2),
+            await serviceRegistry.netmdFactoryService!.readUTOCSector(3),
         );
         const firmwareVersion = await serviceRegistry.netmdFactoryService!.getDeviceFirmware();
         const capabilities = await serviceRegistry.netmdFactoryService!.getExploitCapabilities();
@@ -71,7 +72,7 @@ export function writeModifiedTOC() {
         dispatch(appStateActions.setLoading(true));
         const toc = getState().factory.toc!;
         const sectors = reconstructTOC(toc, false);
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 4; i++) {
             await serviceRegistry.netmdFactoryService!.writeUTOCSector(i, sectors[i]!);
         }
         await serviceRegistry.netmdFactoryService!.flushUTOCCacheToDisc();
