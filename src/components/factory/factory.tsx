@@ -279,7 +279,18 @@ const Toc = () => {
         const newContents = Array(256)
             .fill(0)
             .map(n => ({ current: 0, contents: [] }));
-        applyParameters(newMap, junctionTables[selectedTab] ?? [], e => e !== 0, 'L', '#5ec8f9', 'U'); // Apply 'Linked' and 'Unlinked' parameters
+        if(selectedTab !== 3) {
+            applyParameters(newMap, junctionTables[selectedTab] ?? [], e => e !== 0, 'L', '#5ec8f9', 'U'); // Apply 'Linked' and 'Unlinked' parameters
+        } else {
+            // Sector 3 does not define 0 as 'unlinked' for disc name.
+            applyParameters(newMap, junctionTables[selectedTab] ?? [], (e, i) => {
+                if(i === 0) {
+                    return (toc?.fullWidthTitleCellList ?? [])[i].title.some(z => z !== 0)
+                } else {
+                    return e !== 0;
+                }
+            }, 'L', '#5ec8f9', 'U'); // Apply 'Linked' and 'Unlinked' parameters
+        }
         switch (selectedTab) {
             case 0:
                 // Position sector
@@ -502,7 +513,7 @@ const Toc = () => {
                             {selectedTab === 3 && (
                                 <React.Fragment>
                                     <Typography className={classes.infoText} variant="body2">
-                                        Full title: {getTitleByTrackNumber(toc, selectedTile, true)}
+                                        Full title: {getTitleByTrackNumber(toc, selectedTile, true, (selectedTile === 0 && (toc.fullWidthTitleCellList ?? [])[toc.fullWidthTitleMap[selectedTab]].title?.some(e => e !== 0)))}
                                     </Typography>
                                 </React.Fragment>
                             )}

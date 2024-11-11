@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useShallowEqualSelector, useDispatch, batchActions } from "../../frontend-utils";
 
 import { makeStyles } from 'tss-react/mui';
@@ -12,7 +12,7 @@ import Button from '@mui/material/Button';
 import { actions as factoryEditOtherValuesDialogActions } from '../../redux/factory/factory-edit-other-values-dialog-feature';
 import { actions as factoryActions } from '../../redux/factory/factory-feature';
 import { ToC } from 'netmd-tocmanip';
-import { Typography } from '@mui/material';
+import { Tooltip, Typography } from '@mui/material';
 import { getDeviceNameFromTOCSignature } from '../../utils';
 
 const Transition = React.forwardRef(function Transition(
@@ -41,6 +41,13 @@ function asWord(e: any, callback: (e: number) => void) {
     if(isNaN(asNumber)) callback(0);
 }
 
+function ellipsisIfTooLong(str: string, maxLength: number){
+    if(str.length > maxLength) {
+        return str.substring(0, maxLength - 3) + "...";
+    }
+    return str;
+}
+
 const AnnotatedTextField = ({ label, className, value, onChange, annotation }: {
     label: string;
     className: string;
@@ -48,6 +55,7 @@ const AnnotatedTextField = ({ label, className, value, onChange, annotation }: {
     onChange: (e: any) => void,
     annotation?: string
 }) => {
+    const shortened = useMemo(() => annotation ? ellipsisIfTooLong(annotation, 40) : undefined, [annotation]);
     return <div style={{display: 'flex', alignItems: 'center'}}>
         <TextField
             label={label}
@@ -57,7 +65,13 @@ const AnnotatedTextField = ({ label, className, value, onChange, annotation }: {
             onChange={onChange}
             style={{flexGrow: 1}}
         />
-        <Typography style={{textWrap: 'nowrap'}}>{annotation}</Typography>
+        {shortened === annotation ? (
+            <Typography style={{textWrap: 'nowrap'}}>{annotation}</Typography>
+        ) : (
+            <Tooltip title={annotation}>
+                <Typography style={{textWrap: 'nowrap'}}>{shortened}</Typography>
+            </Tooltip>
+        )}
     </div>
 }
 
@@ -138,6 +152,13 @@ export const FactoryModeEditOtherValuesDialog = (props: {}) => {
                     fullWidth
                     value={tocWorkingCopy?.nextFreeTimestampSlot}
                     onChange={e => asByte(e, e => setTocWorkingCopy({ ...tocWorkingCopy!, nextFreeTimestampSlot: e }))}
+                />
+                <TextField
+                    label="Next Free Full Width Title Slot"
+                    className={classes.marginUpDown}
+                    fullWidth
+                    value={tocWorkingCopy?.nextFreeFullWidthTitleSlot}
+                    onChange={e => asByte(e, e => setTocWorkingCopy({ ...tocWorkingCopy!, nextFreeFullWidthTitleSlot: e }))}
                 />
             </DialogContent>
             <DialogActions>

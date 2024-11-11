@@ -43,7 +43,7 @@
     "music-metadata-browser": "^2.5.9",
     "netmd-exploits": "^0.5.8",
     "netmd-js": "^4.2.2",
-    "netmd-tocmanip": "^0.2.0",
+    "netmd-tocmanip": "^0.2.1",
     "prettier": "^3.2.5",
     "react": "^18.2.0",
     "react-beautiful-dnd": "^13.1.1",
