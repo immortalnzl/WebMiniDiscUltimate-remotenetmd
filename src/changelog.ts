@@ -2,6 +2,14 @@ import { ChangelogVersion } from "./bridge-types";
 
 export const CHANGELOG: ChangelogVersion[] = [
     {
+        name: "Version 1.5.1",
+        contents: [
+            "Fixed some stability issues related to the remote encoder",
+            "Fixed some issues regarding track recognition",
+            "Fixed full-width title support",
+        ]
+    },
+    {
         name: "Version 1.5.0",
         contents: [
             "Overhauled UI - updated all outdated dependencies",
