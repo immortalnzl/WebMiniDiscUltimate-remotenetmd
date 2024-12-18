@@ -20,6 +20,7 @@ import {
     stripTrProtect,
     enterHiMDUnrestrictedMode,
     toggleDiscSwapDetection,
+    enterServiceMode,
 } from '../../redux/factory/factory-actions';
 import { actions as appActions } from '../../redux/app-feature';
 import { actions as factoryEditOtherValuesDialogActions } from '../../redux/factory/factory-edit-other-values-dialog-feature';
@@ -46,6 +47,7 @@ import NoEncryptionIcon from '@mui/icons-material/NoEncryption';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import SettingsIcon from '@mui/icons-material/Settings';
+import HomeRepairServiceIcon from '@mui/icons-material/HomeRepairService';
 import DiscFullIcon from '@mui/icons-material/DiscFull';
 
 import { Capability, ExploitCapability } from '../../services/interfaces/netmd';
@@ -203,6 +205,11 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
 
     const handleToggleDiscSwapDetection = useCallback(() => {
         dispatch(toggleDiscSwapDetection());
+        handleMenuClose();
+    }, [dispatch, handleMenuClose]);
+
+    const handleEnterServiceMode = useCallback(() => {
+        dispatch(enterServiceMode());
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
@@ -404,6 +411,18 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
                 {deviceDiscSwapDetectionDisabled ? <ToggleOnIcon fontSize="small" /> : <ToggleOffIcon fontSize="small" />}
             </ListItemIcon>
             <ListItemText>{deviceDiscSwapDetectionDisabled ? 'Enable' : 'Disable'} disc swap detection</ListItemText>
+        </MenuItem>
+    );
+    submenuItems.push(
+        <MenuItem
+            key="enter-service-mode"
+            onClick={handleEnterServiceMode}
+            disabled={!(exploitCapabilities.includes(ExploitCapability.enterServiceMode))}
+        >
+            <ListItemIcon className={classes.listItemIcon}>
+                <HomeRepairServiceIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Enter Service Mode</ListItemText>
         </MenuItem>
     );
 

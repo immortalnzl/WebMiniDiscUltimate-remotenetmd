@@ -54,6 +54,7 @@ import {
     ConsoleLogger,
     MonoSPUpload,
     DisableDiscDetection,
+    EnterServiceMode,
 } from 'netmd-exploits';
 import netmdExploits from 'netmd-exploits';
 import netmdTocmanip from 'netmd-tocmanip';
@@ -86,6 +87,7 @@ export enum ExploitCapability {
     readRam,
     uploadMonoSP,
     disableDiscSwapDetection,
+    enterServiceMode,
 }
 
 export type CodecFamily = 'SP' | 'MONO' | 'LP2' | 'LP4' | HiMDCodecName;
@@ -297,6 +299,7 @@ export interface NetMDFactoryService {
     enableHiMDFullMode(): Promise<void>;
     enableMonoUpload(enable: boolean): Promise<void>;
     setDiscSwapDetection(enable: boolean): Promise<void>;
+    enterServiceMode(): Promise<void>;
 }
 
 // Compatibility methods. Do NOT use these unless absolutely necessary!!
@@ -823,6 +826,7 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
         bind(HiMDUSBClassOverride, ExploitCapability.himdFullMode);
         bind(MonoSPUpload, ExploitCapability.uploadMonoSP);
         bind(DisableDiscDetection, ExploitCapability.disableDiscSwapDetection);
+        bind(EnterServiceMode, ExploitCapability.enterServiceMode);
         if (!this.exploitStateManager.device.isHimd) {
             // Non-HiMD devices can read the RAM using normal commands
             capabilities.push(ExploitCapability.readRam);
@@ -1007,5 +1011,10 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
         } else {
             await this.exploitStateManager.unload(DisableDiscDetection);
         }
+    }
+
+    @asyncMutex
+    async enterServiceMode() {
+        await this.exploitStateManager.require(EnterServiceMode);
     }
 }

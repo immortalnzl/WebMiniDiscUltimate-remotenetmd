@@ -526,6 +526,7 @@ class NetMDFactoryMockService implements NetMDFactoryService {
     async setSPSpeedupActive(newState: boolean) {}
     async enableHiMDFullMode(): Promise<void> {}
     async enableMonoUpload(enable: boolean): Promise<void> {}
+    async enterServiceMode(): Promise<void> {}
 }
 
 export { NetMDMockService };

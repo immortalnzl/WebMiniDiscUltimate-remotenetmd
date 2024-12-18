@@ -475,3 +475,10 @@ export function writeRecoveryTOC() {
         toc.trackMap[1] = 1;
     }
 }
+
+export function enterServiceMode() {
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        dispatch(appStateActions.setMainView('WELCOME'));
+        await serviceRegistry.netmdFactoryService!.enterServiceMode();
+    }
+}
