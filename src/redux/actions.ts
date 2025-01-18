@@ -833,17 +833,17 @@ export function setNotifyWhenFinished(value: boolean) {
 
 const csvHeaderOld = ['INDEX', 'GROUP RANGE', 'GROUP NAME', 'GROUP FULL WIDTH NAME', 'NAME', 'FULL WIDTH NAME', 'DURATION', 'ENCODING'];
 const csvHeader = [
-    'INDEX',
-    'GROUP RANGE',
-    'GROUP NAME',
-    'GROUP FULL WIDTH NAME',
-    'NAME',
-    'FULL WIDTH NAME',
-    'ALBUM',
-    'ARTIST',
-    'DURATION',
-    'ENCODING',
-    'BITRATE',
+    ['INDEX'],
+    ['GROUP RANGE'],
+    ['GROUP NAME'],
+    ['GROUP FULL WIDTH NAME'],
+    ['NAME'],
+    ['FULL WIDTH NAME'],
+    ['HIMD ALBUM', 'ALBUM'],
+    ['HIMD ARTIST', 'ARTIST'],
+    ['DURATION'],
+    ['ENCODING'],
+    ['BITRATE'],
 ];
 
 export function exportCSV(callback: (blob: Blob, name: string) => void = downloadBlob) {
@@ -884,7 +884,7 @@ export function exportCSV(callback: (blob: Blob, name: string) => void = downloa
                 ]);
             }
         }
-        const csvDocument = [csvHeader, ...rows].map((e) => e.map((q) => q.toString().replace(/,/g, '\\,')).join(',')).join('\n');
+        const csvDocument = [csvHeader.map(e => e[0]), ...rows].map((e) => e.map((q) => q.toString().replace(/,/g, '\\,')).join(',')).join('\n');
 
         let title;
         if (disc.title) {
@@ -921,14 +921,14 @@ export function importCSV(file: File) {
         // Backwards-compatibility
         if (records[0].every((e, i) => e === csvHeaderOld[i])) {
             // It's using the old format
-            records[0] = [...csvHeader];
+            records[0] = csvHeader.map(e => e[0]);
             for (let i = 1; i < records.length; i++) {
                 records[i].splice(6, 0, '', ''); // ALBUM, ARTIST
                 records[i].push(''); // BITRATE
             }
         }
 
-        if (records[0].some((e, i) => e !== csvHeader[i])) {
+        if (records[0].some((e, i) => !csvHeader[i].includes(e))) {
             alert('Malformed CSV file');
             return;
         }
