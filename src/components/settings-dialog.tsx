@@ -393,7 +393,7 @@ export const SettingsDialog = (props: {}) => {
                 <NativeFields classes={classes} section="Functionality" />
 
                 <DialogContentText className={classes.header}>Encoding</DialogContentText>
-                <SimpleField name="Encoder to use" classes={classes}>
+                <SimpleField name="LP / HiMD encoder to use" classes={classes}>
                     <Select className={classes.wider} value={currentExportService} onChange={handleExportServiceChanges}>
                         {AudioServices.map((n, i) => (
                             <MenuItem value={i} key={`${i}`}>
