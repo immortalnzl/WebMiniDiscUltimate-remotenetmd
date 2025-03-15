@@ -103,7 +103,7 @@ const useStyles = makeStyles()((theme) => ({
 export const Welcome = (props: {}) => {
     const { classes } = useStyles();
     const dispatch = useDispatch();
-    const { browserSupported, runningChrome, availableServices, pairingFailed, pairingMessage, vintageMode, lastSelectedService } =
+    const { browserSupported, runningChrome, availableServices, pairingFailed, pairingMessage, vintageMode, lastSelectedService, connectingInProgress } =
         useShallowEqualSelector((state) => state.appState);
     const simpleServicesLength = getSimpleServices().length;
     if (pairingMessage.toLowerCase().match(/denied/)) {
@@ -220,6 +220,7 @@ export const Welcome = (props: {}) => {
                                 disabled={Services[lastSelectedService].requiresChrome && !runningChrome}
                                 selectedIndex={lastSelectedService}
                                 dropdownMapping={mapToEntry}
+                                loading={connectingInProgress}
                             />
 
                             <FormControl

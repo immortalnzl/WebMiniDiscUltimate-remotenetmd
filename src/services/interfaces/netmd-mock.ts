@@ -177,6 +177,8 @@ class NetMDMockService extends NetMDService {
     }
 
     async connect() {
+        // Test the button spinner
+        await sleep(1200);
         return true;
     }
 

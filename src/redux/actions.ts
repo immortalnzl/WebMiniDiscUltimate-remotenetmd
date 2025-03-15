@@ -249,7 +249,7 @@ export function deleteService(index: number) {
 
 export function pair(serviceInstance: NetMDService, spec: MinidiscSpec) {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
-        dispatch(batchActions([appStateActions.setPairingFailed(false), appStateActions.setFactoryModeRippingInMainUi(false)]));
+        dispatch(batchActions([appStateActions.setPairingFailed(false), appStateActions.setConnectingInProgress(true), appStateActions.setFactoryModeRippingInMainUi(false)]));
 
         serviceRegistry.mediaSessionService?.init(); // no need to await
 
@@ -295,6 +295,8 @@ export function pair(serviceInstance: NetMDService, spec: MinidiscSpec) {
             console.error(err);
             const message = (err as Error).message;
             dispatch(batchActions([appStateActions.setPairingMessage(message), appStateActions.setPairingFailed(true)]));
+        } finally {
+            dispatch(appStateActions.setConnectingInProgress(false));
         }
     };
 }

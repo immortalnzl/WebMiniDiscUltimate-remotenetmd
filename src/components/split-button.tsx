@@ -9,6 +9,7 @@ import Popper from '@mui/material/Popper';
 import MenuItem from '@mui/material/MenuItem';
 import MenuList from '@mui/material/MenuList';
 import { ButtonProps } from '@mui/material/Button';
+import { CircularProgress } from '@mui/material';
 
 export type OptionType = {
     name: string;
@@ -23,13 +24,14 @@ export type SplitButtonProps = {
     width?: number;
     selectedIndex?: number;
     dropdownMapping?: (option: OptionType) => any;
+    loading?: boolean;
 } & ButtonProps;
 
 export default function SplitButton(props: SplitButtonProps) {
     const [open, setOpen] = React.useState(false);
     const anchorRef = React.useRef<HTMLDivElement>(null);
 
-    const { options, boxClassName, width, selectedIndex: initialSelected, dropdownMapping, ...buttonProps } = props;
+    const { options, boxClassName, width, selectedIndex: initialSelected, dropdownMapping, loading, ...buttonProps } = props;
 
     const [selectedIndex, setSelectedIndex] = React.useState(initialSelected || 0);
 
@@ -55,9 +57,9 @@ export default function SplitButton(props: SplitButtonProps) {
 
     return (
         <div className={boxClassName}>
-            <ButtonGroup variant="contained" ref={anchorRef} aria-label="split button">
+            <ButtonGroup variant="contained" ref={anchorRef} aria-label="split button" disabled={loading}>
                 <Button {...buttonProps} onClick={options[selectedIndex].handler} style={{ minWidth: width ? width * 0.8 : undefined }}>
-                    {options[selectedIndex].name}
+                    {loading ? <CircularProgress style={{ width: 24, height: 24 }}/> : options[selectedIndex].name}
                 </Button>
                 <Button
                     size="small"
@@ -92,7 +94,7 @@ export default function SplitButton(props: SplitButtonProps) {
                                     {options.map((option, index) => (
                                         <MenuItem
                                             key={`${index}-connect-button`}
-                                            disabled={option.disabled}
+                                            disabled={option.disabled || loading}
                                             selected={index === selectedIndex}
                                             onClick={(event) => handleMenuItemClick(event, index)}
                                         >
