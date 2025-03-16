@@ -294,7 +294,7 @@ export function pair(serviceInstance: NetMDService, spec: MinidiscSpec) {
         } catch (err) {
             console.error(err);
             const message = (err as Error).message;
-            dispatch(batchActions([appStateActions.setPairingMessage(message), appStateActions.setPairingFailed(true)]));
+            dispatch(batchActions([appStateActions.setPairingMessage(message ?? 'Unknown Error!'), appStateActions.setPairingFailed(true)]));
         } finally {
             dispatch(appStateActions.setConnectingInProgress(false));
         }
