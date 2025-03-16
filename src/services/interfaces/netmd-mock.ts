@@ -450,10 +450,6 @@ class NetMDMockService extends NetMDService {
         return new NetMDFactoryMockService();
     }
 
-    async canBeFlushed() {
-        return false;
-    }
-
     async flush(): Promise<void> {}
     async himdRenameTrack(
         index: number,

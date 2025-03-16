@@ -182,6 +182,7 @@ export class HiMDRestrictedService extends NetMDService {
                 second: 0,
             },
             track: 0,
+            canBeFlushed: this.atdata !== null || (this.himd?.isDirty() ?? false),
         };
     }
 
@@ -341,27 +342,7 @@ export class HiMDRestrictedService extends NetMDService {
         format: Codec,
         progressCallback: (progress: { written: number; encrypted: number; total: number }) => void
     ) {
-        if (format.codec !== 'MP3') {
-            throw new Error('Unavailable in restricted mode');
-        }
-        const stream = new HiMDWriteStream(this.himd!, this.atdata!, true);
-        let firstByteOffset = -1;
-        await uploadMP3Track(
-            this.himd!,
-            stream,
-            data,
-            title as { title?: string | undefined; album?: string | undefined; artist?: string | undefined },
-            obj => {
-                if (firstByteOffset === -1) {
-                    firstByteOffset = obj.byte;
-                }
-                progressCallback({
-                    written: obj.byte - firstByteOffset,
-                    encrypted: obj.byte - firstByteOffset,
-                    total: obj.totalBytes - firstByteOffset,
-                });
-            }
-        );
+        throw new Error('Unavailable in restricted mode');
     }
     async download(
         index: number,
@@ -385,9 +366,7 @@ export class HiMDRestrictedService extends NetMDService {
         return [
             Capability.contentList,
             Capability.metadataEdit,
-            Capability.requiresManualFlush,
             Capability.trackDownload,
-            Capability.trackUpload,
             Capability.himdTitles,
         ];
     }
@@ -399,10 +378,6 @@ export class HiMDRestrictedService extends NetMDService {
 
     async connect() {
         return false;
-    }
-
-    async canBeFlushed() {
-        return this.atdata !== null || (this.himd?.isDirty() ?? false);
     }
 
     async flush() {
@@ -470,7 +445,6 @@ export class HiMDFullService extends HiMDRestrictedService {
         return [
             Capability.contentList,
             Capability.metadataEdit,
-            Capability.requiresManualFlush,
             Capability.trackDownload,
             Capability.trackUpload,
             Capability.himdTitles,
@@ -573,7 +547,24 @@ export class HiMDFullService extends HiMDRestrictedService {
         progressCallback: (progress: { written: number; encrypted: number; total: number }) => void
     ): Promise<void> {
         if (format.codec === 'MP3') {
-            await super.upload(title, fullWidthTitle, data, format, progressCallback);
+            const stream = new HiMDWriteStream(this.himd!, this.atdata!, true);
+            let firstByteOffset = -1;
+            await uploadMP3Track(
+                this.himd!,
+                stream,
+                data,
+                title as { title?: string | undefined; album?: string | undefined; artist?: string | undefined },
+                obj => {
+                    if (firstByteOffset === -1) {
+                        firstByteOffset = obj.byte;
+                    }
+                    progressCallback({
+                        written: obj.byte - firstByteOffset,
+                        encrypted: obj.byte - firstByteOffset,
+                        total: obj.totalBytes - firstByteOffset,
+                    });
+                }
+            );
         } else {
             if (!this.session) {
                 this.session = new HiMDSecureSession(this.himd!, this.fsDriver!.driver);

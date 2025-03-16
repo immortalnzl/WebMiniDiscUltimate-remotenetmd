@@ -1248,11 +1248,9 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
 export function flushDevice() {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
         const { netmdService } = serviceRegistry;
-        if (await netmdService!.canBeFlushed()) {
-            dispatch(appStateActions.setLoading(true));
-            await netmdService!.flush();
-            dispatch(batchActions([appStateActions.setLoading(false), mainActions.setFlushable(false)]));
-        }
+        dispatch(appStateActions.setLoading(true));
+        await netmdService!.flush();
+        dispatch(batchActions([appStateActions.setLoading(false), mainActions.setFlushable(false)]));
     };
 }
 

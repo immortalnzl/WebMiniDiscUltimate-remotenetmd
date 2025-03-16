@@ -72,8 +72,6 @@ export enum Capability {
     himdTitles,
     fullWidthSupport,
     nativeMonoUpload,
-
-    requiresManualFlush,
 }
 
 export enum ExploitCapability {
@@ -254,10 +252,6 @@ export abstract class NetMDService {
 
     async factory(): Promise<NetMDFactoryService | null> {
         return null;
-    }
-
-    async canBeFlushed(): Promise<boolean> {
-        return false;
     }
 
     async flush(): Promise<void> {}

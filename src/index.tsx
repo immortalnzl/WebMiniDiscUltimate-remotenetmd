@@ -119,8 +119,8 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
                     store.dispatch(mainActions.setDeviceStatus(deviceStatus));
                 }
                 const currentFlushability = store.getState().main.flushable;
-                const serviceFlushability = await serviceRegistry.netmdService!.canBeFlushed();
-                if (currentFlushability !== serviceFlushability) {
+                const serviceFlushability = deviceStatus.canBeFlushed;
+                if (typeof serviceFlushability === 'boolean' && currentFlushability !== serviceFlushability) {
                     store.dispatch(mainActions.setFlushable(serviceFlushability));
                 }
                 // Since this function doesn't execute if there's any operational dialog on screen

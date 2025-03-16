@@ -29,8 +29,8 @@ export const Services: ServicePrototype[] = [
         requiresChrome: true,
     },
     {
-        name: 'HiMD (Restricted)',
-        getConnectName: () => 'Connect to HiMD (Restricted)',
+        name: 'HiMD (Read Only)',
+        getConnectName: () => 'Connect to HiMD (Read Only)',
         create: () => new HiMDRestrictedService({ debug: true }),
         spec: new HiMDSpec(false),
         requiresChrome: true,
