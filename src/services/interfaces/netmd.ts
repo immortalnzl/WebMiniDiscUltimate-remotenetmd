@@ -7,7 +7,7 @@ import {
     Wireformat,
     MDTrack,
     getDeviceStatus,
-    DeviceStatus,
+    DeviceStatus as NetMDDeviceStatus,
     Group as NetMDGroup,
     renameDisc,
     DiscFormat,
@@ -142,6 +142,8 @@ export interface MinidiscSpec {
     translateDefaultMeasuringModeTo(mode: Codec, defaultMeasuringModeDuration: number): number;
     translateToDefaultMeasuringModeFrom(mode: Codec, defaultMeasuringModeDuration: number): number;
 }
+
+export type DeviceStatus = NetMDDeviceStatus & { canBeFlushed?: boolean };
 
 export const WireformatDict: { [k: string]: Wireformat } = {
     SP: Wireformat.pcm,

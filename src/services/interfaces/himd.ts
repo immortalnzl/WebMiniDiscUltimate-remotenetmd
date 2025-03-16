@@ -1,5 +1,5 @@
 import { Mutex } from 'async-mutex';
-import { DeviceStatus, DiscFormat, TrackFlag } from 'netmd-js';
+import { DiscFormat, TrackFlag } from 'netmd-js';
 import { Logger } from 'netmd-js/dist/logger';
 import { makeAsyncWorker } from 'himd-js/dist/web-crypto-worker';
 import {
@@ -39,6 +39,7 @@ import {
     RecordingCodec,
     Codec,
     TitleParameter,
+    DeviceStatus,
 } from './netmd';
 import { concatUint8Arrays } from 'netmd-js/dist/utils';
 import { recomputeGroupsAfterTrackMove } from '../../utils';
