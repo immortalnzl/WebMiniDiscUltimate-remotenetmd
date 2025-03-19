@@ -14,7 +14,6 @@
   },
   "homepage": "https://web.minidisc.wiki/",
   "scripts": {
-    "postinstall": "patch-package",
     "start": "npm run dev",
     "dev": "npm run update-version && vite",
     "build": "npm run update-version && tsc && vite build",
@@ -58,7 +57,7 @@
     "styled-components": "^6.1.8",
     "tss-react": "^4.9.3",
     "vite-plugin-commonjs": "^0.10.1",
-    "vite-plugin-svgr": "^4.2.0"
+    "vite-plugin-svgr": "^4.3.0"
   },
   "devDependencies": {
     "@types/node": "^20.12.4",
@@ -69,15 +68,14 @@
     "@types/w3c-web-usb": "^1.0.4",
     "@typescript-eslint/eslint-plugin": "^7.5.0",
     "@typescript-eslint/parser": "^7.5.0",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
-    "patch-package": "^8.0.0",
     "source-map-explorer": "^2.5.3",
     "typescript": "^5.4.4",
-    "vite": "^5.0.8",
-    "vite-plugin-node-polyfills": "^0.21.0",
-    "vite-plugin-pwa": "^0.20.1"
+    "vite": "^6.2.2",
+    "vite-plugin-node-polyfills": "^0.23.0",
+    "vite-plugin-pwa": "^0.21.1"
   }
 }
