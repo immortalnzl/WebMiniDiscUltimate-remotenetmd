@@ -1,7 +1,7 @@
 import { Mutex } from 'async-mutex';
 import { DiscFormat, TrackFlag } from 'netmd-js';
 import { Logger } from 'netmd-js/dist/logger';
-import { makeAsyncWorker } from 'himd-js/dist/web-crypto-worker';
+import { makeAsyncWorker, makeAsyncCryptoBlockProvider } from 'himd-js/dist/web-crypto-worker';
 import {
     HiMD,
     FSAHiMDFilesystem,
@@ -18,7 +18,7 @@ import {
     uploadMP3Track,
     HiMDFile,
     HiMDWriteStream,
-    uploadMacDependent,
+    uploadStreamingMacDependent,
     HiMDSecureSession,
     generateCodecInfo,
     HiMDKBPSToFrameSize,
@@ -43,7 +43,7 @@ import {
 } from './netmd';
 import { concatUint8Arrays } from 'netmd-js/dist/utils';
 import { recomputeGroupsAfterTrackMove } from '../../utils';
-import { CryptoProvider } from 'himd-js/dist/workers';
+import { CryptoBlockProvider, CryptoProvider } from 'himd-js/dist/workers';
 
 import WorkerURL from 'himd-js/dist/web-crypto-worker?worker&url';
 
@@ -170,7 +170,7 @@ export class HiMDRestrictedService extends NetMDService {
         };
     }
     getWorker(): any[]{
-        return [new Worker(new URL(WorkerURL, import.meta.url), { type: 'classic' }), makeAsyncWorker];
+        return [new Worker(new URL(WorkerURL, ""), { type: 'classic' }), makeAsyncWorker, makeAsyncCryptoBlockProvider];
     }
 
     async getDeviceStatus(): Promise<DeviceStatus> {
@@ -350,7 +350,7 @@ export class HiMDRestrictedService extends NetMDService {
         progressCallback: (progress: { read: number; total: number }) => void
     ): Promise<{ format: DiscFormat; data: Uint8Array } | null> {
         const trackNumber = this.himd!.trackIndexToTrackSlot(index);
-        const [w, creator] = this.getWorker();
+        const [w, creator, _] = this.getWorker();
         const webWorker = await creator(w);
         const info = dumpTrack(this.himd!, trackNumber, webWorker);
         const blocks: Uint8Array[] = [];
@@ -431,6 +431,7 @@ export class HiMDRestrictedService extends NetMDService {
 
 export class HiMDFullService extends HiMDRestrictedService {
     protected worker: CryptoProvider | null = null;
+    protected streamingWorker: CryptoBlockProvider | null = null;
     protected session: HiMDSecureSession | null = null;
     protected fsDriver?: UMSCHiMDFilesystem;
     constructor(p: { debug: boolean }) {
@@ -513,8 +514,8 @@ export class HiMDFullService extends HiMDRestrictedService {
             await this.session!.finalizeSession();
             this.session = null;
         }
-        this.worker?.close();
-        this.worker = null;
+        this.streamingWorker?.close();
+        this.streamingWorker = null;
     }
 
     async finalize(): Promise<void> {
@@ -523,8 +524,8 @@ export class HiMDFullService extends HiMDRestrictedService {
 
     async prepareUpload(): Promise<void> {
         await super.prepareUpload();
-        const [w, creator] = this.getWorker();
-        this.worker = await creator(w);
+        const [w, _, creator] = this.getWorker();
+        this.streamingWorker = creator(w);
     }
 
     async deleteTracks(indexes: number[]): Promise<void> {
@@ -593,21 +594,26 @@ export class HiMDFullService extends HiMDRestrictedService {
                     throw new HiMDError('Invalid format');
             }
             const codecInfo = generateCodecInfo(format.codec, frameSize);
-            await uploadMacDependent(
+            let written = 0;
+            let encrypted = 0;
+            const total = data.byteLength;
+            const runCallback = () => progressCallback({ written, encrypted, total });
+            await uploadStreamingMacDependent(
                 this.himd!,
                 this.session!,
                 stream,
                 data,
                 codecInfo,
                 titleObject,
-                ({ byte, totalBytes }: { byte: number; totalBytes: number }) => {
-                    progressCallback({
-                        written: byte,
-                        encrypted: byte,
-                        total: totalBytes,
-                    });
+                this.streamingWorker!,
+                ({ encryptedBytes }) => {
+                    encrypted = encryptedBytes;
+                    runCallback();
                 },
-                this.worker!
+                ({ writtenBytes }) => {
+                    written = writtenBytes;
+                    runCallback();
+                },
             );
         }
     }
