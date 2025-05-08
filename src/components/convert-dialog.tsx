@@ -972,6 +972,15 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                     Warning: You are using a mediocre encoder. The resulting audio is not going to be perfect. Alternative encoders are
                     available in the settings.
                 </Typography>
+                <Typography
+                    component="h3"
+                    className={classes.warningMediocreEncoder}
+                    hidden={!isSelectedUnsupported}
+                    style={{ marginTop: '1em' }}
+                    align="center"
+                >
+                    Error: The selected encoder backend does not support this codec! Please choose a different codec, or change the encoder in settings!
+                </Typography>
                 <span className={classes.durationsSpan}>
                     <Typography component="h3" align="center" hidden={loadingMetadata}>
                         Total:{' '}
