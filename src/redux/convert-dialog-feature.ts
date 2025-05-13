@@ -5,7 +5,7 @@ import { Codec } from '../services/interfaces/netmd';
 import { savePreference, loadPreference } from '../utils';
 
 export type TitleFormatType = 'filename' | 'title' | 'album-title' | 'artist-title' | 'artist-album-title' | 'title-artist';
-export type ForcedEncodingFormat = { codec: 'SPM' | 'SPS' | 'LP2' | 'LP4' | HiMDCodecName; bitrate?: number } | null;
+export type ForcedEncodingFormat = { codec: 'SPM' | 'SPS' | HiMDCodecName; bitrate: number; } | null;
 
 export interface ConvertDialogFeature {
     visible: boolean;

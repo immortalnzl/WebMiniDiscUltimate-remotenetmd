@@ -8,7 +8,7 @@ export interface LogPayload {
 }
 
 export type ExportParams = {
-    format: { bitrate?: number; codec: 'AT3' | 'A3+' | 'PCM' | 'MP3' };
+    format: { bitrate: number; codec: 'AT3' | 'A3+' | 'PCM' | 'MP3' };
     enableReplayGain?: boolean;
 };
 

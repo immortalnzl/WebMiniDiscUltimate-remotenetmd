@@ -21,7 +21,7 @@ import {
     TitledFile,
     downloadBlob,
     createDownloadTrackName,
-    secondsToNormal,
+    secondsToHumanReadable,
     getTracks,
     convertToWAV,
     ffmpegTranscode,
@@ -998,9 +998,9 @@ export function importCSV(file: File) {
                 if (
                     !window.confirm(
                         `
-                    The CSV file describes track ${index} as a ${secondsToNormal(
+                    The CSV file describes track ${index} as a ${secondsToHumanReadable(
                         duration
-                    )} ${codec}${bitrateDescription} track. The actual track ${index} is a ${secondsToNormal(
+                    )} ${codec}${bitrateDescription} track. The actual track ${index} is a ${secondsToHumanReadable(
                         ungroupedTracks[index - 1].duration
                     )} ${currentTrackEncoding.codec}${actualBitrateDescription} track. Label it according to the file?
                         `.trim()
@@ -1279,7 +1279,7 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
 
         const { audioExportService, netmdService, netmdSpec } = serviceRegistry;
         let { netmdFactoryService } = serviceRegistry;
-        if (format.codec === 'MONO' && !deviceCapabilities.includes(Capability.nativeMonoUpload)) {
+        if (format.codec === 'SPM' && !deviceCapabilities.includes(Capability.nativeMonoUpload)) {
             // SP MONO is a homebrew feature
             if (!deviceCapabilities.includes(Capability.factoryMode)) {
                 window.alert('Sorry! Your device cannot enter the factory mode. SP MONO upload is not possible');
@@ -1422,22 +1422,11 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
                     converted[j] = new Promise(async (resolve, reject) => {
                         let audioExportFormat: ExportParams['format'];
                         switch (format.codec) {
-                            case 'LP2':
-                                audioExportFormat = {
-                                    codec: 'AT3',
-                                    bitrate: 132,
-                                };
-                                break;
-                            case 'LP4':
-                                audioExportFormat = {
-                                    codec: 'AT3',
-                                    bitrate: 66,
-                                };
-                                break;
-                            case 'SP':
-                            case 'MONO':
+                            case 'SPS':
+                            case 'SPM':
                                 audioExportFormat = {
                                     codec: 'PCM',
+                                    bitrate: 1411,
                                 };
                                 break;
                             default:
@@ -1574,7 +1563,7 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
         }
         await netmdService?.finalizeUpload();
 
-        if (format.codec === 'MONO' && !deviceCapabilities.includes(Capability.nativeMonoUpload)) {
+        if (format.codec === 'SPM' && !deviceCapabilities.includes(Capability.nativeMonoUpload)) {
             netmdFactoryService!.enableMonoUpload(false);
         }
 

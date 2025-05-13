@@ -21,7 +21,7 @@ import { actions as contextMenuActions } from '../redux/context-menu-feature';
 import { DeviceStatus } from 'netmd-js';
 import { control, openLocalLibrary } from '../redux/actions';
 
-import { formatTimeFromSeconds, getGroupedTracks, getSortedTracks, isSequential, acceptedTypes, AdaptiveFile } from '../utils';
+import { formatTimeFromSeconds, getGroupedTracks, getSortedTracks, isSequential, acceptedTypes, AdaptiveFile, bytesToHumanReadable } from '../utils';
 import { belowDesktop, forAnyDesktop, useShallowEqualSelector, themeSpacing, batchActions } from '../frontend-utils';
 
 import { makeStyles } from 'tss-react/mui';
@@ -270,6 +270,7 @@ export const Main = (props: {}) => {
     const { classes, cx } = useStyles();
     const tracks = useMemo(() => getSortedTracks(disc), [disc]);
     const groupedTracks = useMemo(() => getGroupedTracks(disc), [disc]);
+    const defaultCodecName = useMemo(() => minidiscSpec?.availableFormats.find(e => e.codec === minidiscSpec?.defaultFormat.codec)?.userFriendlyName ?? minidiscSpec?.defaultFormat.codec ?? '?', [minidiscSpec]);
 
     // Action Handlers
     const handleSelectTrackClick = useCallback(
@@ -505,6 +506,7 @@ export const Main = (props: {}) => {
             selected,
             setSelected,
             selectedCount,
+            isUsingBytes: minidiscSpec?.measurementUnits == 'bytes',
 
             tracks,
             uploadedFiles,
@@ -565,10 +567,16 @@ export const Main = (props: {}) => {
             <Typography component="h2" variant="body2">
                 {disc !== null ? (
                     <React.Fragment>
-                        <span>{`${formatTimeFromSeconds(disc.left)} left of ${formatTimeFromSeconds(disc.total)} `}</span>
-                        <Tooltip title={LeftInNondefaultCodecs(disc.left)} arrow>
-                            <span className={classes.remainingTimeTooltip}>{minidiscSpec?.defaultFormat?.codec ?? '?'} Mode</span>
-                        </Tooltip>
+                        {minidiscSpec?.measurementUnits === 'frames' ? 
+                            <>
+                                <span>{`${formatTimeFromSeconds(disc.left)} left of ${formatTimeFromSeconds(disc.total)} `}</span>
+                                <Tooltip title={LeftInNondefaultCodecs(disc.left)} arrow>
+                                    <span className={classes.remainingTimeTooltip}>{defaultCodecName} Mode</span>
+                                </Tooltip>
+                            </> : <>
+                                <span>{`${bytesToHumanReadable(disc.left)} left of ${bytesToHumanReadable(disc.total)} `}</span>
+                            </>
+                        }
                         <div className={classes.spacing} />
                         <LinearProgress
                             variant="determinate"

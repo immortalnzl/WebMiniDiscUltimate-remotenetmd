@@ -13,11 +13,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 
 import { DraggableProvided } from 'react-beautiful-dnd';
 import { Track, Group } from '../services/interfaces/netmd';
-import { formatTimeFromSeconds, secondsToNormal } from '../utils';
+import { formatTimeFromSeconds, secondsToHumanReadable } from '../utils';
 
 import serviceRegistry from '../services/registry';
 import { alpha, lighten } from '@mui/material';
 import { useDeviceCapabilities } from '../frontend-utils';
+import { format } from 'path';
 
 const useStyles = makeStyles<
     void,
@@ -212,6 +213,8 @@ export function TrackRow({
     onTogglePlayPause,
     onOpenContextMenu,
 }: TrackRowProps) {
+    const minidiscSpec = serviceRegistry.netmdSpec;
+    const formatInfo = minidiscSpec!.availableFormats.find(e => e.codec === track.encoding.codec)!;
     const { classes, cx } = useStyles();
 
     const deviceCapabilities = useDeviceCapabilities();
@@ -283,13 +286,13 @@ export function TrackRow({
                 </>
             )}
             <TableCell align="right" className={classes.durationCell}>
-                {track.encoding.codec === 'SP' && track.channel === 1 && <span className={classes.channelBadge}>MONO</span>}
-                {track.encoding.bitrate ? (
+                {track.encoding.codec === 'SPM' && <span className={classes.channelBadge}>MONO</span>}
+                {formatInfo.availableBitrates.length > 1 ? (
                     <Tooltip title={`${track.encoding.bitrate!} kbps`}>
                         <span className={classes.formatBadge}>{track.encoding.codec}</span>
                     </Tooltip>
                 ) : (
-                    <span className={classes.formatBadge}>{track.encoding.codec}</span>
+                    <span className={classes.formatBadge}>{formatInfo.userFriendlyName ?? formatInfo.codec}</span>
                 )}
                 <span className={classes.durationCellTime}>{formatTimeFromSeconds(track.duration)}</span>
             </TableCell>
@@ -366,18 +369,18 @@ export function LeftInNondefaultCodecs(timeLeft: number) {
     }
     return (
         <React.Fragment>
-            {minidiscSpec.availableFormats.map((e) =>
+            {minidiscSpec.availableFormats.map((e, i) =>
                 e.codec === minidiscSpec.defaultFormat.codec ? null : (
-                    <React.Fragment key={`total-${e.codec}`}>
-                        <span>{`${secondsToNormal(
+                    <React.Fragment key={`total-${e.codec}-${i}`}>
+                        <span>{`${secondsToHumanReadable(
                             minidiscSpec.translateDefaultMeasuringModeTo(
                                 {
                                     codec: e.codec,
-                                    bitrate: e.availableBitrates ? e.defaultBitrate ?? Math.max(...e.availableBitrates) : undefined,
+                                    bitrate: e.defaultBitrate,
                                 },
                                 timeLeft
                             )
-                        )} in ${e.codec} Mode`}</span>
+                        )} in ${e.userFriendlyName ?? e.codec} Mode`}</span>
                         <br />
                     </React.Fragment>
                 )

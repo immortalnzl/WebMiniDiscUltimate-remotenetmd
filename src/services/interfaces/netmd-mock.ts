@@ -10,10 +10,15 @@ import {
     convertDiscToNJS,
     Disc,
     Codec,
+    DefaultMinidiscSpec,
 } from './netmd';
 import { sleep, asyncMutex, recomputeGroupsAfterTrackMove, isSequential } from '../../utils';
 import { assert, sanitizeFullWidthTitle, sanitizeHalfWidthTitle } from 'netmd-js/dist/utils';
 import { Mutex } from 'async-mutex';
+
+const SP_CODEC = { codec: 'SPS' as const, bitrate: 292 };
+
+const spec = new DefaultMinidiscSpec();
 
 class NetMDMockService extends NetMDService {
     public statusMonitorTimer: any;
@@ -21,11 +26,11 @@ class NetMDMockService extends NetMDService {
     public _tracksTitlesMaxLength = 1700;
     public _discTitle: string = 'Mock Disc';
     public _fullWidthDiscTitle: string = '';
-    public _discCapacity: number = 80 * 60;
+    public _discCapacity: number = 305758208;// 80 * 60;
     public _tracks: Track[] = [
         {
             duration: 3 * 60,
-            encoding: { codec: 'SP' },
+            encoding: SP_CODEC,
             index: 0,
             channel: Channels.stereo,
             protected: TrackFlag.unprotected,
@@ -34,7 +39,7 @@ class NetMDMockService extends NetMDService {
         },
         {
             duration: 5 * 60,
-            encoding: { codec: 'SP' },
+            encoding: SP_CODEC,
             index: 1,
             channel: Channels.mono,
             protected: TrackFlag.unprotected,
@@ -43,7 +48,7 @@ class NetMDMockService extends NetMDService {
         },
         {
             duration: 5 * 60,
-            encoding: { codec: 'SP' },
+            encoding: SP_CODEC,
             index: 2,
             channel: Channels.stereo,
             protected: TrackFlag.unprotected,
@@ -52,7 +57,7 @@ class NetMDMockService extends NetMDService {
         },
         {
             duration: 5 * 60,
-            encoding: { codec: 'SP' },
+            encoding: SP_CODEC,
             index: 3,
             channel: Channels.stereo,
             protected: TrackFlag.unprotected,
@@ -61,7 +66,7 @@ class NetMDMockService extends NetMDService {
         },
         {
             duration: 5 * 60,
-            encoding: { codec: 'SP' },
+            encoding: SP_CODEC,
             index: 4,
             channel: Channels.stereo,
             protected: TrackFlag.unprotected,
@@ -141,8 +146,9 @@ class NetMDMockService extends NetMDService {
     _getUsed() {
         let used = 0;
         for (const t of this._tracks) {
-            used += t.duration;
+            used += spec.translateToDefaultMeasuringModeFrom(t.encoding, t.duration);
         }
+        console.log(used);
         return used;
     }
 
@@ -369,7 +375,7 @@ class NetMDMockService extends NetMDService {
         const newTrack = {
             title: halfWidthTitle,
             duration: 5 * 60,
-            encoding: { codec: 'SP' },
+            encoding: SP_CODEC,
             index: this._tracks.length,
             protected: TrackFlag.unprotected,
             channel: 0,

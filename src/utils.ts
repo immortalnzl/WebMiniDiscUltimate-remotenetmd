@@ -278,10 +278,18 @@ export function timeToSeekArgs(timeInSecs: number): number[] {
     return [h, m, s, 0];
 }
 
-export function secondsToNormal(time: number): string {
+export function secondsToHumanReadable(time: number): string {
     const negative = time < 0;
     const [h, m, s] = timeToSeekArgs(Math.abs(time));
     return `${negative ? '-' : ''}${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+export function bytesToHumanReadable(bytes: number): string {
+    if(bytes === 0) return "0 B";
+    const negative = bytes < 0;
+    const units = ["B", "KiB", "MiB", "GiB", "TiB"];
+    let i = Math.floor(Math.log(Math.abs(bytes)) / Math.log(1024));
+    return `${negative ? '-' : ''}${Math.round(bytes / Math.pow(1024, i) * 100) / 100} ${units[i]}`
 }
 
 export type DisplayTrack = {
@@ -503,11 +511,10 @@ export function downloadBlob(buffer: Blob, fileName: string) {
 }
 
 export function getTrackExtension(track: Track) {
+    // Todo: Fix AT3 netmd-js extraction
     const fileExtMap: { [key in typeof track.encoding.codec]: string } = {
-        SP: 'aea',
-        MONO: 'aea',
-        LP2: 'wav',
-        LP4: 'wav',
+        SPS: 'aea',
+        SPM: 'aea',
         'A3+': 'oma',
         AT3: 'oma',
         MP3: 'mp3',

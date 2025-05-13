@@ -19,7 +19,7 @@ import { makeStyles } from 'tss-react/mui';
 import { DropzoneRootProps, DropzoneInputProps, FileRejection } from 'react-dropzone';
 import { ThemeContext } from 'styled-components';
 import { Controls } from '../controls';
-import { AdaptiveFile, formatTimeFromSeconds } from '../../utils';
+import { AdaptiveFile, bytesToHumanReadable, formatTimeFromSeconds } from '../../utils';
 import { useDeviceCapabilities, useShallowEqualSelector } from '../../frontend-utils';
 
 import DeleteIconUrl from '../../images/win95/delete.png';
@@ -100,6 +100,7 @@ export const W95Main = (props: {
     getRootProps: (props?: DropzoneRootProps | undefined) => DropzoneRootProps;
     getInputProps: (props?: DropzoneInputProps | undefined) => DropzoneInputProps;
     isDragActive: boolean;
+    isUsingBytes: boolean;
     open: () => void;
     moveMenuAnchorEl: HTMLElement | null;
     setMoveMenuAnchorEl: React.Dispatch<React.SetStateAction<HTMLElement | null>>;
@@ -134,7 +135,11 @@ export const W95Main = (props: {
                         </div>
                         <Bar size={35} />
                         <img alt="minidisc" src={MDIconUrl} style={{ width: 32, marginLeft: 10 }} />
-                        {props.disc !== null ? (
+                        {props.disc !== null ? props.isUsingBytes ?
+                            <div className={classes.toolbarItem}>{`${bytesToHumanReadable(
+                                props.disc.left
+                            )} left of ${bytesToHumanReadable(props.disc.total)} `}</div>
+                        : (
                             <Tooltip
                                 text={`${formatTimeFromSeconds(props.disc.left * 2)} in LP2 or ${formatTimeFromSeconds(
                                     props.disc.left * 4

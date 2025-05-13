@@ -1,7 +1,7 @@
 import React, { ReactHTMLElement } from 'react';
 import { CustomParameterInfo, CustomParameters } from '../custom-parameters';
 import { HiMDFullService, HiMDRestrictedService, HiMDSpec } from './interfaces/himd';
-import { DefaultMinidiscSpec, MinidiscSpec, NetMDService, NetMDUSBService } from './interfaces/netmd';
+import { Codec, DefaultMinidiscSpec, MinidiscSpec, NetMDService, NetMDUSBService, RecordingCodec } from './interfaces/netmd';
 import { NetMDMockService } from './interfaces/netmd-mock';
 import { NetMDRemoteService } from './interfaces/remote-netmd';
 
@@ -156,14 +156,24 @@ export const Services: ServicePrototype[] = [
 ];
 
 if(window.native?.nwInterface) {
-    Services.push({
-        name: 'NetworkWM',
-        requiresChrome: true,
-        spec: HiMDSpec.derive('NetworkWM', [
+    class NetworkWMSpec extends HiMDSpec {
+        public availableFormats: RecordingCodec[] = [
             { codec: 'AT3', availableBitrates: [132, 105, 66], defaultBitrate: 132 },
             { codec: 'A3+', availableBitrates: [352, 256, 192, 64, 48], defaultBitrate: 256 },
             { codec: 'MP3', availableBitrates: [320, 256, 192, 128, 96, 64], defaultBitrate: 192 },
-        ], { codec: 'A3+', bitrate: 256 }),
+        ];
+        public readonly measurementUnits = 'bytes';
+        public defaultFormat: Codec = { codec: 'A3+', bitrate: 256 };
+        public specName = "NetworkWM";
+        
+        translateToDefaultMeasuringModeFrom(codec: Codec, defaultMeasuringModeDuration: number): number {
+            return super.translateToDefaultMeasuringModeFrom(codec, defaultMeasuringModeDuration) + 32768; // For initial metadata sections!
+        }
+    }
+    Services.push({
+        name: 'NetworkWM',
+        requiresChrome: true,
+        spec: new NetworkWMSpec(),
         getConnectName: () => 'Connect to Network Walkman',
         create: () => window.native?.nwInterface!,
     });
