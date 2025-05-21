@@ -375,7 +375,7 @@ class NetMDMockService extends NetMDService {
         const newTrack = {
             title: halfWidthTitle,
             duration: 5 * 60,
-            encoding: SP_CODEC,
+            encoding: JSON.parse(JSON.stringify(format)),
             index: this._tracks.length,
             protected: TrackFlag.unprotected,
             channel: 0,
