@@ -50,19 +50,17 @@ import { CryptoBlockProvider, CryptoProvider } from 'himd-js/dist/workers';
 import WorkerURL from 'himd-js/dist/web-crypto-worker?worker&url';
 
 export class HiMDSpec implements MinidiscSpec {
-    constructor(private unrestricted: boolean = false) {
-        this.specName = unrestricted ? 'HiMD_full' : 'HiMD_restricted';
+    constructor() {
+        this.specName = 'HiMD';
     }
-    public availableFormats: RecordingCodec[] = this.unrestricted
-        ? [
-              { codec: 'A3+', availableBitrates: [352, 256, 192, 64, 48], defaultBitrate: 256 },
-              { codec: 'AT3', availableBitrates: [132, 105, 66], defaultBitrate: 132 },
-              { codec: 'MP3', availableBitrates: [320, 256, 192, 128, 96, 64], defaultBitrate: 192 },
-              { codec: 'PCM', availableBitrates: [1411], defaultBitrate: 1411 },
-          ]
-        : [{ codec: 'MP3', availableBitrates: [320, 256, 192, 128, 96, 64], defaultBitrate: 192 }];
+    public availableFormats: RecordingCodec[] = [
+        { codec: 'A3+', availableBitrates: [352, 256, 192, 64, 48], defaultBitrate: 256 },
+        { codec: 'AT3', availableBitrates: [132, 105, 66], defaultBitrate: 132 },
+        { codec: 'MP3', availableBitrates: [320, 256, 192, 128, 96, 64], defaultBitrate: 192 },
+        { codec: 'PCM', availableBitrates: [1411], defaultBitrate: 1411 },
+    ];
     public readonly measurementUnits = 'bytes';
-    public defaultFormat = (this.unrestricted ? [0, 1] : [0, 2]) as [number, number];
+    public defaultFormat = [0, 1] as [number, number];
     public specName: string;
 
     getRemainingCharactersForTitles(disc: Disc): { halfWidth: number; fullWidth: number } {
@@ -153,7 +151,7 @@ export class HiMDRestrictedService extends NetMDService {
                 child: () => this.logger!,
             };
         }
-        this.spec = new HiMDSpec(false);
+        this.spec = new HiMDSpec();
     }
     getRemainingCharactersForTitles(disc: Disc): { halfWidth: number; fullWidth: number } {
         return { halfWidth: Number.MAX_SAFE_INTEGER, fullWidth: Number.MAX_SAFE_INTEGER };
@@ -428,7 +426,7 @@ export class HiMDFullService extends HiMDRestrictedService {
     protected fsDriver?: UMSCHiMDFilesystem;
     constructor(p: { debug: boolean }) {
         super(p);
-        this.spec = new HiMDSpec(true);
+        this.spec = new HiMDSpec();
     }
     async getDeviceName(): Promise<string> {
         if (!this.himd) await this.initHiMD();

@@ -23,7 +23,7 @@ export interface ServiceConstructionInfo {
 // For MockMD-Bytes only:
 const BYTES_DEFAULT_SPEC = new DefaultMinidiscSpec();
 (BYTES_DEFAULT_SPEC as any).measurementUnits = 'bytes';
-BYTES_DEFAULT_SPEC.translateToDefaultMeasuringModeFrom = new HiMDSpec(true).translateToDefaultMeasuringModeFrom;
+BYTES_DEFAULT_SPEC.translateToDefaultMeasuringModeFrom = new HiMDSpec().translateToDefaultMeasuringModeFrom;
 
 export const Services: ServicePrototype[] = [
     {
@@ -37,7 +37,7 @@ export const Services: ServicePrototype[] = [
         name: 'HiMD (Read Only)',
         getConnectName: () => 'Connect to HiMD (Read Only)',
         create: () => new HiMDRestrictedService({ debug: true }),
-        spec: new HiMDSpec(false),
+        spec: new HiMDSpec(),
         requiresChrome: true,
     },
     {
@@ -52,7 +52,7 @@ export const Services: ServicePrototype[] = [
             }
             return new HiMDFullService({ debug: true });
         },
-        spec: new HiMDSpec(true),
+        spec: new HiMDSpec(),
         requiresChrome: true,
     },
     {

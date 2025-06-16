@@ -192,7 +192,7 @@ export const Controls = () => {
         if (isSeekingProgressLocked) {
             currentTimeSecs = Math.floor((trackPercentage * track.duration) / 100);
         } else {
-            setTrackPercentage(Math.floor((currentTimeSecs / track.duration) * 100));
+            setTrackPercentage(Math.floor((currentTimeSecs / Math.max(1, track.duration)) * 100));
         }
         if (isSeeking) {
             messageIsTime();
