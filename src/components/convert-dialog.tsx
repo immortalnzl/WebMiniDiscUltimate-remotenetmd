@@ -161,6 +161,9 @@ const useStyles = makeStyles()((theme) => ({
     durationNotFit: {
         color: theme.palette.error.main,
     },
+    invalidEncoder: {
+        color: theme.palette.error.main,
+    },
     timeTooltip: {
         textDecoration: 'underline',
         textDecorationStyle: 'dotted',
@@ -977,7 +980,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                 </Typography>
                 <Typography
                     component="h3"
-                    className={classes.warningMediocreEncoder}
+                    className={classes.invalidEncoder}
                     hidden={!isSelectedUnsupported}
                     style={{ marginTop: '1em' }}
                     align="center"
