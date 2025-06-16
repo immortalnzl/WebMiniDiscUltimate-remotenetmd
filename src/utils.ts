@@ -288,7 +288,7 @@ export function bytesToHumanReadable(bytes: number): string {
     if(bytes === 0) return "0 B";
     const negative = bytes < 0;
     const units = ["B", "KiB", "MiB", "GiB", "TiB"];
-    let i = Math.floor(Math.log(Math.abs(bytes)) / Math.log(1024));
+    const i = Math.floor(Math.log(Math.abs(bytes)) / Math.log(1024));
     return `${negative ? '-' : ''}${Math.round(bytes / Math.pow(1024, i) * 100) / 100} ${units[i]}`
 }
 
@@ -593,7 +593,7 @@ export function dispatchQueue(
 }
 
 export function getDeviceNameFromTOCSignature(deviceId: number){
-    let signature = SIGNATURES[deviceId];
+    const signature = SIGNATURES[deviceId];
     return `${signature || "Unknown device"} (0x${deviceId.toString(16).padStart(4, '0')})`;
 }
 

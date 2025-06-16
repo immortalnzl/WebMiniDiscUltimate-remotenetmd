@@ -1,4 +1,4 @@
-import React, { useCallback, useContext } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo } from 'react';
 import { Button, WindowHeader, Fieldset, Select, Table, TableBody, TableDataCell, Divider, Toolbar } from 'react95';
 import { DialogOverlay, DialogWindow, DialogFooter, DialogWindowContent, WindowCloseIcon, FooterButton, CustomTableRow } from './common';
 import { TitleFormatType } from '../../redux/convert-dialog-feature';
@@ -8,7 +8,7 @@ import ArrowUpIconUrl from '../../images/win95/arrowup.png';
 import ArrowDownIconUrl from '../../images/win95/arrowdown.png';
 import DeleteIconUrl from '../../images/win95/delete.png';
 import RenameIconUrl from '../../images/win95/rename.png';
-import { Codec } from '../../services/interfaces/netmd';
+import { MinidiscSpec } from '../../services/interfaces/netmd';
 
 const trackTitleOptions = [
     { value: 'filename', label: 'Filename' },
@@ -19,16 +19,11 @@ const trackTitleOptions = [
     { value: 'artist-album-title', label: 'Artist - Album - Title' },
 ];
 
-const recordModeOptions = [
-    { value: 'SP', label: 'SP' },
-    { value: 'LP2', label: 'LP2' },
-    { value: 'LP4', label: 'LP4' },
-];
-
 export const W95ConvertDialog = (props: {
     visible: boolean;
-    format: Codec;
+    codecFamilyIndex: number;
     titleFormat: TitleFormatType;
+    minidiscSpec: MinidiscSpec,
     titles: { title: string; fullWidthTitle: string }[];
     loadingMetadata: boolean;
     availableCharacters: { halfWidth: number; fullWidth: number };
@@ -39,7 +34,7 @@ export const W95ConvertDialog = (props: {
     moveFileUp: () => void;
     moveFileDown: () => void;
     handleClose: () => void;
-    handleChangeFormat: (ev: any, newFormat: any) => void;
+    handleChangeFormat: (ev: any, newIndex?: number) => void;
     handleChangeTitleFormat: (
         event: React.ChangeEvent<{
             value: any;
@@ -60,6 +55,7 @@ export const W95ConvertDialog = (props: {
     dialogVisible: boolean;
 }) => {
     const themeContext = useContext(ThemeContext)!;
+    const recordModeOptions = useMemo(() => props.minidiscSpec.availableFormats.map((e, i) => ({ label: e.userFriendlyName ?? e.codec, value: i })), [props.minidiscSpec]);
 
     const renderTracks = useCallback(() => {
         return props.titles.map((file, i) => {
@@ -96,10 +92,12 @@ export const W95ConvertDialog = (props: {
                     <div style={{ display: 'flex', width: '100%' }}>
                         <Fieldset label="Recording Mode" style={{ display: 'flex', flex: '1 1 auto' }}>
                             <Select
-                                defaultValue={props.format}
+                                defaultValue={props.codecFamilyIndex}
                                 options={recordModeOptions}
                                 width={90}
-                                onChange={(ev: any, format: any) => props.handleChangeFormat(ev, format.value)}
+                                onChange={(format: any) => {
+                                    props.handleChangeFormat(null, format.value);
+                                }}
                             />
                         </Fieldset>
                         <Fieldset label="Track title" style={{ flex: '1 1 auto', marginLeft: 16 }}>

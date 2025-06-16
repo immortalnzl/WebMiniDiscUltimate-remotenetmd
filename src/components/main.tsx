@@ -63,7 +63,7 @@ import Button from '@mui/material/Button';
 import { W95Main } from './win95/main';
 import { useMemo } from 'react';
 import { ChangelogDialog } from './changelog-dialog';
-import { Track } from '../services/interfaces/netmd';
+import { getDefaultCodecName, Track } from '../services/interfaces/netmd';
 import { FactoryModeNoticeDialog } from './factory/factory-notice-dialog';
 import { FactoryModeProgressDialog } from './factory/factory-progress-dialog';
 import { SongRecognitionDialog } from './song-recognition-dialog';
@@ -270,7 +270,7 @@ export const Main = (props: {}) => {
     const { classes, cx } = useStyles();
     const tracks = useMemo(() => getSortedTracks(disc), [disc]);
     const groupedTracks = useMemo(() => getGroupedTracks(disc), [disc]);
-    const defaultCodecName = useMemo(() => minidiscSpec?.availableFormats.find(e => e.codec === minidiscSpec?.defaultFormat.codec)?.userFriendlyName ?? minidiscSpec?.defaultFormat.codec ?? '?', [minidiscSpec]);
+    const defaultCodecName = minidiscSpec ? getDefaultCodecName(minidiscSpec) : '';
 
     // Action Handlers
     const handleSelectTrackClick = useCallback(

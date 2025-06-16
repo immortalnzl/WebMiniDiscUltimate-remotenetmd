@@ -20,6 +20,11 @@ export interface ServiceConstructionInfo {
     parameters?: CustomParameters;
 }
 
+// For MockMD-Bytes only:
+const BYTES_DEFAULT_SPEC = new DefaultMinidiscSpec();
+(BYTES_DEFAULT_SPEC as any).measurementUnits = 'bytes';
+BYTES_DEFAULT_SPEC.translateToDefaultMeasuringModeFrom = new HiMDSpec(true).translateToDefaultMeasuringModeFrom;
+
 export const Services: ServicePrototype[] = [
     {
         name: 'USB NetMD',
@@ -89,7 +94,7 @@ export const Services: ServicePrototype[] = [
         description: React.createElement('p', null, 'Test NetMD interface. It does nothing'),
         create: (parameters) => {
             console.log(`Given parameters: ${JSON.stringify(parameters)}`);
-            return new NetMDMockService(parameters);
+            return new NetMDMockService(parameters, false);
         },
         spec: new DefaultMinidiscSpec(),
         requiresChrome: false,
@@ -153,6 +158,61 @@ export const Services: ServicePrototype[] = [
             },
         ],
     },
+    {
+        name: 'MockMD - Byte-Based',
+        getConnectName: () => 'Connect to MockMD (bytes)',
+        description: React.createElement('p', null, 'Test NetMD interface. It does nothing'),
+        create: (parameters) => {
+            console.log(`Given parameters: ${JSON.stringify(parameters)}`);
+            return new NetMDMockService(parameters, true);
+        },
+        spec: BYTES_DEFAULT_SPEC,
+        requiresChrome: false,
+        customParameters: [
+            {
+                userFriendlyName: 'capabilityContentList',
+                type: 'boolean',
+                varName: 'capabilityContentList',
+                defaultValue: true,
+            },
+            {
+                userFriendlyName: 'capabilityPlaybackControl',
+                type: 'boolean',
+                varName: 'capabilityPlaybackControl',
+                defaultValue: true,
+            },
+            {
+                userFriendlyName: 'capabilityMetadataEdit',
+                type: 'boolean',
+                varName: 'capabilityMetadataEdit',
+                defaultValue: true,
+            },
+            {
+                userFriendlyName: 'capabilityTrackUpload',
+                type: 'boolean',
+                varName: 'capabilityTrackUpload',
+                defaultValue: true,
+            },
+            {
+                userFriendlyName: 'capabilityTrackDownload',
+                type: 'boolean',
+                varName: 'capabilityTrackDownload',
+                defaultValue: true,
+            },
+            {
+                userFriendlyName: 'capabilityDiscEject',
+                type: 'boolean',
+                varName: 'capabilityDiscEject',
+                defaultValue: true,
+            },
+            {
+                userFriendlyName: 'capabilityFactoryMode',
+                type: 'boolean',
+                varName: 'capabilityFactoryMode',
+                defaultValue: true,
+            },
+        ],
+    },
 ];
 
 if(window.native?.nwInterface) {
@@ -163,9 +223,9 @@ if(window.native?.nwInterface) {
             { codec: 'MP3', availableBitrates: [320, 256, 192, 128, 96, 64], defaultBitrate: 192 },
         ];
         public readonly measurementUnits = 'bytes';
-        public defaultFormat: Codec = { codec: 'A3+', bitrate: 256 };
+        public defaultFormat = [1, 1] as [number, number];
         public specName = "NetworkWM";
-        
+
         translateToDefaultMeasuringModeFrom(codec: Codec, defaultMeasuringModeDuration: number): number {
             return super.translateToDefaultMeasuringModeFrom(codec, defaultMeasuringModeDuration) + 32768; // For initial metadata sections!
         }

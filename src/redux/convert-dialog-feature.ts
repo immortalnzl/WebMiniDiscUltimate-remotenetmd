@@ -9,7 +9,7 @@ export type ForcedEncodingFormat = { codec: 'SPM' | 'SPS' | HiMDCodecName; bitra
 
 export interface ConvertDialogFeature {
     visible: boolean;
-    format: { [mdSpecName: string]: Codec };
+    format: { [mdSpecName: string]: [number, number] };
     titleFormat: TitleFormatType;
     titles: {
         title: string;
@@ -24,7 +24,7 @@ export interface ConvertDialogFeature {
 
 const initialState: ConvertDialogFeature = {
     visible: false,
-    format: loadPreference('uploadFormat', {}), //FIXME add defaults again
+    format: loadPreference('uploadFormat', {}),
     titleFormat: loadPreference('trackTitleFormat', 'filename') as TitleFormatType,
     titles: [],
 };
@@ -60,7 +60,7 @@ const slice = createSlice({
         ) => {
             state.titles = action.payload;
         },
-        updateFormatForSpec: (state, action: PayloadAction<{ spec: string; codec: Codec; unlessUnset?: boolean }>) => {
+        updateFormatForSpec: (state, action: PayloadAction<{ spec: string; codec: [number, number]; unlessUnset?: boolean }>) => {
             if (action.payload.unlessUnset && state.format[action.payload.spec] !== undefined) return;
             state.format = {
                 ...state.format,

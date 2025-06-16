@@ -12,13 +12,12 @@ import FolderIcon from '@mui/icons-material/Folder';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 import { DraggableProvided } from 'react-beautiful-dnd';
-import { Track, Group } from '../services/interfaces/netmd';
+import { Track, Group, getDefaultCodec } from '../services/interfaces/netmd';
 import { formatTimeFromSeconds, secondsToHumanReadable } from '../utils';
 
 import serviceRegistry from '../services/registry';
 import { alpha, lighten } from '@mui/material';
 import { useDeviceCapabilities } from '../frontend-utils';
-import { format } from 'path';
 
 const useStyles = makeStyles<
     void,
@@ -286,7 +285,7 @@ export function TrackRow({
                 </>
             )}
             <TableCell align="right" className={classes.durationCell}>
-                {track.encoding.codec === 'SPM' && <span className={classes.channelBadge}>MONO</span>}
+                {track.channel === 1 && <span className={classes.channelBadge}>MONO</span>}
                 {formatInfo.availableBitrates.length > 1 ? (
                     <Tooltip title={`${track.encoding.bitrate!} kbps`}>
                         <span className={classes.formatBadge}>{track.encoding.codec}</span>
@@ -370,7 +369,7 @@ export function LeftInNondefaultCodecs(timeLeft: number) {
     return (
         <React.Fragment>
             {minidiscSpec.availableFormats.map((e, i) =>
-                e.codec === minidiscSpec.defaultFormat.codec ? null : (
+                e.codec === getDefaultCodec(minidiscSpec).codec ? null : (
                     <React.Fragment key={`total-${e.codec}-${i}`}>
                         <span>{`${secondsToHumanReadable(
                             minidiscSpec.translateDefaultMeasuringModeTo(
