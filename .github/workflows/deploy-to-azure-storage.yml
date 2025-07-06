@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
   # login to Azure using credentials in GH secrets
     - uses: azure/login@v1
