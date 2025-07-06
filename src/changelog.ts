@@ -4,6 +4,8 @@ export const CHANGELOG: ChangelogVersion[] = [
     {
         name: "Version 1.5.1",
         contents: [
+            "Switched to byte-based storage space calculations in HiMD",
+            "Updated HiMD support libraries",
             "Fixed some stability issues related to the remote encoder",
             "Fixed some issues regarding track recognition",
             "Fixed full-width title support",
