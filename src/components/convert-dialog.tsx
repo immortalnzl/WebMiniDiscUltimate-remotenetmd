@@ -322,7 +322,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                             const channels = await getChannelsFromAEA(file);
                             if (channels === 1 || channels === 2) {
                                 forcedEncoding = {
-                                    format: channels === 1 ? { codec: 'SPS', bitrate: 292 } : { codec: 'SPM', bitrate: 146 },
+                                    format: channels === 2 ? { codec: 'SPS', bitrate: 292 } : { codec: 'SPM', bitrate: 146 },
                                     headerLength: 2048,
                                 };
                                 metadata.duration = (((file.size - 2048) / 212) * 11.6) / 1000 / channels;
