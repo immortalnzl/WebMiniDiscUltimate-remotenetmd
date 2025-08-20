@@ -213,7 +213,7 @@ export function TrackRow({
     onOpenContextMenu,
 }: TrackRowProps) {
     const minidiscSpec = serviceRegistry.netmdSpec;
-    const formatInfo = minidiscSpec!.availableFormats.find(e => e.codec === track.encoding.codec)!;
+    const formatInfo = minidiscSpec!.availableFormats.find(e => e.codec === track.encoding.codec && e.availableBitrates.includes(track.encoding.bitrate))!;
     const { classes, cx } = useStyles();
 
     const deviceCapabilities = useDeviceCapabilities();
