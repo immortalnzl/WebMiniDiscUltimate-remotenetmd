@@ -5,6 +5,7 @@
 // @namespace    http://tampermonkey.net/
 // @author       Asivery
 // @match        https://web.minidisc.wiki/
+// @match        https://testing.minidisc.wiki/webminidisc-testing/
 // @grant        GM.xmlHttpRequest
 // @grant        unsafeWindow
 // @run-at       document-start
