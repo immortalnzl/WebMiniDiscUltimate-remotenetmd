@@ -34,9 +34,9 @@ import { Capability, NetMDService, Disc, Codec, MinidiscSpec, ExploitCapability 
 import { getSimpleServices, ServiceConstructionInfo } from '../services/interface-service-manager';
 import { AudioServices } from '../services/audio-export-service-manager';
 import { checkFactoryCapability, initializeFactoryMode } from './factory/factory-actions';
-import { Shazam } from 'shazam-api/dist/api';
 import { ExportParams } from '../services/audio/audio-export';
 import { LibraryServices } from '../services/library-services';
+import { s16LEToSamplesArray, Shazam } from 'shazam-api';
 
 export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pause' | 'seek', params?: unknown) {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
@@ -1114,10 +1114,9 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
             if (!trackEntry.selectedToRecognize || trackEntry.alreadyRecognized) {
                 continue;
             }
-            const SECONDS_TO_OFFSET = 10;
             const TRY_COUNT = 3;
-            const SECONDS_TO_READ = 16;
-            const MIN_DURATION = 2 * (SECONDS_TO_OFFSET * TRY_COUNT + SECONDS_TO_READ);
+            const SECONDS_TO_READ = 12;
+            const MIN_DURATION = SECONDS_TO_READ * TRY_COUNT;
 
             // TRY_COUNT tries to get the song right:
             const track = getTracks(getState().main.disc!).find((e) => e.index === trackEntry.index)!;
@@ -1132,7 +1131,7 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
             toRecognizeTrackCounter++;
             dispatch(songRecognitionProgressDialogActions.setCurrentTrack(toRecognizeTrackCounter));
 
-            for (let offset = 0; offset < 8 * TRY_COUNT; offset += 8) {
+            for (let offset = 0; offset < SECONDS_TO_READ * TRY_COUNT; offset += SECONDS_TO_READ) {
                 let rawSamples: Uint8Array;
                 dispatch(
                     batchActions([
@@ -1142,7 +1141,7 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
                     ])
                 );
 
-                const optimalStartSeconds = track.duration / 2 + offset;
+                const optimalStartSeconds = offset;
 
                 if (mode === 'exploits') {
                     // Download the track
@@ -1210,11 +1209,7 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
                 }
                 dispatch(batchActions([songRecognitionProgressDialogActions.setCurrentStepProgress(-1)]));
 
-                const samplesArray = [];
-                for (let sample = 0; sample < rawSamples.length / 2; sample++) {
-                    samplesArray.push(rawSamples[2 * sample] | (rawSamples[2 * sample + 1] << 8));
-                }
-                const songData = await shazam.recognizeSong(samplesArray, (state) =>
+                const songData = await shazam.recognizeSong(s16LEToSamplesArray(rawSamples), (state) =>
                     dispatch(songRecognitionProgressDialogActions.setCurrentStep(state === 'generating' ? 1 : 2))
                 );
                 if (songData !== null) {
