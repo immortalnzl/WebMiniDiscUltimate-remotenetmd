@@ -57,5 +57,5 @@ export function useDeviceCapabilities(){
             .filter(e => typeof e[1] === 'number')
             .map(e => [e[0], deviceCapabilities.includes(e[1] as Capability)])
         ) as any;
-    }, [deviceCapabilities]);   
+    }, [deviceCapabilities]);
 }

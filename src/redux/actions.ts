@@ -429,6 +429,19 @@ export function wipeDisc() {
     };
 }
 
+export function formatToHiMD() {
+    return async function (dispatch: AppDispatch) {
+        const confirmation = window.confirm(`Format the disc to HiMD? This operation cannot be undone.`);
+        if (!confirmation) {
+            return;
+        }
+        const { netmdService } = serviceRegistry;
+        dispatch(appStateActions.setLoading(true));
+        await netmdService!.formatToHiMD();
+        dispatch(appStateActions.setMainView('WELCOME'));
+    };
+}
+
 export function ejectDisc() {
     return async function (dispatch: AppDispatch) {
         const { netmdService } = serviceRegistry;

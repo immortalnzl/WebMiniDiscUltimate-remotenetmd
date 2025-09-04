@@ -7,7 +7,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 
-import { wipeDisc, listContent, selfTest, exportCSV, importCSV, openRecognizeTrackDialog } from '../redux/actions';
+import { wipeDisc, formatToHiMD, listContent, selfTest, exportCSV, importCSV, openRecognizeTrackDialog } from '../redux/actions';
 import { actions as appActions } from '../redux/app-feature';
 import { actions as renameDialogActions, RenameType } from '../redux/rename-dialog-feature';
 import { actions as factoryNoticeDialogActions } from '../redux/factory/factory-notice-dialog-feature';
@@ -40,6 +40,7 @@ import LockOpenIcon from '@mui/icons-material/LockOpen';
 import SecurityIcon from '@mui/icons-material/Security';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import StorageIcon from '@mui/icons-material/Storage';
 import CodeIcon from '@mui/icons-material/Code';
 
 import { W95TopMenu } from './win95/topmenu';
@@ -126,6 +127,11 @@ export const TopMenu = function (props: { tracksSelected?: number[]; onClick?: (
 
     const handleWipeDisc = useCallback(() => {
         dispatch(wipeDisc());
+        handleMenuClose();
+    }, [dispatch, handleMenuClose]);
+
+    const handleFormatToHiMD = useCallback(() => {
+        dispatch(formatToHiMD());
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
@@ -410,6 +416,16 @@ export const TopMenu = function (props: { tracksSelected?: number[]; onClick?: (
                 <ListItemText>Wipe Disc</ListItemText>
             </MenuItem>
         );
+        if(deviceCapabilities.himdFormat) {
+            menuItems.push(
+                <MenuItem key="himdFormat" onClick={handleFormatToHiMD} disabled={!deviceCapabilities.metadataEdit}>
+                    <ListItemIcon className={classes.listItemIcon}>
+                        <StorageIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Format to HiMD</ListItemText>
+                </MenuItem>
+            );
+        }
 
         menuItems.push(
             <MenuItem
