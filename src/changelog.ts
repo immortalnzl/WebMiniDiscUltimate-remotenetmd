@@ -2,6 +2,14 @@ import { ChangelogVersion } from "./bridge-types";
 
 export const CHANGELOG: ChangelogVersion[] = [
     {
+        name: "Version 1.5.2",
+        contents: [
+            "Added the ability to format MDs to HiMD on supported devices",
+            "Fixed song recognition",
+            "Fixed issues with codec recognition",
+        ],
+    },
+    {
         name: "Version 1.5.1",
         contents: [
             "Switched to byte-based storage space calculations in HiMD",
