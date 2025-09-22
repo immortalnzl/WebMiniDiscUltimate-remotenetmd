@@ -291,7 +291,7 @@ export function TrackRow({
                         <span className={classes.formatBadge}>{track.encoding.codec}</span>
                     </Tooltip>
                 ) : (
-                    <span className={classes.formatBadge}>{formatInfo.userFriendlyName ?? formatInfo.codec}</span>
+                    <span className={classes.formatBadge}>{formatInfo.displayBadgeFriendlyName ?? formatInfo.userFriendlyName ?? formatInfo.codec}</span>
                 )}
                 <span className={classes.durationCellTime}>{formatTimeFromSeconds(track.duration)}</span>
             </TableCell>

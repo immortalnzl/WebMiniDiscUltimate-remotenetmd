@@ -38,7 +38,7 @@ class NetMDMockService extends NetMDService {
         },
         {
             duration: 5 * 60,
-            encoding: this._defaultCodec,
+            encoding: { codec: 'SPM' as const, bitrate: 146 },
             index: 1,
             channel: Channels.mono,
             protected: TrackFlag.unprotected,
