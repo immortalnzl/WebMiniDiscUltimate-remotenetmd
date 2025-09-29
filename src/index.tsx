@@ -4,7 +4,6 @@ import { Buffer } from 'buffer';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
-import * as serviceWorker from './serviceWorker';
 import serviceRegistry from './services/registry';
 
 import { store } from './redux/store';
@@ -148,4 +147,3 @@ root.render(
     </Provider>
 );
 
-serviceWorker.register();

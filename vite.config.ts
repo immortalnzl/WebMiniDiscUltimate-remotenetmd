@@ -25,8 +25,35 @@ export default ({ mode }) => {
       }),
       VitePWA({
         registerType: 'autoUpdate',
-        injectRegister: null, // manual registration
-        manifestFilename: 'manifest.js',
+        manifestFilename: 'manifest.json',
+        manifest: {
+          "short_name": "Web MiniDisc",
+          "name": "Web MiniDisc",
+          "description": "Upload music to NetMD MiniDisc devices",
+          "icons": [
+            {
+              "src": "MiniDisc192.png",
+              "type": "image/png",
+              "sizes": "192x192"
+            },
+            {
+              "src": "MiniDisc512.png",
+              "type": "image/png",
+              "sizes": "512x512"
+            },
+            {
+              "src": "favicon.ico",
+              "sizes": "64x64 32x32 24x24 16x16",
+              "type": "image/x-icon"
+            }
+          ],
+          "start_url": ".",
+          "display": "standalone",
+          "theme_color": "#000000",
+          "orientation": "portrait",
+          "background_color": "#ffffff",
+          "splash_pages": null
+        },
         workbox: {
           maximumFileSizeToCacheInBytes: 1024 * 1024 * 10, // 10 MiB
           runtimeCaching: [
