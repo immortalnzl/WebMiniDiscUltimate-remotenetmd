@@ -3,3 +3,4 @@ uvicorn[standard]
 mutagen
 aiofiles
 python-multipart
+requests

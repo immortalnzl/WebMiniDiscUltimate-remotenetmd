@@ -24,33 +24,17 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
 
     constructor(parameters: CustomParameters) {
         super();
-        let address = (parameters.address as string) || '/api/';
-        if (!address.startsWith('http') && !address.startsWith('/')) {
-            address = '/' + address;
-        }
-        if (!address.endsWith('/')) {
-            address = address + '/';
-        }
-
-        // Force to /api/ in BPI environment if it's a local/relative path
-        if (window.location.port === '8443' && address === '/') {
-            address = '/api/';
-        }
-        
-        this.address = address;
+        this.address = (parameters.address as string) || '/api/';
         this.music_path = (parameters.music_path as string) || '/music';
         this.volume_type = (parameters.volume_type as string) || 'none';
         this.volume_options = (parameters.volume_options as string) || 'bind';
 
-        // Sync with backend
-        this.syncStorage();
+        // NOTE: removed syncStorage() from constructor to avoid race conditions during init
     }
 
     async syncStorage() {
         try {
-            const url = new URL(this.address, window.location.origin);
-            url.pathname = url.pathname.endsWith('/') ? url.pathname + 'storage' : url.pathname + '/storage';
-            const resp = await fetch(url.href);
+            const resp = await fetch('/api/storage');
             const current = await resp.json();
 
             const needsUpdate = 
@@ -60,7 +44,7 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
 
             if (needsUpdate) {
                 console.log("Updating backend storage settings...");
-                await fetch(url.href, {
+                await fetch('/api/storage', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -71,9 +55,7 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
                 });
                 
                 // Trigger restart
-                const restartUrl = new URL(this.address, window.location.origin);
-                restartUrl.pathname = restartUrl.pathname.endsWith('/') ? restartUrl.pathname + 'restart' : restartUrl.pathname + '/restart';
-                await fetch(restartUrl.href, { method: 'POST' });
+                await fetch('/api/restart', { method: 'POST' });
             }
         } catch (e) {
             console.error("Failed to sync storage with backend:", e);
@@ -85,33 +67,39 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
     }
 
     async getDatabase(): Promise<LocalDatabase> {
-        const dbPage = new URL(this.address, window.location.origin);
-        dbPage.pathname = dbPage.pathname.endsWith('/') ? dbPage.pathname + 'database' : dbPage.pathname + '/database';
-        dbPage.searchParams.append("cache", Math.random() + "");
-        const resp = await fetch(dbPage);
-        const json = await resp.json() as LocalDatabase;
-
-        // Prepend address to artwork URLs
-        const process = (db: LocalDatabase) => {
-            for (const key in db) {
-                const entry = db[key];
-                if ('artist' in entry) {
-                    const track = entry as any;
-                    if (track.artwork) {
-                        const artURL = new URL(this.address, window.location.origin);
-                        const [path, search] = track.artwork.split('?');
-                        artURL.pathname = path;
-                        artURL.search = search || '';
-                        track.artwork = artURL.href;
-                    }
-                } else {
-                    process(entry as LocalDatabase);
-                }
+        try {
+            console.log("Fetching database from /api/database...");
+            const resp = await fetch('/api/database?cache=' + Math.random());
+            if (!resp.ok) {
+                throw new Error(`HTTP Error: ${resp.status} ${resp.statusText}`);
             }
-        };
-        process(json);
+            const json = await resp.json() as LocalDatabase;
 
-        return json;
+            // Prepend address to artwork URLs
+            const process = (db: LocalDatabase) => {
+                for (const key in db) {
+                    const entry = db[key];
+                    if ('artist' in entry) {
+                        const track = entry as any;
+                        if (track.artwork) {
+                            const artURL = new URL(this.address, window.location.origin);
+                            const [path, search] = track.artwork.split('?');
+                            artURL.pathname = path;
+                            artURL.search = search || '';
+                            track.artwork = artURL.href;
+                        }
+                    } else {
+                        process(entry as LocalDatabase);
+                    }
+                }
+            };
+            process(json);
+
+            return json;
+        } catch (e) {
+            console.error("RemoteLibraryService.getDatabase failed:", e);
+            throw e;
+        }
     }
 
     async processLocalLibraryFile(filePath: string, params: ExportParams): Promise<ArrayBuffer> {

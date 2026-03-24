@@ -41,7 +41,7 @@ export interface AppState {
 
 export const buildInitialState = (): AppState => {
     return {
-        mainView: 'WELCOME',
+        mainView: 'MAIN',
         loading: false,
         pairingFailed: false,
         pairingMessage: ``,

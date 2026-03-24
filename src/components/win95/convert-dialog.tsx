@@ -55,7 +55,7 @@ export const W95ConvertDialog = (props: {
     dialogVisible: boolean;
 }) => {
     const themeContext = useContext(ThemeContext)!;
-    const recordModeOptions = useMemo(() => props.minidiscSpec.availableFormats.map((e, i) => ({ label: e.userFriendlyName ?? e.codec, value: i })), [props.minidiscSpec]);
+    const recordModeOptions = useMemo(() => props.minidiscSpec?.availableFormats.map((e, i) => ({ label: e.userFriendlyName ?? e.codec, value: i })) ?? [], [props.minidiscSpec]);
 
     const renderTracks = useCallback(() => {
         return props.titles.map((file, i) => {

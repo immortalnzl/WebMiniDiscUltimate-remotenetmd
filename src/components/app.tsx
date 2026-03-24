@@ -30,7 +30,7 @@ const useStyles = makeStyles()((theme) => ({
         overflow: 'hidden',
     },
     sidebar: {
-        width: '350px',
+        width: '75%',
         flexShrink: 0,
         height: '100%',
         transition: 'width 0.3s ease-in-out',
@@ -42,7 +42,8 @@ const useStyles = makeStyles()((theme) => ({
         width: '100%',
     },
     mainContent: {
-        flexGrow: 1,
+        width: '25%',
+        flexShrink: 0,
         height: '100%',
         display: 'flex',
         flexDirection: 'column',

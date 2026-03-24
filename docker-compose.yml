@@ -25,6 +25,7 @@ services:
 
 volumes:
   music_volume:
+    driver: local
     driver_opts:
       type: "${VOLUME_TYPE:-none}"
       device: "${MUSIC_PATH}"

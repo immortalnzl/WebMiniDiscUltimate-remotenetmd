@@ -40,41 +40,44 @@ import { s16LEToSamplesArray, Shazam } from 'shazam-api';
 export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pause' | 'seek', params?: unknown) {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
         const state = getState();
+        const { netmdService } = serviceRegistry;
+        if (!netmdService) return;
+
         switch (action) {
             case 'play':
-                await serviceRegistry.netmdService!.play();
+                await netmdService.play();
                 break;
             case 'stop':
-                await serviceRegistry.netmdService!.stop();
+                await netmdService.stop();
                 break;
             case 'next':
                 try {
-                    await serviceRegistry.netmdService!.next();
+                    await netmdService.next();
                 } catch (e) {
                     // Some devices don't support next() and prev()
-                    if (state.main.deviceStatus?.track === state.main.disc!.trackCount - 1 || !state.main.deviceStatus) return;
-                    await serviceRegistry.netmdService!.stop();
-                    await serviceRegistry.netmdService!.gotoTrack(state.main.deviceStatus.track! + 1);
-                    await serviceRegistry.netmdService!.play();
+                    if (state.main.deviceStatus?.track === (state.main.disc?.trackCount ?? 0) - 1 || !state.main.deviceStatus) return;
+                    await netmdService.stop();
+                    await netmdService.gotoTrack(state.main.deviceStatus.track! + 1);
+                    await netmdService.play();
                 }
                 break;
             case 'prev':
                 try {
-                    await serviceRegistry.netmdService!.prev();
+                    await netmdService.prev();
                 } catch (e) {
                     // Some devices don't support next() and prev()
                     if (state.main.deviceStatus?.track === 0 || !state.main.deviceStatus) return;
-                    await serviceRegistry.netmdService!.stop();
-                    await serviceRegistry.netmdService!.gotoTrack(state.main.deviceStatus.track! - 1);
-                    await serviceRegistry.netmdService!.play();
+                    await netmdService.stop();
+                    await netmdService.gotoTrack(state.main.deviceStatus.track! - 1);
+                    await netmdService.play();
                 }
                 break;
             case 'pause':
-                await serviceRegistry.netmdService!.pause();
+                await netmdService.pause();
                 break;
             case 'goto': {
                 const trackNumber = assertNumber(params, 'Invalid track number for "goto" command');
-                await serviceRegistry.netmdService!.gotoTrack(trackNumber);
+                await netmdService.gotoTrack(trackNumber);
                 break;
             }
             case 'seek': {
@@ -85,7 +88,7 @@ export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pa
                 const trackNumber = assertNumber(typedParams.trackNumber, 'Invalid track number for "seek" command');
                 const time = assertNumber(typedParams.time, 'Invalid time for "seek" command');
                 const timeArgs = timeToSeekArgs(time);
-                await serviceRegistry.netmdService!.gotoTime(trackNumber, timeArgs[0], timeArgs[1], timeArgs[2], timeArgs[3]);
+                await netmdService.gotoTime(trackNumber, timeArgs[0], timeArgs[1], timeArgs[2], timeArgs[3]);
                 break;
             }
         }
@@ -93,7 +96,7 @@ export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pa
         // We wait 500ms and let the monitor do further updates
         await sleep(500);
         try {
-            const deviceStatus = await serviceRegistry.netmdService!.getDeviceStatus();
+            const deviceStatus = await netmdService.getDeviceStatus();
             dispatch(mainActions.setDeviceStatus(deviceStatus));
         } catch (e) {
             console.log('control: Cannot get device status');
@@ -104,7 +107,7 @@ export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pa
 export function renameGroup({ groupIndex, newName, newFullWidthName }: { groupIndex: number; newName: string; newFullWidthName?: string }) {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
         dispatch(appStateActions.setLoading(true));
-        await serviceRegistry!.netmdService?.renameGroup(groupIndex, newName, newFullWidthName);
+        await serviceRegistry.netmdService?.renameGroup(groupIndex, newName, newFullWidthName);
         listContent()(dispatch);
         dispatch(appStateActions.setLoading(false));
     };
@@ -115,8 +118,12 @@ export function groupTracks(indexes: number[]) {
         const begin = indexes[0];
         const length = indexes[indexes.length - 1] - begin + 1;
         const { netmdService } = serviceRegistry;
+        if (!netmdService) return;
 
-        netmdService!.addGroup(begin, length, '');
+        netmdService.addGroup(begin, length, '');
+        listContent()(dispatch);
+
+        netmdService?.addGroup(begin, length, '');
         listContent()(dispatch);
     };
 }
@@ -125,9 +132,10 @@ export function deleteGroups(indexes: number[]) {
     return async function (dispatch: AppDispatch) {
         dispatch(appStateActions.setLoading(true));
         const { netmdService } = serviceRegistry;
+        if (!netmdService) return;
         const sorted = [...indexes].sort((a, b) => b - a);
         for (const index of sorted) {
-            await netmdService!.deleteGroup(index);
+            await netmdService.deleteGroup(index);
         }
         listContent()(dispatch);
     };
@@ -137,8 +145,11 @@ export function dragDropTrack(sourceList: number, sourceIndex: number, targetLis
     // This code is here, because it would need to be duplicated in both netmd and netmd-mock.
     return async function (dispatch: AppDispatch, getState: () => RootState) {
         if (sourceList === targetList && sourceIndex === targetIndex) return;
+        const { netmdService } = serviceRegistry;
+        if (!netmdService) return;
+
         dispatch(appStateActions.setLoading(true));
-        const groupedTracks = getGroupedTracks(await serviceRegistry.netmdService!.listContent());
+        const groupedTracks = getGroupedTracks(await netmdService.listContent());
         // Remove the moved item from its current list
         const movedItem = groupedTracks[sourceList].tracks.splice(sourceIndex, 1)[0];
         let newIndex: number;
@@ -203,7 +214,7 @@ export function dragDropTrack(sourceList: number, sourceIndex: number, targetLis
         }
 
         if (movedItem.index !== newIndex) {
-            await serviceRegistry!.netmdService!.moveTrack(movedItem.index, newIndex, false);
+            await netmdService.moveTrack(movedItem.index, newIndex, false);
         }
 
         movedItem.index = newIndex;
@@ -224,7 +235,7 @@ export function dragDropTrack(sourceList: number, sourceIndex: number, targetLis
                 fullWidthTitle: null,
                 tracks: ungrouped,
             });
-        await serviceRegistry.netmdService!.rewriteGroups(normalGroups);
+        await netmdService.rewriteGroups(normalGroups);
         listContent()(dispatch);
     };
 }
@@ -255,7 +266,7 @@ export function pair(serviceInstance: NetMDService, spec: MinidiscSpec) {
         serviceRegistry.audioExportService = new AudioServices[getState().appState.audioExportService].create(
             getState().appState.audioExportServiceConfig
         );
-        await serviceRegistry.audioExportService!.init();
+        await serviceRegistry.audioExportService?.init();
 
         let libraryServiceIndex = getState().appState.libraryService;
         if (libraryServiceIndex !== -1) {
@@ -267,7 +278,7 @@ export function pair(serviceInstance: NetMDService, spec: MinidiscSpec) {
         serviceRegistry.netmdFactoryService = undefined;
 
         try {
-            const connected = await serviceRegistry.netmdService!.connect();
+            const connected = await serviceRegistry.netmdService?.connect();
             if (connected) {
                 dispatch(appStateActions.setMainView('MAIN'));
                 return;
@@ -278,7 +289,7 @@ export function pair(serviceInstance: NetMDService, spec: MinidiscSpec) {
         }
 
         try {
-            const paired = await serviceRegistry.netmdService!.pair();
+            const paired = await serviceRegistry.netmdService?.pair();
             if (paired) {
                 dispatch(
                     batchActions([
@@ -302,22 +313,36 @@ export function pair(serviceInstance: NetMDService, spec: MinidiscSpec) {
 
 export function listContent(dropCache: boolean = false) {
     return async function (dispatch: AppDispatch) {
+        const { netmdService } = serviceRegistry;
+        if (!netmdService) {
+            dispatch(
+                batchActions([
+                    mainActions.setDisc(null),
+                    mainActions.setDeviceName(''),
+                    mainActions.setDeviceStatus(null),
+                    mainActions.setDeviceCapabilities([]),
+                    appStateActions.setLoading(false),
+                ])
+            );
+            return;
+        }
+
         // Issue loading
         dispatch(appStateActions.setLoading(true));
         let disc = null;
         let deviceStatus = null;
         try {
-            deviceStatus = await serviceRegistry.netmdService!.getDeviceStatus();
+            deviceStatus = await netmdService.getDeviceStatus();
         } catch (e) {
             console.log('listContent: Cannot get device status');
             console.log(e);
         }
-        const deviceName = await serviceRegistry.netmdService!.getDeviceName();
-        const deviceCapabilities = await serviceRegistry.netmdService!.getServiceCapabilities();
+        const deviceName = await netmdService.getDeviceName();
+        const deviceCapabilities = await netmdService.getServiceCapabilities();
 
         if (deviceStatus?.discPresent) {
             try {
-                disc = await serviceRegistry.netmdService!.listContent(dropCache);
+                disc = await netmdService.listContent(dropCache);
             } catch (err) {
                 console.log(err);
                 if (!(err as any).message.startsWith('Rejected')) {
@@ -326,8 +351,8 @@ export function listContent(dropCache: boolean = false) {
                             "This disc's title seems to be corrupted, do you wish to erase it?\nNone of the tracks will be deleted."
                         )
                     ) {
-                        await serviceRegistry.netmdService!.wipeDiscTitleInfo();
-                        disc = await serviceRegistry.netmdService!.listContent(true);
+                        await netmdService.wipeDiscTitleInfo();
+                        disc = await netmdService.listContent(true);
                     } else throw err;
                 }
             }
@@ -347,10 +372,11 @@ export function listContent(dropCache: boolean = false) {
 export function renameTrack(...entries: { index: number; newName: string; newFullWidthName?: string }[]) {
     return async function (dispatch: AppDispatch) {
         const { netmdService } = serviceRegistry;
+        if (!netmdService) return;
         dispatch(batchActions([renameDialogActions.setVisible(false), appStateActions.setLoading(true)]));
         try {
             for (const { index, newName, newFullWidthName } of entries) {
-                await netmdService!.renameTrack(index, newName, newFullWidthName);
+                await netmdService.renameTrack(index, newName, newFullWidthName);
             }
         } catch (err) {
             console.error(err);
@@ -369,10 +395,11 @@ export function renameTrack(...entries: { index: number; newName: string; newFul
 export function himdRenameTrack(...entries: { index: number; title?: string; album?: string; artist?: string }[]) {
     return async function (dispatch: AppDispatch) {
         const { netmdService } = serviceRegistry;
+        if (!netmdService) return;
         dispatch(batchActions([renameDialogActions.setVisible(false), appStateActions.setLoading(true)]));
         try {
             for (const { index, title, album, artist } of entries) {
-                await netmdService!.renameTrack(index, { title, album, artist });
+                await netmdService.renameTrack(index, { title, album, artist });
             }
         } catch (err) {
             console.error(err);
@@ -391,7 +418,8 @@ export function himdRenameTrack(...entries: { index: number; title?: string; alb
 export function renameDisc({ newName, newFullWidthName }: { newName: string; newFullWidthName?: string }) {
     return async function (dispatch: AppDispatch) {
         const { netmdService } = serviceRegistry;
-        await netmdService!.renameDisc(
+        if (!netmdService) return;
+        await netmdService.renameDisc(
             newName.replace(/\/\//g, ' /'), // Make sure the title doesn't interfere with the groups
             newFullWidthName?.replace(/／／/g, '／')
         );
@@ -409,8 +437,9 @@ export function deleteTracks(indexes: number[]) {
             return;
         }
         const { netmdService } = serviceRegistry;
+        if (!netmdService) return;
         dispatch(appStateActions.setLoading(true));
-        await netmdService!.deleteTracks(indexes);
+        await netmdService.deleteTracks(indexes);
         listContent()(dispatch);
     };
 }
@@ -422,8 +451,9 @@ export function wipeDisc() {
             return;
         }
         const { netmdService } = serviceRegistry;
+        if (!netmdService) return;
         dispatch(appStateActions.setLoading(true));
-        await netmdService!.wipeDisc();
+        await netmdService.wipeDisc();
         listContent()(dispatch);
     };
 }
@@ -435,8 +465,9 @@ export function formatToHiMD() {
             return;
         }
         const { netmdService } = serviceRegistry;
+        if (!netmdService) return;
         dispatch(appStateActions.setLoading(true));
-        await netmdService!.formatToHiMD();
+        await netmdService.formatToHiMD();
         dispatch(appStateActions.setMainView('WELCOME'));
     };
 }
@@ -444,7 +475,8 @@ export function formatToHiMD() {
 export function ejectDisc() {
     return async function (dispatch: AppDispatch) {
         const { netmdService } = serviceRegistry;
-        netmdService!.ejectDisc();
+        if (!netmdService) return;
+        netmdService.ejectDisc();
         dispatch(mainActions.setDisc(null));
     };
 }
@@ -452,7 +484,8 @@ export function ejectDisc() {
 export function moveTrack(srcIndex: number, destIndex: number) {
     return async function (dispatch: AppDispatch) {
         const { netmdService } = serviceRegistry;
-        await netmdService!.moveTrack(srcIndex, destIndex);
+        if (!netmdService) return;
+        await netmdService.moveTrack(srcIndex, destIndex);
         listContent()(dispatch);
     };
 }
@@ -474,6 +507,7 @@ export function downloadTracks(
         const tracks = getTracks(disc!).filter((t) => indexes.indexOf(t.index) >= 0);
 
         const { netmdService } = serviceRegistry;
+        if (!netmdService) return;
 
         for (const [i, track] of tracks.entries()) {
             dispatch(
@@ -530,7 +564,8 @@ export function recordTracks(indexes: number[], deviceId: string) {
         const tracks = getTracks(disc!).filter((t) => indexes.indexOf(t.index) >= 0);
 
         const { netmdService, mediaRecorderService } = serviceRegistry;
-        await serviceRegistry.netmdService!.stop();
+        if (!netmdService) return;
+        await netmdService.stop();
 
         for (const [i, track] of tracks.entries()) {
             dispatch(
@@ -662,6 +697,7 @@ export function selfTest() {
         if (!window.confirm('Warning - This is a destructive self test. THE DISC WILL BE ERASED! Continue?')) return;
 
         const { netmdService } = serviceRegistry;
+        if (!netmdService) return;
 
         const allTracks = (disc: Disc) => disc.groups.sort((a, b) => a.tracks[0].index - b.tracks[0].index).flatMap((n) => n.tracks);
 
@@ -674,7 +710,7 @@ export function selfTest() {
             {
                 name: 'Reload TOC',
                 func: async () => {
-                    await netmdService!.listContent();
+                    await netmdService.listContent();
                     return true;
                 },
             },
@@ -682,24 +718,24 @@ export function selfTest() {
                 name: 'Rename Disc',
                 func: async () => {
                     const titleToSet = 'Self-Test Half-Width';
-                    await netmdService!.renameDisc(titleToSet);
-                    return compareOrThrow((await netmdService!.listContent()).title, titleToSet);
+                    await netmdService.renameDisc(titleToSet);
+                    return compareOrThrow((await netmdService.listContent()).title, titleToSet);
                 },
             },
             {
                 name: 'Full-Width Rename Disc',
                 func: async () => {
                     const titleToSet = 'Ｓｅｌｆ－Ｔｅｓｔ\u3000Ｆｕｌｌ－Ｗｉｄｔｈ';
-                    await netmdService!.renameDisc('1', titleToSet);
-                    return compareOrThrow((await netmdService!.listContent()).fullWidthTitle, titleToSet);
+                    await netmdService.renameDisc('1', titleToSet);
+                    return compareOrThrow((await netmdService.listContent()).fullWidthTitle, titleToSet);
                 },
             },
             {
                 name: 'Rename Track 1, 2',
                 func: async () => {
-                    await netmdService!.renameTrack(0, '1');
-                    await netmdService!.renameTrack(1, '2');
-                    const content = allTracks(await netmdService!.listContent());
+                    await netmdService.renameTrack(0, '1');
+                    await netmdService.renameTrack(1, '2');
+                    const content = allTracks(await netmdService.listContent());
                     return compareOrThrow(content[0].title, '1') && compareOrThrow(content[1].title, '2');
                 },
             },
@@ -707,23 +743,23 @@ export function selfTest() {
                 name: 'Full-Width Rename Track 1',
                 func: async () => {
                     const titleToSet = 'Ｓｅｌｆ－Ｔｅｓｔ\u3000Ｔｒａｃｋ\u3000Ｆｕｌｌ－Ｗｉｄｔｈ';
-                    await netmdService!.renameTrack(1, '2', titleToSet);
-                    return compareOrThrow(allTracks(await netmdService!.listContent())[1].fullWidthTitle, titleToSet);
+                    await netmdService.renameTrack(1, '2', titleToSet);
+                    return compareOrThrow(allTracks(await netmdService.listContent())[1].fullWidthTitle, titleToSet);
                 },
             },
             {
                 name: 'Move Track 1 to 2',
                 func: async () => {
-                    await netmdService!.moveTrack(0, 1, false);
-                    const content = allTracks(await netmdService!.listContent());
+                    await netmdService.moveTrack(0, 1, false);
+                    const content = allTracks(await netmdService.listContent());
                     return compareOrThrow(content[0].title, '2') && compareOrThrow(content[1].title, '1');
                 },
             },
             {
                 name: 'Play Track 1',
                 func: async () => {
-                    await netmdService!.gotoTrack(0);
-                    await netmdService!.play();
+                    await netmdService.gotoTrack(0);
+                    await netmdService.play();
                     await sleep(1000);
                     return true;
                 },
@@ -731,7 +767,7 @@ export function selfTest() {
             {
                 name: 'Next Track',
                 func: async () => {
-                    await netmdService!.next();
+                    await netmdService.next();
                     await sleep(1000);
                     return true;
                 },
@@ -739,7 +775,7 @@ export function selfTest() {
             {
                 name: 'Previous Track',
                 func: async () => {
-                    await netmdService!.prev();
+                    await netmdService.prev();
                     await sleep(1000);
                     return true;
                 },
@@ -747,7 +783,7 @@ export function selfTest() {
             {
                 name: 'Go To Track 2',
                 func: async () => {
-                    await netmdService!.gotoTrack(1);
+                    await netmdService.gotoTrack(1);
                     await sleep(1000);
                     return true;
                 },
@@ -755,7 +791,7 @@ export function selfTest() {
             {
                 name: 'Pause',
                 func: async () => {
-                    await netmdService!.pause();
+                    await netmdService.pause();
                     await sleep(1000);
                     return true;
                 },
@@ -763,7 +799,7 @@ export function selfTest() {
             {
                 name: 'Stop',
                 func: async () => {
-                    await netmdService!.stop();
+                    await netmdService.stop();
                     await sleep(1000);
                     return true;
                 },
@@ -771,17 +807,17 @@ export function selfTest() {
             {
                 name: 'Delete Track 1',
                 func: async () => {
-                    const beforeDelete = allTracks(await netmdService!.listContent()).length;
-                    await netmdService!.deleteTracks([0]);
-                    const afterDelete = allTracks(await netmdService!.listContent()).length;
+                    const beforeDelete = allTracks(await netmdService.listContent()).length;
+                    await netmdService.deleteTracks([0]);
+                    const afterDelete = allTracks(await netmdService.listContent()).length;
                     return compareOrThrow(beforeDelete, afterDelete + 1);
                 },
             },
             {
                 name: 'Erase Disc',
                 func: async () => {
-                    await netmdService!.wipeDisc();
-                    return compareOrThrow(allTracks(await netmdService!.listContent()).length, 0);
+                    await netmdService.wipeDisc();
+                    return compareOrThrow(allTracks(await netmdService.listContent()).length, 0);
                 },
             },
         ];
@@ -862,8 +898,10 @@ const csvHeader = [
 
 export function exportCSV(callback: (blob: Blob, name: string) => void = downloadBlob) {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
+        const { netmdService } = serviceRegistry;
+        if (!netmdService) return;
         dispatch(appStateActions.setLoading(true));
-        const disc = await serviceRegistry.netmdService!.listContent();
+        const disc = await netmdService.listContent();
         const rows: string[][] = [];
         rows.push([
             '0', // track index - 0 is disc title
@@ -953,7 +991,9 @@ export function importCSV(file: File) {
 
         // Make sure the CSV matches the disc
         dispatch(appStateActions.setLoading(true));
-        const disc = await serviceRegistry.netmdService!.listContent();
+        const { netmdService } = serviceRegistry;
+        if (!netmdService) return;
+        const disc = await netmdService.listContent();
         const ungroupedTracks = getTracks(disc).sort((a, b) => a.index - b.index);
         if (disc.trackCount !== records.length - 2) {
             // - 2 - one for the header, second for the disc title / info
@@ -969,7 +1009,7 @@ export function importCSV(file: File) {
             }
         }
 
-        await serviceRegistry.netmdService!.wipeDiscTitleInfo();
+        await netmdService.wipeDiscTitleInfo();
 
         for (const [
             sIndex,
@@ -989,7 +1029,7 @@ export function importCSV(file: File) {
                 gRange = grRange.replace(/ /g, '');
             if (index === 0) {
                 // Disc title info
-                await serviceRegistry.netmdService!.renameDisc(name, fwName);
+                await netmdService.renameDisc(name, fwName);
                 continue;
             }
             if (!ungroupedTracks[index - 1]) {
@@ -1030,14 +1070,14 @@ export function importCSV(file: File) {
                     const start = parseInt(startS),
                         end = parseInt(endS),
                         length = end - start + 1;
-                    await serviceRegistry.netmdService!.addGroup(start, length, groupName, groupFullWidthName);
+                    await netmdService.addGroup(start, length, groupName, groupFullWidthName);
                 }
             }
 
             if (usesHiMDTitles) {
-                await serviceRegistry.netmdService!.renameTrack(index - 1, { title: name, album, artist });
+                await netmdService.renameTrack(index - 1, { title: name, album, artist });
             } else {
-                await serviceRegistry.netmdService!.renameTrack(index - 1, name, fwName);
+                await netmdService.renameTrack(index - 1, name, fwName);
             }
         }
 
@@ -1120,6 +1160,10 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
             await serviceRegistry.netmdFactoryService!.prepareDownload(getState().appState.factoryModeUseSlowerExploit);
         }
 
+        const { netmdService, mediaRecorderService, netmdFactoryService } = serviceRegistry;
+        if (mode === 'exploits' && !netmdFactoryService) return;
+        if (mode === 'line-in' && (!netmdService || !mediaRecorderService)) return;
+
         let toRecognizeTrackCounter = -1;
         for (let i = 0; i<trackEntries.length; i++) {
             const trackEntry = trackEntries[i];
@@ -1158,7 +1202,7 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
                 if (mode === 'exploits') {
                     // Download the track
 
-                    const atracData = await serviceRegistry.netmdFactoryService!.exploitDownloadTrack(
+                    const atracData = await netmdFactoryService!.exploitDownloadTrack(
                         trackEntry.index,
                         false,
                         (e) =>
@@ -1213,11 +1257,12 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
                             songRecognitionProgressDialogActions.setCurrentStep(1),
                         ])
                     );
+                    if (!mediaRecorderService) return;
                     const rawWav = await new Promise<Uint8Array>((res) =>
-                        mediaRecorderService!.recorder.exportWAV(async (blob: Blob) => res(new Uint8Array(await blob.arrayBuffer())))
+                        mediaRecorderService.recorder.exportWAV(async (blob: Blob) => res(new Uint8Array(await blob.arrayBuffer())))
                     );
                     rawSamples = await ffmpegTranscode(rawWav, 'wav', '-ar 16000 -ac 1 -f s16le');
-                    await mediaRecorderService?.closeStream();
+                    await mediaRecorderService.closeStream();
                 }
                 dispatch(batchActions([songRecognitionProgressDialogActions.setCurrentStepProgress(-1)]));
 
@@ -1255,8 +1300,9 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
 export function flushDevice() {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
         const { netmdService } = serviceRegistry;
+        if (!netmdService) return;
         dispatch(appStateActions.setLoading(true));
-        await netmdService!.flush();
+        await netmdService.flush();
         dispatch(batchActions([appStateActions.setLoading(false), mainActions.setFlushable(false)]));
     };
 }
@@ -1285,6 +1331,7 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
         if (files.length === 0) return;
 
         const { audioExportService, netmdService, netmdSpec } = serviceRegistry;
+        if (!netmdService || !netmdSpec) return;
         let { netmdFactoryService } = serviceRegistry;
         if (format.codec === 'SPM' && !deviceCapabilities.includes(Capability.nativeMonoUpload)) {
             // SP MONO is a homebrew feature
@@ -1513,13 +1560,14 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
         const disc = getState().main.disc;
         const usesHiMDTitles = getState().main.deviceCapabilities.includes(Capability.himdTitles);
         const useFullWidth = getState().appState.fullWidthSupport;
+        if (!netmdSpec || !disc) return;
         let { halfWidth: availableHalfWidthCharacters, fullWidth: availableFullWidthCharacters } =
-            netmdSpec!.getRemainingCharactersForTitles(disc!);
+            netmdSpec.getRemainingCharactersForTitles(disc);
 
         let error: any;
         let errorMessage = ``;
         let i = 1;
-        await netmdService?.prepareUpload();
+        await netmdService.prepareUpload();
 
         for await (const item of conversionIterator(files)) {
             if (hasUploadBeenCancelled()) {
@@ -1557,7 +1605,8 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
             updateUploadProgressCallback({ written: 0, encrypted: 0, total: 100 });
             if (file.forcedEncoding?.codec === 'SPS' || file.forcedEncoding?.codec === 'SPM') {
                 // Uploading an AEA file.
-                await netmdFactoryService!.uploadSP(
+                if (!netmdFactoryService) return;
+                await netmdFactoryService.uploadSP(
                     halfWidthTitle,
                     fullWidthTitle,
                     file.forcedEncoding.codec === 'SPM',
@@ -1607,6 +1656,70 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
     };
 }
 
+export function loadLibraryStatus() {
+    return async function (dispatch: AppDispatch) {
+        try {
+            const resp = await fetch('/api/status');
+            const status = await resp.json();
+            dispatch(localLibraryActions.setScanStatus(status));
+        } catch (e) {
+            console.warn("Failed to load library status:", e);
+        }
+    };
+}
+
+export function loadArtists() {
+    return async function (dispatch: AppDispatch) {
+        try {
+            const resp = await fetch('/api/artists');
+            const artists = await resp.json();
+            dispatch(localLibraryActions.setArtists(artists));
+        } catch (e) {
+            console.warn("Failed to load artists:", e);
+        }
+    };
+}
+
+export function loadAlbums() {
+    return async function (dispatch: AppDispatch) {
+        try {
+            const resp = await fetch('/api/albums');
+            const albums = await resp.json();
+            dispatch(localLibraryActions.setAlbums(albums));
+        } catch (e) {
+            console.warn("Failed to load albums:", e);
+        }
+    };
+}
+
+export function loadLibraryDatabase(force: boolean = false) {
+    return async function (dispatch: AppDispatch, getState: () => RootState) {
+        const { libraryService } = serviceRegistry;
+        if (!libraryService) return;
+
+        const { database, status } = getState().localLibrary;
+        if (!force && (database !== null && Object.keys(database).length > 0)) return;
+        if (status === 'Loading database...') return;
+
+        dispatch(localLibraryActions.setStatus('Loading database...'));
+        try {
+            const db = await libraryService.getDatabase();
+            dispatch(batchActions([
+                localLibraryActions.setStatus(null),
+                localLibraryActions.setDatabase(db)
+            ]));
+            // Load extras
+            loadLibraryStatus()(dispatch);
+            loadArtists()(dispatch);
+            loadAlbums()(dispatch);
+        } catch (e) {
+            console.error("Failed to load library database:", e);
+            dispatch(localLibraryActions.setStatus('Failed to load library'));
+            setTimeout(() => dispatch(localLibraryActions.setStatus(null)), 5000);
+        }
+    };
+}
+
 export function openLocalLibrary() {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
         if (!serviceRegistry.libraryService) {
@@ -1614,10 +1727,6 @@ export function openLocalLibrary() {
         }
 
         dispatch(localLibraryActions.setVisible(true));
-        if (!getState().localLibrary.database) {
-            dispatch(localLibraryActions.setStatus('Loading database...'));
-            const database = await serviceRegistry.libraryService!.getDatabase();
-            dispatch(batchActions([localLibraryActions.setStatus(null), localLibraryActions.setDatabase(database)]));
-        }
+        dispatch(loadLibraryDatabase());
     };
 }

@@ -240,11 +240,13 @@ export const SongRecognitionDialog = (props: {}) => {
     );
 
     useEffect(() => {
+        const minidiscSpec = serviceRegistry.netmdSpec;
+        if (!minidiscSpec) return;
+
         let changed = false;
         const newArray = [...titles];
         for (let i = 0; i < newArray.length; i++) {
             const title = newArray[i];
-            const minidiscSpec = serviceRegistry.netmdSpec!;
 
             let halfWidth, fullWidth;
             let newRawTitle;

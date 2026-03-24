@@ -189,7 +189,9 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                 artwork: (file as any).artwork,
 
                 getForEncoding: async (params: ExportParams) => {
-                    return serviceRegistry.libraryService!.processLocalLibraryFile(file.path, params);
+                    const { libraryService } = serviceRegistry;
+                    if (!libraryService) throw new Error('Library service not available');
+                    return libraryService.processLocalLibraryFile(file.path, params);
                 },
             };
             return adaptiveFile;

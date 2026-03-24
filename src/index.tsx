@@ -45,7 +45,7 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
 
     if (navigator && navigator.usb) {
         navigator.usb.ondisconnect = function(event) {
-            if(serviceRegistry.netmdService!.isDeviceConnected(event.device)){
+            if(serviceRegistry.netmdService?.isDeviceConnected(event.device)){
                 store.dispatch(appActions.setMainView('WELCOME'));
                 document.title = originalApplicationTitle;
             } else {
@@ -104,11 +104,8 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
         if (shouldMonitorBeRunning(state)) {
             try {
                 await sleep(250);
-                let deviceStatus;
-                try {
-                    deviceStatus = await serviceRegistry.netmdService!.getDeviceStatus();
-                } catch (ex) {
-                    // In invalid state - wait it out.
+                let deviceStatus = await serviceRegistry.netmdService?.getDeviceStatus();
+                if (!deviceStatus) {
                     setTimeout(monitor, 5000);
                     return;
                 }

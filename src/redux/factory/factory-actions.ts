@@ -16,10 +16,15 @@ import { AtracRecoveryConfig } from 'netmd-exploits';
 export function initializeFactoryMode() {
     return async function(dispatch: AppDispatch) {
         if (serviceRegistry.netmdFactoryService === undefined) {
+            const { netmdService } = serviceRegistry;
+            if (!netmdService) return;
+            
             dispatch(appStateActions.setLoading(true));
-            serviceRegistry.netmdFactoryService = (await serviceRegistry.netmdService!.factory()) as NetMDFactoryService;
-            const firmwareVersion = await serviceRegistry.netmdFactoryService!.getDeviceFirmware();
-            const capabilities = await serviceRegistry.netmdFactoryService!.getExploitCapabilities();
+            const netmdFactoryService = (await netmdService.factory()) as NetMDFactoryService;
+            serviceRegistry.netmdFactoryService = netmdFactoryService;
+            
+            const firmwareVersion = await netmdFactoryService.getDeviceFirmware();
+            const capabilities = await netmdFactoryService.getExploitCapabilities();
 
             dispatch(
                 batchActions([
@@ -35,15 +40,18 @@ export function initializeFactoryMode() {
 export function readToc() {
     return async function(dispatch: AppDispatch) {
         await initializeFactoryMode()(dispatch);
+        const { netmdFactoryService } = serviceRegistry;
+        if (!netmdFactoryService) return;
+
         dispatch(appStateActions.setLoading(true));
         const newToc = parseTOC(
-            await serviceRegistry.netmdFactoryService!.readUTOCSector(0),
-            await serviceRegistry.netmdFactoryService!.readUTOCSector(1),
-            await serviceRegistry.netmdFactoryService!.readUTOCSector(2),
-            await serviceRegistry.netmdFactoryService!.readUTOCSector(3),
+            await netmdFactoryService.readUTOCSector(0),
+            await netmdFactoryService.readUTOCSector(1),
+            await netmdFactoryService.readUTOCSector(2),
+            await netmdFactoryService.readUTOCSector(3),
         );
-        const firmwareVersion = await serviceRegistry.netmdFactoryService!.getDeviceFirmware();
-        const capabilities = await serviceRegistry.netmdFactoryService!.getExploitCapabilities();
+        const firmwareVersion = await netmdFactoryService.getDeviceFirmware();
+        const capabilities = await netmdFactoryService.getExploitCapabilities();
         dispatch(
             batchActions([
                 factoryActions.setToc(newToc),
@@ -69,25 +77,31 @@ export function editFragmentMode(index: number, mode: number) {
 
 export function writeModifiedTOC() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
+        const { netmdFactoryService } = serviceRegistry;
+        if (!netmdFactoryService) return;
+
         dispatch(appStateActions.setLoading(true));
         const toc = getState().factory.toc!;
         const sectors = reconstructTOC(toc, false);
         for (let i = 0; i < 4; i++) {
-            await serviceRegistry.netmdFactoryService!.writeUTOCSector(i, sectors[i]!);
+            await netmdFactoryService.writeUTOCSector(i, sectors[i]!);
         }
-        await serviceRegistry.netmdFactoryService!.flushUTOCCacheToDisc();
+        await netmdFactoryService.flushUTOCCacheToDisc();
         dispatch(batchActions([appStateActions.setLoading(false), factoryActions.setModified(false)]));
     };
 }
 
 export function runTetris() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        await serviceRegistry.netmdFactoryService!.runTetris();
+        await serviceRegistry.netmdFactoryService?.runTetris();
     };
 }
 
 export function downloadRam() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
+        const { netmdFactoryService } = serviceRegistry;
+        if (!netmdFactoryService) return;
+
         const firmwareVersion = getState().factory.firmwareVersion;
         dispatch(
             batchActions([
@@ -104,7 +118,7 @@ export function downloadRam() {
                 factoryProgressDialogActions.setVisible(true),
             ])
         );
-        const ramData = await serviceRegistry.netmdFactoryService!.readRAM(
+        const ramData = await netmdFactoryService.readRAM(
             ({ readBytes, totalBytes }: { readBytes: number; totalBytes: number }) => {
                 dispatch(
                     factoryProgressDialogActions.setProgress({
@@ -116,13 +130,16 @@ export function downloadRam() {
         );
 
         const fileName = `ram_${getState().main.deviceName}_${firmwareVersion}.bin`;
-        downloadBlob(new Blob([ramData]), fileName);
+        if (ramData) downloadBlob(new Blob([ramData]), fileName);
         dispatch(factoryProgressDialogActions.setVisible(false));
     };
 }
 
 export function downloadRom() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
+        const { netmdFactoryService } = serviceRegistry;
+        if (!netmdFactoryService) return;
+
         dispatch(
             batchActions([
                 factoryProgressDialogActions.setDetails({
@@ -133,7 +150,7 @@ export function downloadRom() {
                 factoryProgressDialogActions.setVisible(true),
             ])
         );
-        const firmwareData = await serviceRegistry.netmdFactoryService!.readFirmware(
+        const firmwareData = await netmdFactoryService.readFirmware(
             ({ type, readBytes, totalBytes }: { type: 'RAM' | 'ROM' | 'DRAM'; readBytes: number; totalBytes: number }) => {
                 if (readBytes % 0x200 === 0)
                     dispatch(
@@ -145,6 +162,12 @@ export function downloadRom() {
                     );
             }
         );
+
+        if (!firmwareData) {
+            dispatch(factoryProgressDialogActions.setVisible(false));
+            return;
+        }
+
         const firmwareVersion = getState().factory.firmwareVersion;
         const fileName = `firmware_${getState().main.deviceName}_${firmwareVersion}.bin`;
         downloadBlob(new Blob([firmwareData.rom]), fileName);
@@ -162,6 +185,9 @@ export function downloadRom() {
 
 export function downloadToc(callback: (blob: Blob, name: string) => void = downloadBlob) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
+        const { netmdFactoryService } = serviceRegistry;
+        if (!netmdFactoryService) return;
+
         dispatch(
             batchActions([
                 factoryProgressDialogActions.setDetails({
@@ -179,7 +205,8 @@ export function downloadToc(callback: (blob: Blob, name: string) => void = downl
         const readSlices: Uint8Array[] = [];
         for (let i = 0; i < 6; i += 1) {
             dispatch(factoryProgressDialogActions.setProgress({ current: i, total: 6 }));
-            readSlices.push(await serviceRegistry.netmdFactoryService!.readUTOCSector(i));
+            const sector = await netmdFactoryService.readUTOCSector(i);
+            if (sector) readSlices.push(sector);
         }
         const fileName = `toc_${getTitleByTrackNumber(getState().factory.toc!, 0 /* Disc */)}.bin`;
         callback(new Blob([concatUint8Arrays(...readSlices)]), fileName);
@@ -230,13 +257,16 @@ export function exploitDownloadTracks(
     callback: (blob: Blob, name: string) => void = downloadBlob
 ) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
+        const { netmdFactoryService } = serviceRegistry;
+        if (!netmdFactoryService) return;
+
         // Verify if there even exists a track of that number
         const disc = getState().main.disc!;
         const useSlowerExploit = getState().appState.factoryModeUseSlowerExploit;
         const nerawDownload = getState().appState.factoryModeNERAWDownload;
         const tracks = getTracks(disc);
         try {
-            await serviceRegistry.netmdService!.stop();
+            await serviceRegistry.netmdService?.stop();
         } catch (ex) {
             /* Ignore */
         }
@@ -261,7 +291,7 @@ export function exploitDownloadTracks(
                 }),
             ])
         );
-        await serviceRegistry.netmdFactoryService!.prepareDownload(useSlowerExploit);
+        await netmdFactoryService.prepareDownload(useSlowerExploit);
         for (const trackIndex of trackIndexes) {
             if (trackIndex >= disc.trackCount) {
                 window.alert("This track does not exist. Make sure you've read the instructions on how to use the homebrew mode.");
@@ -286,7 +316,7 @@ export function exploitDownloadTracks(
 
             let storedBadSectorHandling: null | BadSectorResponse = null;
 
-            let trackData = await serviceRegistry.netmdFactoryService!.exploitDownloadTrack(
+            let trackData = await netmdFactoryService.exploitDownloadTrack(
                 trackIndex,
                 nerawDownload,
                 ({ total, read, action, sector }: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => {
@@ -333,6 +363,12 @@ export function exploitDownloadTracks(
                     },
                 }
             );
+
+            if (!trackData) {
+                if (getState().factoryProgressDialog.cancelled) break;
+                continue;
+            }
+
             let filename = createDownloadTrackName(track, trackData.extension);
             if (convertOutputToWav) {
                 trackData.data = await convertToWAV(trackData, track);
@@ -341,16 +377,19 @@ export function exploitDownloadTracks(
             callback(new Blob([trackData.data]), filename);
             if (getState().factoryProgressDialog.cancelled) break;
         }
-        await serviceRegistry.netmdFactoryService!.finalizeDownload();
+        await netmdFactoryService.finalizeDownload();
         dispatch(factoryProgressDialogActions.setVisible(false));
     };
 }
 
 export async function checkFactoryCapability(dispatch: AppDispatch, capability: ExploitCapability){
-    await serviceRegistry.netmdService!.stop();
+    await serviceRegistry.netmdService?.stop();
     await initializeFactoryMode()(dispatch);
 
-    const capabilities = await serviceRegistry.netmdFactoryService!.getExploitCapabilities();
+    const { netmdFactoryService } = serviceRegistry;
+    if (!netmdFactoryService) return false;
+
+    const capabilities = await netmdFactoryService.getExploitCapabilities();
     return capabilities.includes(capability);
 }
 
@@ -435,7 +474,7 @@ export function archiveDisc() {
 export function toggleSPUploadSpeedup() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         const spUploadSpeedupActive = getState().factory.spUploadSpeedupActive;
-        await serviceRegistry.netmdFactoryService!.setSPSpeedupActive(!spUploadSpeedupActive);
+        await serviceRegistry.netmdFactoryService?.setSPSpeedupActive(!spUploadSpeedupActive);
         dispatch(factoryActions.setSPUploadSpedUp(!spUploadSpeedupActive));
     };
 }
@@ -450,7 +489,7 @@ export function enterHiMDUnrestrictedMode() {
             return;
         }
         dispatch(appStateActions.setLoading(true));
-        await serviceRegistry.netmdFactoryService!.enableHiMDFullMode();
+        await serviceRegistry.netmdFactoryService?.enableHiMDFullMode();
         window.alert('Loaded. Please insert a HiMD disc.');
         dispatch(appStateActions.setMainView('WELCOME'));
     };
@@ -460,7 +499,7 @@ export function toggleDiscSwapDetection() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         const deviceDiscSwapDetectionDisabled = getState().factory.deviceDiscSwapDetectionDisabled;
         dispatch(appStateActions.setLoading(true));
-        await serviceRegistry.netmdFactoryService!.setDiscSwapDetection(!deviceDiscSwapDetectionDisabled);
+        await serviceRegistry.netmdFactoryService?.setDiscSwapDetection(!deviceDiscSwapDetectionDisabled);
         dispatch(appStateActions.setLoading(false));
         dispatch(factoryActions.setDiscSwapDetectionDisabled(!deviceDiscSwapDetectionDisabled));
     };
@@ -479,6 +518,6 @@ export function writeRecoveryTOC() {
 export function enterServiceMode() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         dispatch(appStateActions.setMainView('WELCOME'));
-        await serviceRegistry.netmdFactoryService!.enterServiceMode();
+        await serviceRegistry.netmdFactoryService?.enterServiceMode();
     }
 }

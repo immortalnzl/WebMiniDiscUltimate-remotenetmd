@@ -140,7 +140,7 @@ export const RenameDialog = (props: {}) => {
         handleCancelRename(); // Close the dialog
     }, [dispatch, handleCancelRename, renameType, title, fullWidthTitle, index, himdTitle, himdArtist, himdAlbum]);
 
-    const minidiscSpec = serviceRegistry.netmdSpec!;
+    const minidiscSpec = serviceRegistry.netmdSpec;
 
     const handleChange = useCallback(
         (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
@@ -151,6 +151,7 @@ export const RenameDialog = (props: {}) => {
 
     const handleFullWidthChange = useCallback(
         (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+            if (!minidiscSpec) return;
             dispatch(
                 renameDialogActions.setCurrentFullWidthName(minidiscSpec.sanitizeFullWidthTitle(event.target.value.substring(0, 105)))
             );
@@ -171,6 +172,7 @@ export const RenameDialog = (props: {}) => {
 
     const handleSwitchToFullWidth = useCallback(
         (event: React.MouseEvent) => {
+            if (!minidiscSpec) return;
             dispatch(
                 batchActions([
                     appActions.setFullWidthSupport(true),
