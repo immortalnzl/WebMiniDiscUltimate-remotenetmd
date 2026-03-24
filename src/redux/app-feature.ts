@@ -65,7 +65,11 @@ export const buildInitialState = (): AppState => {
         audioExportService: loadPreference('audioExportService', 0),
         audioExportServiceConfig: loadPreference('audioExportServiceConfig', {}),
         libraryService: loadPreference('libraryService', 0),
-        libraryServiceConfig: loadPreference('libraryServiceConfig', { address: '/api/', music_path: '/music', volume_type: 'none', volume_options: 'bind' }),
+        libraryServiceConfig: (() => {
+            const config = loadPreference('libraryServiceConfig', { address: '/api/', music_path: '/music', volume_type: 'none', volume_options: 'bind' });
+            if (!config.address) config.address = '/api/';
+            return config;
+        })(),
         pageFullHeight: loadPreference('pageFullHeight', false),
         pageFullWidth: loadPreference('pageFullWidth', false),
         archiveDiscCreateZip: loadPreference('archiveDiscCreateZip', false),

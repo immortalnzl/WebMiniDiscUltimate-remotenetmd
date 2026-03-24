@@ -24,9 +24,22 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
 
     constructor(parameters: CustomParameters) {
         super();
-        this.address = (parameters.address as string) || '/api/';
-        this.volume_type = (parameters.volume_type as string) || 'none';
+        let address = (parameters.address as string) || '/api/';
+        if (!address.startsWith('http') && !address.startsWith('/')) {
+            address = '/' + address;
+        }
+        if (!address.endsWith('/')) {
+            address = address + '/';
+        }
+
+        // Force to /api/ in BPI environment if it's a local/relative path
+        if (window.location.port === '8443' && address === '/') {
+            address = '/api/';
+        }
+        
+        this.address = address;
         this.music_path = (parameters.music_path as string) || '/music';
+        this.volume_type = (parameters.volume_type as string) || 'none';
         this.volume_options = (parameters.volume_options as string) || 'bind';
 
         // Sync with backend
