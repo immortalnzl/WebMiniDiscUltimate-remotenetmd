@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: .
+    container_name: webminidisc-frontend
+    ports:
+      - "8080:80"
+      - "8443:443"
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: webminidisc-backend
+    environment:
+      - MUSIC_DIR=/music
+      - DOTENV_PATH=/app/.env
+    volumes:
+      - music_volume:/music:ro
+      - ./.env:/app/.env
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8001:8000"
+    restart: unless-stopped
+
+volumes:
+  music_volume:
+    driver_opts:
+      type: "${VOLUME_TYPE:-none}"
+      device: "${MUSIC_PATH}"
+      o: "${VOLUME_OPTIONS:-bind}"

@@ -17,35 +17,54 @@ const Toc = lazy(() => import('./factory/factory'));
 const Controls = lazy(() => import('./controls'));
 const Welcome = lazy(() => import('./welcome'));
 const Main = lazy(() => import('./main'));
+
+import { MusicLibrarySidebar } from './library-sidebar';
+import { DiscVisualizer } from './disc-visualizer';
+import { AdaptiveFile } from '../utils';
+
 const useStyles = makeStyles()((theme) => ({
     layout: {
-        width: 'auto',
+        width: '100%',
         height: '100%',
-        [forAnyDesktop(theme)]: {
-            width: 600,
-            marginLeft: 'auto',
-            marginRight: 'auto',
-        },
-        [forWideDesktop(theme)]: {
-            width: 700,
+        display: 'flex',
+        overflow: 'hidden',
+    },
+    sidebar: {
+        width: '350px',
+        flexShrink: 0,
+        height: '100%',
+        transition: 'width 0.3s ease-in-out',
+        [belowDesktop(theme)]: {
+            display: 'none',
         },
     },
-
+    sidebarExpanded: {
+        width: '100%',
+    },
+    mainContent: {
+        flexGrow: 1,
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        padding: theme.spacing(2),
+        backgroundColor: theme.palette.background.default,
+        transition: 'opacity 0.3s ease-in-out',
+    },
+    mainContentHidden: {
+        width: 0,
+        padding: 0,
+        overflow: 'hidden',
+        opacity: 0,
+        pointerEvents: 'none',
+    },
     paper: {
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         padding: theme.spacing(2),
-        height: 'calc(100% - 20px)',
-        [forAnyDesktop(theme)]: {
-            marginTop: theme.spacing(2),
-            marginBottom: theme.spacing(1),
-            padding: theme.spacing(3),
-            height: 200,
-        },
-        [forWideDesktop(theme)]: {
-            height: 250,
-        },
+        flexGrow: 1,
+        overflow: 'hidden',
     },
     paperShowsList: {
         [forAnyDesktop(theme)]: {
@@ -228,6 +247,8 @@ const InternalApp = () => {
     const { mainView, loading, pageFullHeight, pageFullWidth } = useShallowEqualSelector((state) => state.appState);
     const { deviceCapabilities } = useShallowEqualSelector((state) => state.main);
     const { classes, cx } = useStyles();
+    const [uploadedFiles, setUploadedFiles] = React.useState<(File | AdaptiveFile)[]>([]);
+    const [isSidebarExpanded, setIsSidebarExpanded] = React.useState(false);
 
     return (
         <React.Fragment>
@@ -240,32 +261,43 @@ const InternalApp = () => {
                     </Backdrop>
                 }
             >
-                <main className={cx(classes.layout, { [classes.layoutFullWidth]: pageFullWidth })}>
-                    <Paper
-                        className={cx(classes.paper, {
-                            [classes.paperShowsList]: deviceCapabilities.includes(0 /*Capability.listContent*/),
-                            [classes.paperFullHeight]: pageFullHeight,
-                        })}
-                    >
-                        {mainView === 'WELCOME' ? <Welcome /> : null}
-                        {mainView === 'MAIN' ? <Main /> : null}
-                        {mainView === 'FACTORY' ? <Toc /> : null}
+                <Box className={classes.layout}>
+                    {mainView === 'MAIN' && (
+                        <Box className={cx(classes.sidebar, isSidebarExpanded && classes.sidebarExpanded)}>
+                            <MusicLibrarySidebar 
+                                setUploadedFiles={setUploadedFiles} 
+                                isExpanded={isSidebarExpanded}
+                                onToggleExpand={() => setIsSidebarExpanded(!isSidebarExpanded)}
+                            />
+                        </Box>
+                    )}
+                    <Box className={cx(classes.mainContent, (mainView === 'MAIN' && isSidebarExpanded) && classes.mainContentHidden)}>
+                        <Paper className={classes.paper}>
+                            {mainView === 'WELCOME' ? <Welcome /> : null}
+                            {mainView === 'MAIN' ? (
+                                <>
+                                    {!isSidebarExpanded && <DiscVisualizer />}
+                                    <Main uploadedFiles={uploadedFiles} setUploadedFiles={setUploadedFiles} />
+                                </>
+                             ) : null}
+                            {mainView === 'FACTORY' ? <Toc /> : null}
 
-                        <Box className={classes.controlsContainer}>{mainView === 'MAIN' ? <Controls /> : null}</Box>
-                    </Paper>
-                    <Typography variant="body2" color="textSecondary" className={classes.copyrightTypography}>
-                        {'© '}
-                        <Link rel="noopener noreferrer" color="inherit" target="_blank" href="https://stefano.brilli.me/">
-                            Stefano Brilli
-                        </Link>
-                        {', '}
-                        <Link rel="noopener noreferrer" color="inherit" target="_blank" href="https://github.com/asivery/">
-                            Asivery
-                        </Link>{' '}
-                        {new Date().getFullYear()}
-                        {'.'}
-                    </Typography>
-                </main>
+                            <Box className={classes.controlsContainer}>{mainView === 'MAIN' ? <Controls /> : null}</Box>
+                        </Paper>
+                        <Typography variant="body2" color="textSecondary" className={classes.copyrightTypography}>
+                            {'© '}
+                            <Link rel="noopener noreferrer" color="inherit" target="_blank" href="https://stefano.brilli.me/">
+                                Stefano Brilli
+                            </Link>
+                            {', '}
+                            <Link rel="noopener noreferrer" color="inherit" target="_blank" href="https://github.com/asivery/">
+                                Asivery
+                            </Link>{' '}
+                            {new Date().getFullYear()}
+                            {'.'}
+                        </Typography>
+                    </Box>
+                </Box>
             </Suspense>
 
             {loading ? (

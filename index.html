@@ -16,17 +16,6 @@
     <title>Web MiniDisc Pro - Version 1.5.3</title>
   </head>
   <body>
-    <script>
-    try {
-      if (location.protocol !== 'file:' && location.protocol !== 'https:' && !location.host.match(/^localhost/gm)) {
-        // Make sure we're on https/file, or WebUSB won't work.
-        location.replace(`https:${location.href.substring(location.protocol.length)}`);
-        console.log('Redirecting to https....');
-      }
-    } catch (err) {
-      console.log(err)
-    }
-    </script>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
     <script type="module" src="src/index.tsx"></script>

@@ -24,7 +24,7 @@ import serviceRegistry from '../services/registry';
 import { ExportParams } from '../services/audio/audio-export';
 import { LocalDatabase } from '../services/library/library';
 import { File, FileBrowser } from './file-browser/browser';
-import { Add, ArrowUpward } from '@mui/icons-material';
+import { Add, ArrowUpward, Description, Folder, PlayArrow } from '@mui/icons-material';
 import { dirSorter, FileType } from './file-browser/utils';
 
 const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
@@ -108,9 +108,8 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
         setCurrentFileTree(convertToFileArray(database || {}, currentPath));
     }, [database, currentPath, setCurrentFileTree]);
 
-    const [selectedFiles, setSelectedFiles] = useState<{ path: string; album: string; artist: string; title: string; duration: number, trackIndex?: number }[]>(
-        []
-    );
+    const [selectedFiles, setSelectedFiles] = useState<{ path: string; album: string; artist: string; title: string; duration: number, trackIndex?: number }[]>([]);
+    const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
 
     const resetToRoot = useMemo(
         () => () => {
@@ -187,6 +186,7 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                 title: file.title,
                 name: pathTokens[pathTokens.length - 1] || 'unknown.unk',
                 duration: file.duration,
+                artwork: (file as any).artwork,
 
                 getForEncoding: async (params: ExportParams) => {
                     return serviceRegistry.libraryService!.processLocalLibraryFile(file.path, params);
@@ -224,6 +224,12 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                                 allowMultifileSelection={true}
                                 defaultSorting={{ by: 'name', asc: false }}
                                 pathString={currentPath.join('/')}
+                                iconGenerator={(file) => {
+                                    if (file.type === FileType.File && file.props?.artwork) {
+                                        return <img src={file.props.artwork} alt="" style={{ width: 24, height: 24, objectFit: 'cover' }} />;
+                                    }
+                                    return file.type === FileType.Directory ? <Folder /> : <Description />;
+                                }}
                                 additionalColumns={[
                                     {
                                         name: 'trackIndex',
@@ -254,6 +260,16 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                                         icon: <Add />,
                                         actionPossible: e => e.length > 0,
                                         handler: e => handleAddAllSelected(e),
+                                    },
+                                    {
+                                        name: 'Play Preview',
+                                        icon: <PlayArrow />,
+                                        actionPossible: (e) => e.length === 1 && e[0].type === FileType.File,
+                                        handler: (e) => {
+                                            const file = e[0];
+                                            const url = serviceRegistry.libraryService?.getAudioUrl(file.props!['id']);
+                                            if (url) setCurrentAudioUrl(url);
+                                        },
                                     }
                                 ]}
                             />
@@ -290,6 +306,18 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                         </Table>
                     </div>
                 </div>
+                {currentAudioUrl && (
+                    <div style={{ marginTop: theme.spacing(2), display: 'flex', alignItems: 'center', gap: theme.spacing(2), padding: theme.spacing(1), border: `1px solid ${theme.palette.divider}`, borderRadius: theme.shape.borderRadius }}>
+                        <PlayArrow color="primary" />
+                        <audio 
+                            src={currentAudioUrl} 
+                            controls 
+                            autoPlay 
+                            style={{ flexGrow: 1, height: 32 }}
+                        />
+                        <Button size="small" onClick={() => setCurrentAudioUrl(null)}>Close Player</Button>
+                    </div>
+                )}
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleClose}>Cancel</Button>

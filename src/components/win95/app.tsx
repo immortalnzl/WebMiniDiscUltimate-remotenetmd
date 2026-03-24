@@ -11,6 +11,7 @@ import { createGlobalStyle, ThemeProvider as StyledThemeProvider } from 'styled-
 import original from 'react95/dist/themes/original';
 import { TopMenu } from '../topmenu';
 import { useDispatch } from '../../frontend-utils';
+import { AdaptiveFile } from '../../utils';
 
 import CDPlayerIconUrl from '../../images/win95/cdplayer.png';
 import { WindowCloseIcon } from './common';
@@ -96,6 +97,8 @@ export const W95App = () => {
         },
     };
 
+    const [uploadedFiles, setUploadedFiles] = useState<(File | AdaptiveFile)[]>([]);
+    
     return (
         <div className={classes.desktop}>
             <GlobalStyles />
@@ -121,7 +124,7 @@ export const W95App = () => {
                     </Toolbar>
                     <>
                         {mainView === 'WELCOME' ? <Welcome /> : null}
-                        {mainView === 'MAIN' ? <Main /> : null}
+                        {mainView === 'MAIN' ? <Main uploadedFiles={uploadedFiles} setUploadedFiles={setUploadedFiles} /> : null}
                     </>
                     <Panel variant="well">
                         &nbsp;

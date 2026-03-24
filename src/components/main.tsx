@@ -177,7 +177,8 @@ function getTrackStatus(track: Track, deviceStatus: DeviceStatus | null): 'playi
     }
 }
 
-export const Main = (props: {}) => {
+export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploadedFiles: React.Dispatch<React.SetStateAction<(File | AdaptiveFile)[]>> }) => {
+    const { uploadedFiles, setUploadedFiles } = props;
     const dispatch = useDispatch();
     const disc = useShallowEqualSelector((state) => state.main.disc);
     const flushable = useShallowEqualSelector((state) => state.main.flushable);
@@ -188,7 +189,6 @@ export const Main = (props: {}) => {
 
     const [selected, setSelected] = React.useState<number[]>([]);
     const [selectedGroups, setSelectedGroups] = React.useState<number[]>([]);
-    const [uploadedFiles, setUploadedFiles] = React.useState<(File | AdaptiveFile)[]>([]);
     const [lastClicked, setLastClicked] = useState(-1);
     const [moveMenuAnchorEl, setMoveMenuAnchorEl] = React.useState<null | HTMLElement>(null);
     const [showRemainingSpace, setShowRemainingSpace] = useState(true);
@@ -541,7 +541,7 @@ export const Main = (props: {}) => {
     return (
         <React.Fragment>
             <Box className={classes.headBox}>
-                <Typography component="h1" variant="h4">
+                <Typography component="h1" variant="h6">
                     {deviceName || `Loading...`}
                 </Typography>
                 <span>
@@ -552,6 +552,7 @@ export const Main = (props: {}) => {
                             aria-haspopup="true"
                             onClick={handleEject}
                             disabled={!disc}
+                            size="small"
                         >
                             <EjectIcon />
                         </IconButton>
@@ -559,8 +560,8 @@ export const Main = (props: {}) => {
 
                     {flushable && (
                         <Tooltip title="Commit changes">
-                            <IconButton aria-label="actions" aria-controls="actions-menu" aria-haspopup="true" onClick={handleFlush}>
-                                <DoneIcon />
+                            <IconButton aria-label="actions" aria-controls="actions-menu" aria-haspopup="true" onClick={handleFlush} size="small">
+                                <DoneIcon fontSize="small" />
                             </IconButton>
                         </Tooltip>
                     )}

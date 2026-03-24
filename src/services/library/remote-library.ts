@@ -18,10 +18,53 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
 
     public address: string;
     public originalFileName: string = '';
+    public volume_type: string;
+    public music_path: string;
+    public volume_options: string;
 
     constructor(parameters: CustomParameters) {
         super();
-        this.address = parameters.address as string;
+        this.address = (parameters.address as string) || '/api/';
+        this.volume_type = (parameters.volume_type as string) || 'none';
+        this.music_path = (parameters.music_path as string) || '/music';
+        this.volume_options = (parameters.volume_options as string) || 'bind';
+
+        // Sync with backend
+        this.syncStorage();
+    }
+
+    async syncStorage() {
+        try {
+            const url = new URL(this.address, window.location.origin);
+            url.pathname = url.pathname.endsWith('/') ? url.pathname + 'storage' : url.pathname + '/storage';
+            const resp = await fetch(url.href);
+            const current = await resp.json();
+
+            const needsUpdate = 
+                current.MUSIC_PATH !== this.music_path ||
+                current.VOLUME_TYPE !== this.volume_type ||
+                current.VOLUME_OPTIONS !== this.volume_options;
+
+            if (needsUpdate) {
+                console.log("Updating backend storage settings...");
+                await fetch(url.href, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        MUSIC_PATH: this.music_path,
+                        VOLUME_TYPE: this.volume_type,
+                        VOLUME_OPTIONS: this.volume_options,
+                    })
+                });
+                
+                // Trigger restart
+                const restartUrl = new URL(this.address, window.location.origin);
+                restartUrl.pathname = restartUrl.pathname.endsWith('/') ? restartUrl.pathname + 'restart' : restartUrl.pathname + '/restart';
+                await fetch(restartUrl.href, { method: 'POST' });
+            }
+        } catch (e) {
+            console.error("Failed to sync storage with backend:", e);
+        }
     }
 
     getSupport(codec: CodecFamily): 'perfect' {
@@ -29,18 +72,39 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
     }
 
     async getDatabase(): Promise<LocalDatabase> {
-        const dbPage = new URL(this.address);
-        dbPage.pathname = "/database";
+        const dbPage = new URL(this.address, window.location.origin);
+        dbPage.pathname = dbPage.pathname.endsWith('/') ? dbPage.pathname + 'database' : dbPage.pathname + '/database';
         dbPage.searchParams.append("cache", Math.random() + "");
         const resp = await fetch(dbPage);
-        const json = await resp.json();
-        return json as LocalDatabase;
+        const json = await resp.json() as LocalDatabase;
+
+        // Prepend address to artwork URLs
+        const process = (db: LocalDatabase) => {
+            for (const key in db) {
+                const entry = db[key];
+                if ('artist' in entry) {
+                    const track = entry as any;
+                    if (track.artwork) {
+                        const artURL = new URL(this.address, window.location.origin);
+                        const [path, search] = track.artwork.split('?');
+                        artURL.pathname = path;
+                        artURL.search = search || '';
+                        track.artwork = artURL.href;
+                    }
+                } else {
+                    process(entry as LocalDatabase);
+                }
+            }
+        };
+        process(json);
+
+        return json;
     }
 
     async processLocalLibraryFile(filePath: string, params: ExportParams): Promise<ArrayBuffer> {
         if (params.format.codec === 'PCM' || params.format.codec === 'MP3') {
             // Fetch the file normally, then transcode to PCM / MP3
-            const rawURL = new URL(this.address);
+            const rawURL = new URL(this.address, window.location.origin);
             if (!rawURL.pathname.endsWith('/')) rawURL.pathname += '/';
             rawURL.pathname += 'get_local';
             rawURL.searchParams.set('file_name', filePath);
@@ -63,7 +127,7 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
             return this.export(params);
         } else {
             const { format, enableReplayGain } = params;
-            const encodingURL = new URL(this.address);
+            const encodingURL = new URL(this.address, window.location.origin);
             if (!encodingURL.pathname.endsWith('/')) encodingURL.pathname += '/';
             encodingURL.pathname += 'transcode_local';
             let encoderFormat: string;
@@ -111,5 +175,13 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
 
             throw new Error("Failed to transcode audio!");
         }
+    }
+
+    getAudioUrl(filePath: string): string {
+        const url = new URL(this.address, window.location.origin);
+        if (!url.pathname.endsWith('/')) url.pathname += '/';
+        url.pathname += 'get_local';
+        url.searchParams.set('file_name', filePath);
+        return url.href;
     }
 }

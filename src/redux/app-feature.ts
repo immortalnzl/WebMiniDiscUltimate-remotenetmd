@@ -64,8 +64,8 @@ export const buildInitialState = (): AppState => {
         // it should not be stored in the preferences, and should default to false.
         audioExportService: loadPreference('audioExportService', 0),
         audioExportServiceConfig: loadPreference('audioExportServiceConfig', {}),
-        libraryService: loadPreference('libraryService', -1),
-        libraryServiceConfig: loadPreference('libraryServiceConfig', {}),
+        libraryService: loadPreference('libraryService', 0),
+        libraryServiceConfig: loadPreference('libraryServiceConfig', { address: '/api/', music_path: '/music', volume_type: 'none', volume_options: 'bind' }),
         pageFullHeight: loadPreference('pageFullHeight', false),
         pageFullWidth: loadPreference('pageFullWidth', false),
         archiveDiscCreateZip: loadPreference('archiveDiscCreateZip', false),

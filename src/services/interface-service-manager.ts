@@ -112,6 +112,22 @@ export const Services: ServicePrototype[] = [
         ],
     },
     {
+        name: 'Offline Mode',
+        getConnectName: () => 'Browse Offline (No Device)',
+        description: React.createElement('p', null, 'Browse your library without connecting a physical device.'),
+        create: () => new NetMDMockService({
+            capabilityContentList: true,
+            capabilityPlaybackControl: false,
+            capabilityMetadataEdit: false,
+            capabilityTrackUpload: false,
+            capabilityTrackDownload: false,
+            capabilityDiscEject: false,
+            capabilityFactoryMode: false,
+        }, false),
+        spec: new DefaultMinidiscSpec(),
+        requiresChrome: false,
+    },
+    {
         name: 'MockMD',
         getConnectName: () => 'Connect to MockMD',
         description: React.createElement('p', null, 'Test NetMD interface. It does nothing'),
