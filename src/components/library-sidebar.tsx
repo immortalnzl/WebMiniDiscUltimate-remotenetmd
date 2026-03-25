@@ -118,9 +118,14 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
     const [tabValue, setTabValue] = useState(0);
-    const [logsOpen, setLogsOpen] = useState(false);
-    const [logs, setLogs] = useState<string[]>([]);
-    const logRef = useRef<HTMLPreElement>(null);
+
+    const handleStartScan = async () => {
+        try {
+            await fetch('/api/scan', { method: 'POST' });
+        } catch (e) {
+            console.error("Failed to start scan", e);
+        }
+    };
 
     const convertToFileArray = (data: LocalDatabase, path: string[] = []): File[] => {
         let currentData = data;
@@ -163,11 +168,9 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
             const { libraryService } = serviceRegistry;
             if (libraryService) {
                 dispatch(loadLibraryDatabase());
-                if (scanStatus?.scanning) {
-                    dispatch(loadLibraryStatus());
-                    dispatch(loadArtists());
-                    dispatch(loadAlbums());
-                }
+                dispatch(loadLibraryStatus());
+                dispatch(loadArtists());
+                dispatch(loadAlbums());
             }
         };
         load();
@@ -175,30 +178,10 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
         return () => clearInterval(interval);
     }, [dispatch, scanStatus?.scanning]);
 
-    useEffect(() => {
-        if (logsOpen) {
-            const fetchLogs = async () => {
-                try {
-                    const resp = await fetch('/api/logs');
-                    const data = await resp.json();
-                    setLogs(data.logs);
-                } catch (e) {}
-            };
-            fetchLogs();
-            const it = setInterval(fetchLogs, 2000);
-            return () => clearInterval(it);
-        }
-    }, [logsOpen]);
-
-    useEffect(() => {
-        if (logRef.current) {
-            logRef.current.scrollTop = logRef.current.scrollHeight;
-        }
-    }, [logs]);
 
     const handleFileAction = useCallback((file: File) => {
         if (file.type === FileType.Directory) {
-            setCurrentPath(e => [...e, file.name]);
+            setCurrentPath((prev: string[]) => [...prev, file.name]);
         } else {
             handleAddToPlaylist([file]);
         }
@@ -291,16 +274,18 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
                 </Box>
             </Box>
 
-            {scanStatus && (
+            {(!scanStatus || (!scanStatus.scanning && scanStatus.files_found === 0)) ? (
+                <Box className={classes.statusCard} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1.5 }}>
+                    <Typography variant="body2" color="text.secondary">Library not scanned</Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.6 }}>Check settings</Typography>
+                </Box>
+            ) : (
                 <Box className={classes.statusCard}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
-                            {scanStatus.scanning ? "Scanning Library..." : "Library Ready"}
+                            {scanStatus.scanning ? "Scanning..." : "Library Ready"}
                             {scanStatus.scanning && <Refresh fontSize="inherit" className="rotating" sx={{ ml: 1 }} />}
                         </Typography>
-                        <IconButton size="small" onClick={() => setLogsOpen(true)}>
-                            <Terminal fontSize="inherit" />
-                        </IconButton>
                     </Box>
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
                         {scanStatus.current_activity}
@@ -313,21 +298,21 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
                     <Box sx={{ display: 'flex', gap: 2 }}>
                         <Box>
                             <Typography variant="caption" color="text.secondary">Tracks</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>{scanStatus.files_found}</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>{scanStatus.files_found || 0}</Typography>
                         </Box>
                         <Box>
                             <Typography variant="caption" color="text.secondary">Artists</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>{scanStatus.artists_found}</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>{scanStatus.artists_found || 0}</Typography>
                         </Box>
                         <Box>
                             <Typography variant="caption" color="text.secondary">Albums</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>{scanStatus.albums_found}</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>{scanStatus.albums_found || 0}</Typography>
                         </Box>
                     </Box>
                 </Box>
             )}
 
-            <Tabs value={tabValue} onChange={(e: any, v: any) => setTabValue(v)} variant="fullWidth" size="small" sx={{ minHeight: 40, borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs value={tabValue} onChange={(e: any, v: any) => setTabValue(v)} variant="fullWidth" sx={{ minHeight: 40, borderBottom: 1, borderColor: 'divider' }}>
                 <Tab label="Folders" sx={{ minHeight: 40, fontSize: '0.75rem' }} />
                 <Tab label="Artists" sx={{ minHeight: 40, fontSize: '0.75rem' }} />
                 <Tab label="Albums" sx={{ minHeight: 40, fontSize: '0.75rem' }} />
@@ -425,22 +410,12 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
                 </Box>
             )}
 
-            <Dialog open={logsOpen} onClose={() => setLogsOpen(false)} maxWidth="md" fullWidth>
-                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    Live Backend Logs
-                    <IconButton size="small" onClick={() => setLogsOpen(false)}><FullscreenExit /></IconButton>
-                </DialogTitle>
-                <DialogContent>
-                    <Box component="pre" className={classes.logTerm} ref={logRef}>
-                        {logs.join('\n')}
-                    </Box>
-                </DialogContent>
-            </Dialog>
-
             <LibrarySettingsDialog 
                 open={settingsOpen} 
                 onClose={() => setSettingsOpen(false)} 
                 onRestart={() => setTimeout(() => window.location.reload(), 3000)}
+                scanStatus={scanStatus}
+                onStartScan={handleStartScan}
             />
         </Box>
     );

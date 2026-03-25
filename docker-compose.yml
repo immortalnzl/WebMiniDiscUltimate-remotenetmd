@@ -12,6 +12,7 @@ services:
   backend:
     build: ./backend
     container_name: webminidisc-backend
+    user: "1000:100"
     environment:
       - MUSIC_DIR=/music
       - DOTENV_PATH=/app/.env

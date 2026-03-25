@@ -29,7 +29,7 @@ MUSIC_DIR = os.getenv("MUSIC_DIR", "/music")
 DOTENV_PATH = os.getenv("DOTENV_PATH", "/app/.env")
 FILE_EXTENSIONS = [ext.strip().lower() for ext in os.getenv("FILE_EXTENSIONS", ".mp3,.flac,.wav,.m4a,.ogg").split(",") if ext.strip()]
 EXCLUDE_PATTERNS = [p.strip() for p in os.getenv("EXCLUDE_PATTERNS", "@eaDir,#recycle,.DS_Store").split(",") if p.strip()]
-ENABLE_SCRAPING = os.getenv("ENABLE_SCRAPING", "true").lower() == "true"
+ENABLE_SCRAPING = os.getenv("ENABLE_SCRAPING", "false").lower() == "true"
 
 # Global cache and status
 _db_cache: Dict[str, Any] = {}
@@ -91,12 +91,14 @@ def get_albums():
     return sorted(list(albums.values()), key=lambda x: (x["artist"], x["album"]))
 
 @app.get("/api/database")
+@app.get("/database")
 def get_database():
+    global _db_cache
     return _db_cache
 VOLUME_TYPE = os.getenv("VOLUME_TYPE", "none")
 VOLUME_OPTIONS = os.getenv("VOLUME_OPTIONS", "bind")
 
-@app.get("/list_dirs")
+@app.get("/api/list_dirs")
 def list_dirs(path: str = "/"):
     print(f"DEBUG: list_dirs called for path: {path}", flush=True)
     try:
@@ -117,7 +119,7 @@ def list_dirs(path: str = "/"):
         print(f"Error listing dirs at {path}: {e}", flush=True)
         return []
 
-@app.get("/scan")
+@app.post("/api/scan")
 async def trigger_scan(background_tasks: BackgroundTasks):
     """Manually trigger a background scan."""
     global _status
@@ -131,8 +133,77 @@ def run_full_scan():
     global _db_cache, _status
     _status["scanning"] = True
     add_log(f"Starting background scan for {MUSIC_DIR}")
+    
+    new_db = {}
+    found_artists = set()
+    found_albums = set()
+    
+    _status["files_found"] = 0
+    _status["artists_found"] = 0
+    _status["albums_found"] = 0
+    found_artists.clear()
+    found_albums.clear()
+
+    def scan_rec(path: str, current_level_db: Dict[str, Any]):
+        global _db_cache, found_artists, found_albums
+        if not os.path.exists(path):
+            return
+        
+        try:
+            entries = list(os.scandir(path))
+        except Exception as e:
+            add_log(f"Error accessing {path}: {e}")
+            return
+
+        for entry in entries:
+            if entry.is_dir():
+                if any(p in entry.name for p in EXCLUDE_PATTERNS):
+                    continue
+                _status["current_activity"] = f"Scanning {entry.name}..."
+                sub_db = {}
+                scan_rec(entry.path, sub_db)
+                if sub_db:
+                    current_level_db[entry.name] = sub_db
+            elif entry.is_file():
+                matches_ext = any(entry.name.lower().endswith(ext) for ext in FILE_EXTENSIONS)
+                if not matches_ext:
+                    continue
+                
+                try:
+                    meta = get_metadata(entry.path)
+                    rel_path = os.path.relpath(entry.path, MUSIC_DIR).replace("\\", "/")
+                    
+                    artwork = None
+                    if meta.get("artwork"): 
+                        artwork = meta["artwork"]
+                    elif meta.get("has_artwork"): 
+                        artwork = f"api/get_artwork?file_name={rel_path}"
+
+                    current_level_db[entry.name] = {
+                        "artist": meta["artist"],
+                        "album": meta["album"],
+                        "title": meta["title"],
+                        "duration": meta["duration"],
+                        "artwork": artwork
+                    }
+
+                    _status["files_found"] += 1
+                    found_artists.add(meta["artist"])
+                    found_albums.add(f"{meta['artist']} - {meta['album']}")
+                    _status["artists_found"] = len(found_artists)
+                    _status["albums_found"] = len(found_albums)
+                    
+                    add_log(f"Indexed: {meta['artist']} - {meta['title']}")
+
+                    # Update global cache for live feedback - Every 5 files for 'live' feel
+                    if _status["files_found"] % 5 == 0:
+                        _db_cache = new_db
+
+                except Exception as e:
+                    add_log(f"Error processing {entry.name}: {e}")
+
     try:
-        new_db = perform_scan(MUSIC_DIR)
+        scan_rec(MUSIC_DIR, new_db)
         _db_cache = new_db
         add_log(f"Background scan complete. Found {_status['files_found']} tracks across {_status['artists_found']} artists.")
     except Exception as e:
@@ -142,87 +213,6 @@ def run_full_scan():
         _status["scanning"] = False
         _status["current_activity"] = "Idle"
 
-def perform_scan(path: str) -> Dict[str, Any]:
-    global _status, _db_cache
-    db: Dict[str, Any] = {}
-    found_artists = set()
-    found_albums = set()
-
-    try:
-        if not os.path.exists(path):
-            return {}
-        
-        # Reset stats if path is root
-        if path == MUSIC_DIR:
-            _status["files_found"] = 0
-            _status["artists_found"] = 0
-            _status["albums_found"] = 0
-
-        entries = list(os.scandir(path))
-        for entry in entries:
-            if entry.is_dir():
-                if any(pattern in entry.name for pattern in EXCLUDE_PATTERNS):
-                    continue
-                _status["current_activity"] = f"Scanning {entry.name}..."
-                res = perform_scan(entry.path)
-                if res:
-                    db[entry.name] = res
-            elif entry.is_file() and any(entry.name.lower().endswith(ext.strip().lower()) for ext in FILE_EXTENSIONS):
-                try:
-                    meta = get_metadata(entry.path)
-                except Exception as e:
-                    add_log(f"Metadata error for {entry.name}: {e}")
-                    meta = {
-                        "artist": "Unknown Artist",
-                        "album": "Unknown Album",
-                        "title": entry.name,
-                        "duration": 0,
-                        "has_artwork": False
-                    }
-                
-                try:
-                    rel_path = os.path.relpath(entry.path, MUSIC_DIR).replace("\\", "/")
-                    artwork = None
-                    if meta.get("artwork"): 
-                        artwork = meta["artwork"]
-                    elif meta.get("has_artwork"): 
-                        artwork = f"/get_artwork?file_name={rel_path}"
-
-                    db[entry.name] = {
-                        "artist": meta["artist"],
-                        "album": meta["album"],
-                        "title": meta["title"],
-                        "duration": meta["duration"],
-                        "artwork": artwork
-                    }
-
-                    files_found = _status.get("files_found", 0)
-                    _status["files_found"] = files_found + 1
-                    
-                    if meta["artist"] not in found_artists:
-                        found_artists.add(meta["artist"])
-                        _status["artists_found"] = len(found_artists)
-                    
-                    album_key = f"{meta['artist']} - {meta['album']}"
-                    if album_key not in found_albums:
-                        found_albums.add(album_key)
-                        _status["albums_found"] = len(found_albums)
-
-                    # Update global cache every 20 files so UI shows progress
-                    if _status["files_found"] % 20 == 0:
-                        # Deep merge or just update top-level?
-                        # For simplicity, since we return the final db, 
-                        # we only update the cache if it's the root call OR if we want live progress.
-                        # Let's just return the db and have run_full_scan update it at the end.
-                        # BUT the user wants TO SEE IT.
-                        pass
-
-                except Exception:
-                    pass
-    except Exception as e:
-        add_log(f"ERROR: Scan error in {path}: {e}")
-    return db
-
 @app.on_event("startup")
 async def startup_event():
     # Start initial scan on startup
@@ -231,7 +221,7 @@ async def startup_event():
     import threading
     threading.Thread(target=run_full_scan, daemon=True).start()
 
-@app.get("/storage")
+@app.get("/api/storage")
 def get_storage():
     try:
         if not os.path.exists(DOTENV_PATH):
@@ -247,7 +237,7 @@ def get_storage():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/storage")
+@app.post("/api/storage")
 async def set_storage(config: Dict[str, str]):
     try:
         if not os.path.exists(DOTENV_PATH):
@@ -283,7 +273,7 @@ async def set_storage(config: Dict[str, str]):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/restart")
+@app.post("/api/restart")
 def restart_service():
     try:
         # This requires docker-compose to be available and /var/run/docker.sock to be mounted
@@ -399,20 +389,16 @@ def get_metadata(filepath: str) -> Dict[str, Any]:
         "has_artwork": False
     }
 
-@app.get("/database")
-def get_database() -> Dict[str, Any]:
-    global _status, _db_cache
-    print(f"DEBUG: GET /database called. Returning current cache (scanning={_status['scanning']})", flush=True)
-    return _db_cache
+# Compatibility alias for /database is handled above
 
-@app.get("/get_local")
+@app.get("/api/get_local")
 def get_local(file_name: str = Query(...)):
     full_path = os.path.join(MUSIC_DIR, file_name)
     if not os.path.exists(full_path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(full_path)
 
-@app.get("/get_artwork")
+@app.get("/api/get_artwork")
 def get_artwork(file_name: str = Query(...)):
     full_path = os.path.join(MUSIC_DIR, file_name)
     parent_dir = os.path.dirname(full_path)
@@ -440,7 +426,7 @@ def get_artwork(file_name: str = Query(...)):
         
     raise HTTPException(status_code=404, detail="Artwork not found")
 
-@app.get("/transcode_local")
+@app.get("/api/transcode_local")
 def transcode_local(file_name: str = Query(...), type: str = Query(...)):
     full_path = os.path.join(MUSIC_DIR, file_name)
     if not os.path.exists(full_path):

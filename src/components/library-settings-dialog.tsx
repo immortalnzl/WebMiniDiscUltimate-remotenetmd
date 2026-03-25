@@ -6,7 +6,7 @@ import {
     Select, FormControl, InputLabel, InputAdornment, IconButton,
     List as MuiList, ListItemIcon, ListItemText, ListItemButton
 } from '@mui/material';
-import { FolderOpen, ArrowBack, Folder } from '@mui/icons-material';
+import { FolderOpen, ArrowBack, Folder, Terminal, Refresh, History } from '@mui/icons-material';
 
 const FolderPicker = ({ open, onClose, onSelect, initialPath }: { open: boolean, onClose: () => void, onSelect: (path: string) => void, initialPath: string }) => {
     const [currentPath, setCurrentPath] = useState(initialPath || '/');
@@ -51,7 +51,7 @@ const FolderPicker = ({ open, onClose, onSelect, initialPath }: { open: boolean,
                 ) : (
                     <MuiList dense>
                         {dirs.length === 0 && <Typography variant="caption" sx={{ p: 2, display: 'block' }}>No subdirectories found or access denied.</Typography>}
-                        {dirs.map(d => (
+                        {dirs.map((d: string) => (
                             <ListItemButton key={d} onClick={() => setCurrentPath(currentPath === '/' || currentPath === '' ? `/${d}` : `${currentPath}/${d}`)}>
                                 <ListItemIcon><Folder color="primary" /></ListItemIcon>
                                 <ListItemText primary={d} />
@@ -68,7 +68,37 @@ const FolderPicker = ({ open, onClose, onSelect, initialPath }: { open: boolean,
     );
 };
 
-export const LibrarySettingsDialog = ({ open, onClose, onRestart }: { open: boolean, onClose: () => void, onRestart: () => void }) => {
+export const LibrarySettingsDialog = ({ 
+    open, onClose, onRestart, 
+    scanStatus, onStartScan 
+}: { 
+    open: boolean, onClose: () => void, onRestart: () => void,
+    scanStatus: any, onStartScan: () => void
+}) => {
+    const dialogRef = React.useRef<HTMLDivElement>(null);
+    const logRef = React.useRef<HTMLPreElement>(null);
+    const [logs, setLogs] = useState<string[]>([]);
+
+    useEffect(() => {
+        if (open) {
+            const fetchLogs = async () => {
+                try {
+                    const resp = await fetch('/api/logs');
+                    const data = await resp.json();
+                    setLogs(data.logs || []);
+                } catch (e) {}
+            };
+            fetchLogs();
+            const it = setInterval(fetchLogs, 2000);
+            return () => clearInterval(it);
+        }
+    }, [open]);
+
+    useEffect(() => {
+        if (logRef.current) {
+            logRef.current.scrollTop = logRef.current.scrollHeight;
+        }
+    }, [logs]);
     const [settings, setSettings] = useState({
         MUSIC_PATH: '',
         FILE_EXTENSIONS: '',
@@ -144,7 +174,7 @@ export const LibrarySettingsDialog = ({ open, onClose, onRestart }: { open: bool
                         <TextField 
                             label="Music Path" 
                             value={settings.MUSIC_PATH} 
-                            onChange={(e) => setSettings({...settings, MUSIC_PATH: e.target.value})} 
+                            onChange={(e: any) => setSettings({...settings, MUSIC_PATH: e.target.value})} 
                             fullWidth 
                             disabled={loading}
                             placeholder="/music"
@@ -166,7 +196,7 @@ export const LibrarySettingsDialog = ({ open, onClose, onRestart }: { open: bool
                                 <Select
                                     value={settings.VOLUME_TYPE}
                                     label="Volume Type"
-                                    onChange={(e) => setSettings({...settings, VOLUME_TYPE: e.target.value})}
+                                    onChange={(e: any) => setSettings({...settings, VOLUME_TYPE: e.target.value})}
                                     disabled={loading}
                                 >
                                     <MenuItem value="none">Bind (Local Folder)</MenuItem>
@@ -177,7 +207,7 @@ export const LibrarySettingsDialog = ({ open, onClose, onRestart }: { open: bool
                             <TextField 
                                 label="Mount Options" 
                                 value={settings.VOLUME_OPTIONS} 
-                                onChange={(e) => setSettings({...settings, VOLUME_OPTIONS: e.target.value})} 
+                                onChange={(e: any) => setSettings({...settings, VOLUME_OPTIONS: e.target.value})} 
                                 fullWidth 
                                 size="small"
                                 disabled={loading || settings.VOLUME_TYPE === 'none'}
@@ -188,7 +218,7 @@ export const LibrarySettingsDialog = ({ open, onClose, onRestart }: { open: bool
                         <TextField 
                             label="File Extensions" 
                             value={settings.FILE_EXTENSIONS} 
-                            onChange={(e) => setSettings({...settings, FILE_EXTENSIONS: e.target.value})} 
+                            onChange={(e: any) => setSettings({...settings, FILE_EXTENSIONS: e.target.value})} 
                             fullWidth 
                             disabled={loading}
                             helperText="Comma-separated list (e.g. .mp3,.flac,.wav)"
@@ -196,7 +226,7 @@ export const LibrarySettingsDialog = ({ open, onClose, onRestart }: { open: bool
                         <TextField 
                             label="Exclude Patterns" 
                             value={settings.EXCLUDE_PATTERNS} 
-                            onChange={(e) => setSettings({...settings, EXCLUDE_PATTERNS: e.target.value})} 
+                            onChange={(e: any) => setSettings({...settings, EXCLUDE_PATTERNS: e.target.value})} 
                             fullWidth 
                             disabled={loading}
                             helperText="Folders or files to skip (e.g. @eaDir,#recycle)"
@@ -205,15 +235,47 @@ export const LibrarySettingsDialog = ({ open, onClose, onRestart }: { open: bool
                             control={
                                 <Switch 
                                     checked={settings.ENABLE_SCRAPING === 'true'} 
-                                    onChange={(e) => setSettings({...settings, ENABLE_SCRAPING: e.target.checked ? 'true' : 'false'})}
+                                    onChange={(e: any) => setSettings({...settings, ENABLE_SCRAPING: e.target.checked ? 'true' : 'false'})}
                                     disabled={loading}
                                 />
                             }
                             label="Enable MusicBrainz Metadata Scraping"
                         />
-                        {error && <Typography color="error" variant="body2">{error}</Typography>}
-                        <Typography variant="caption" color="text.secondary">
-                            Note: Saving will restart the backend service. The application will reload automatically.
+                        
+                        <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Library Maintenance</Typography>
+                                <Button 
+                                    size="small" 
+                                    variant="outlined" 
+                                    startIcon={<Refresh className={scanStatus?.scanning ? "rotating" : ""} />} 
+                                    onClick={onStartScan}
+                                    disabled={scanStatus?.scanning}
+                                >
+                                    {scanStatus?.scanning ? "Scanning..." : "Start Full Scan"}
+                                </Button>
+                            </Box>
+                            
+                            <Box sx={{ 
+                                backgroundColor: '#1e1e1e', 
+                                color: '#d4d4d4', 
+                                fontFamily: 'monospace', 
+                                fontSize: '0.75rem',
+                                p: 1,
+                                height: 200,
+                                overflow: 'auto',
+                                borderRadius: 1,
+                                border: '1px solid #333'
+                            }}>
+                                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }} ref={logRef}>
+                                    {(logs && logs.length > 0) ? logs.join('\n') : "No logs available. Start a scan to see activity."}
+                                </pre>
+                            </Box>
+                        </Box>
+
+                        {error && <Typography color="error" variant="body2" sx={{ mt: 1 }}>{error}</Typography>}
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                            Note: Saving settings will restart the backend service.
                         </Typography>
                     </Box>
                 )}
