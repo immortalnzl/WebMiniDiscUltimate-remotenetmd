@@ -1,18 +1,27 @@
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { useShallowEqualSelector, useDispatch } from '../frontend-utils';
 import { actions as localLibraryActions } from '../redux/local-library-feature';
-import { openLocalLibrary, loadLibraryDatabase, loadLibraryStatus, loadArtists, loadAlbums } from '../redux/actions';
+import { loadLibraryDatabase, loadLibraryStatus, loadArtists, loadAlbums } from '../redux/actions';
 import serviceRegistry from '../services/registry';
 import { File, FileBrowser } from './file-browser/browser';
 import { FileType } from './file-browser/utils';
 import { LocalDatabase } from '../services/library/library';
 import { makeStyles } from 'tss-react/mui';
-import { Typography, Box, InputBase, Paper, IconButton, Tabs, Tab, Badge, LinearProgress, Dialog, DialogTitle, DialogContent, Button } from '@mui/material';
-import { Search, Folder, Description, PlayArrow, Add, GridView, List, Fullscreen, FullscreenExit, Album, MusicNote, Settings, Refresh, Terminal, History } from '@mui/icons-material';
-import { AdaptiveFile } from '../utils';
+import { 
+    Typography, Box, InputBase, Paper, IconButton, Tabs, Tab, 
+    LinearProgress, Button, Slider, Avatar, Tooltip,
+    Grid, Card, CardMedia, CardContent, CardActionArea, Snackbar, Alert
+} from '@mui/material';
+import { 
+    Search, Folder, Description, PlayArrow, Add, GridView, 
+    List, Fullscreen, FullscreenExit, Album, MusicNote, 
+    Settings, Refresh, Stop, VolumeUp, Pause 
+} from '@mui/icons-material';
+import { AdaptiveFile, loadPreference, savePreference } from '../utils';
 import { actions as convertDialogActions } from '../redux/convert-dialog-feature';
-import { Grid, Card, CardMedia, CardContent, CardActionArea, Tooltip as MuiTooltip } from '@mui/material';
 import { LibrarySettingsDialog } from './library-settings-dialog';
+import { PlaylistDialog } from './playlist-dialog';
+import audioPlayerService from '../services/player/audio-player-service';
 
 const useStyles = makeStyles()((theme: any) => ({
     root: {
@@ -22,8 +31,15 @@ const useStyles = makeStyles()((theme: any) => ({
         flexDirection: 'column',
         borderRight: `1px solid ${theme.palette.divider}`,
         backgroundColor: theme.palette.background.default,
-        transition: 'width 0.3s ease-in-out',
+        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
+        '&::-webkit-scrollbar': {
+            width: '6px',
+        },
+        '&::-webkit-scrollbar-thumb': {
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+            borderRadius: '3px',
+        },
     },
     rootExpanded: {
         width: '100%',
@@ -71,14 +87,6 @@ const useStyles = makeStyles()((theme: any) => ({
         height: '100%',
         overflow: 'auto',
     },
-    playerMini: {
-        padding: theme.spacing(1),
-        borderTop: `1px solid ${theme.palette.divider}`,
-        display: 'flex',
-        alignItems: 'center',
-        gap: theme.spacing(1),
-        backgroundColor: theme.palette.background.paper,
-    },
     card: {
         height: '100%',
         display: 'flex',
@@ -93,31 +101,85 @@ const useStyles = makeStyles()((theme: any) => ({
         aspectRatio: '1/1',
         backgroundColor: theme.palette.action.hover,
     },
-    logTerm: {
-        backgroundColor: '#1e1e1e',
-        color: '#d4d4d4',
-        fontFamily: 'monospace',
-        padding: theme.spacing(1),
-        height: '400px',
-        overflowY: 'auto',
-        fontSize: '0.8rem',
-        borderRadius: 4,
+    playerMiniModern: {
+        background: theme.palette.mode === 'dark' ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+        backdropFilter: 'blur(12px)',
+        borderTop: `1px solid ${theme.palette.divider}`,
+        padding: theme.spacing(1.5),
+        display: 'flex',
+        alignItems: 'center',
+        gap: theme.spacing(2),
+        position: 'sticky',
+        bottom: 0,
+        zIndex: 10,
+    },
+    minimizedRoot: {
+        width: 48,
+        alignItems: 'center',
+        padding: theme.spacing(1, 0),
+        gap: theme.spacing(2),
+        backgroundColor: theme.palette.background.paper,
+    },
+    verticalTitle: {
+        writingMode: 'vertical-rl',
+        textTransform: 'uppercase',
+        letterSpacing: 2,
+        opacity: 0.5,
+        margin: theme.spacing(2, 0),
+        userSelect: 'none',
     }
 }));
 
-export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpand }: { 
-    setUploadedFiles: (files: AdaptiveFile[]) => void;
+export const MusicLibrarySidebar = ({ isExpanded, isMinimized, onToggleExpand, onToggleMinimize }: { 
     isExpanded: boolean;
+    isMinimized: boolean;
     onToggleExpand: () => void;
+    onToggleMinimize: () => void;
 }) => {
     const { classes, cx } = useStyles();
     const dispatch = useDispatch();
+    
+    // Core state from Redux
+    const database = useShallowEqualSelector((state: any) => state.localLibrary.database);
+    const artists = useShallowEqualSelector((state: any) => state.localLibrary.artists);
+    const albums = useShallowEqualSelector((state: any) => state.localLibrary.albums);
+    const scanStatus = useShallowEqualSelector((state: any) => state.localLibrary.scanStatus);
+    const stagedTracks = useShallowEqualSelector((state: any) => state.localLibrary.stagedTracks);
+    const uploadedFiles = useShallowEqualSelector((state: any) => state.convertDialog.files);
+
     const [currentPath, setCurrentPath] = useState<string[]>([]);
-    const { database, status, artists, albums, scanStatus } = useShallowEqualSelector((state) => state.localLibrary);
-    const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [playlistDialogOpen, setPlaylistDialogOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-    const [tabValue, setTabValue] = useState(0);
+    const [tabValue, setTabValue] = useState(2); // Default to Albums
+    const [gridColumns, setGridColumns] = useState(loadPreference('library-grid-columns', 6));
+    const [filterArtist, setFilterArtist] = useState<string | null>(null);
+    const [filterAlbum, setFilterAlbum] = useState<string | null>(null);
+    
+    // Player State
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentTrack, setCurrentTrack] = useState<any>(null);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [volume, setVolume] = useState(loadPreference('player-volume', 0.8));
+    const [audioError, setAudioError] = useState<React.ReactNode | null>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [addedSnackbarOpen, setAddedSnackbarOpen] = useState(false);
+    const [lastAddedTitle, setLastAddedTitle] = useState('');
+
+    const handleRefresh = useCallback(() => {
+        dispatch(loadLibraryDatabase());
+        dispatch(loadArtists());
+        dispatch(loadAlbums());
+    }, [dispatch]);
+
+    // Derived State
+    const visualArtists = useMemo(() => {
+        return artists.map((name: string) => {
+            const firstAlbum = albums.find((a: any) => a.artist === name);
+            return { name, artwork: firstAlbum?.artwork || null };
+        });
+    }, [artists, albums]);
 
     const handleStartScan = async () => {
         try {
@@ -127,6 +189,111 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
         }
     };
 
+    useEffect(() => {
+        if (!audioRef.current) return;
+        audioRef.current.volume = volume;
+    }, [volume]);
+
+    const handlePlayTrack = useCallback(async (file: File) => {
+        const { libraryService } = serviceRegistry;
+        if (!libraryService) return;
+        const filePath = file.props?.['id'];
+        if (filePath) {
+            const url = libraryService.getAudioUrl(filePath);
+            if (url) {
+                const trackData = {
+                    ...file.props,
+                    id: filePath,
+                    url
+                };
+                
+                setCurrentTrack(trackData);
+                setAudioError(null);
+                setIsPlaying(true);
+
+                try {
+                    await audioPlayerService.play(url);
+                } catch (e) {
+                    console.error("Playback error", e);
+                    setAudioError("Failed to decode audio. Check if ffmpeg-core.js is available.");
+                    setIsPlaying(false);
+                }
+            }
+        }
+    }, []);
+
+    const handleTogglePlay = useCallback(() => {
+        if (isPlaying) {
+            audioPlayerService.pause();
+            setIsPlaying(false);
+        } else if (currentTrack) {
+            audioPlayerService.resume();
+            setIsPlaying(true);
+        }
+    }, [isPlaying, currentTrack]);
+
+    const handleStopPlayback = useCallback(() => {
+        audioPlayerService.stop();
+        setIsPlaying(false);
+    }, []);
+
+    const handleSeek = (_: any, value: number | number[]) => {
+        const time = value as number;
+        setCurrentTime(time);
+        audioPlayerService.seek(time);
+    };
+
+    const handleVolumeChange = (_: any, value: number | number[]) => {
+        const v = value as number;
+        setVolume(v);
+        savePreference('player-volume', v);
+    };
+
+    const handleGridColumnsChange = (_: any, v: number | number[]) => {
+        setGridColumns(v as number);
+        savePreference('library-grid-columns', v);
+    };
+
+    const handleAddToPlaylist = useCallback((files: File[]) => {
+        const { libraryService } = serviceRegistry;
+        if (!libraryService) return;
+
+        const newAdaptiveFiles: AdaptiveFile[] = files
+            .filter(f => f.type === FileType.File)
+            .map((file: File) => ({
+                name: file.name,
+                title: file.props?.title || file.name,
+                duration: file.props?.duration || 0,
+                artist: file.props?.artist || 'Unknown Artist',
+                album: file.props?.album || 'Unknown Album',
+                artwork: file.props?.artwork,
+                getForEncoding: async (params: any) => {
+                    return libraryService.processLocalLibraryFile(file.props?.['id'], params);
+                }
+            }));
+
+        if (newAdaptiveFiles.length > 0) {
+            dispatch(convertDialogActions.setFiles([...uploadedFiles, ...newAdaptiveFiles]));
+            dispatch(convertDialogActions.setVisible(true));
+
+            // Also keep in sidebar stage for internal tracking
+            files.forEach(f => {
+                if (f.type === FileType.File) {
+                    dispatch(localLibraryActions.addToStage({ ...f.props, id: f.props?.['id'] }));
+                }
+            });
+
+            setLastAddedTitle(newAdaptiveFiles.length === 1 ? (newAdaptiveFiles[0].title) : `${newAdaptiveFiles.length} tracks`);
+            setAddedSnackbarOpen(true);
+        }
+    }, [dispatch, uploadedFiles]);
+
+    const formatDuration = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
     const convertToFileArray = (data: LocalDatabase, path: string[] = []): File[] => {
         let currentData = data;
         const originalPath = [...path];
@@ -134,8 +301,8 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
         try {
             while(pathCopy.length){
                 const part = pathCopy.shift();
-                if (part && currentData[part]) {
-                    currentData = currentData[part] as any;
+                if (part && (currentData as any)[part]) {
+                    currentData = (currentData as any)[part];
                 }
             }
         } catch (e) {
@@ -163,21 +330,52 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
         }
     }, [database, currentPath]);
 
+    const allTracks = useMemo(() => {
+        if (!database) return [];
+        const flatten = (db: LocalDatabase, path: string[] = []): File[] => {
+            let res: File[] = [];
+            for (const [key, value] of Object.entries(db)) {
+                if (value && typeof value === 'object' && 'artist' in value) {
+                    res.push({
+                        name: key,
+                        type: FileType.File,
+                        props: { ...(value as any), id: [...path, key].join('/') }
+                    });
+                } else if (value && typeof value === 'object') {
+                    res.push(...flatten(value as LocalDatabase, [...path, key]));
+                }
+            }
+            return res;
+        };
+        return flatten(database);
+    }, [database]);
+
+    const scanFinishedRef = useRef(false);
+
     useEffect(() => {
-        const load = () => {
-            const { libraryService } = serviceRegistry;
-            if (libraryService) {
-                dispatch(loadLibraryDatabase());
+        const loadStatus = () => {
+            if (isExpanded) {
                 dispatch(loadLibraryStatus());
-                dispatch(loadArtists());
-                dispatch(loadAlbums());
             }
         };
-        load();
-        const interval = setInterval(load, 3000); 
+        loadStatus();
+        const pollInterval = scanStatus?.scanning ? 2000 : 30000;
+        const interval = setInterval(loadStatus, pollInterval);
         return () => clearInterval(interval);
-    }, [dispatch, scanStatus?.scanning]);
-
+    }, [dispatch, isExpanded, scanStatus?.scanning]);
+    
+    useEffect(() => {
+        if (scanStatus && !scanStatus.scanning) {
+            if (!scanFinishedRef.current) {
+                dispatch(loadLibraryDatabase());
+                dispatch(loadArtists());
+                dispatch(loadAlbums());
+                scanFinishedRef.current = true;
+            }
+        } else if (scanStatus?.scanning) {
+            scanFinishedRef.current = false;
+        }
+    }, [scanStatus?.scanning, dispatch]);
 
     const handleFileAction = useCallback((file: File) => {
         if (file.type === FileType.Directory) {
@@ -185,73 +383,56 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
         } else {
             handleAddToPlaylist([file]);
         }
-    }, []);
-
-    const handleAddToPlaylist = useCallback((files: File[]) => {
-        const process = (path: string[], files: File[]): File[] => {
-            const finalFiles = [];
-            for(let file of files){
-                if(file.type === FileType.Directory) {
-                    const newPath = [...path, file.name];
-                    const subFiles = convertToFileArray(database ?? {}, newPath);
-                    finalFiles.push(...process(newPath, subFiles));
-                } else {
-                    finalFiles.push(file);
-                }
-            }
-            return finalFiles;
-        };
-
-        const tracksToAdd = process(currentPath, files);
-        const adaptiveFiles: AdaptiveFile[] = tracksToAdd.map((file) => {
-            const props = file.props!;
-            const pathTokens = props['id'].split('/');
-            return {
-                album: props['album'],
-                artist: props['artist'],
-                title: props['title'],
-                name: pathTokens[pathTokens.length - 1] || 'unknown.unk',
-                duration: props['duration'],
-                artwork: props['artwork'],
-                getForEncoding: async (params) => {
-                    const { libraryService } = serviceRegistry;
-                    if (!libraryService) throw new Error('Library service not available');
-                    return libraryService.processLocalLibraryFile(props['id'], params);
-                },
-            };
-        });
-        setUploadedFiles(adaptiveFiles);
-        dispatch(convertDialogActions.setVisible(true));
-    }, [database, currentPath, setUploadedFiles, dispatch]);
+    }, [handleAddToPlaylist]);
 
     const renderGridView = (files: File[]) => (
         <Grid container spacing={2}>
-            {files.map((file) => (
-                <Grid item xs={6} sm={4} md={isExpanded ? 2 : 6} key={file.name}>
+            {files.map((file: File) => (
+                <Grid item xs={12} sm={6} md={12 / gridColumns} key={file.name}>
                     <Card className={classes.card}>
-                        <CardActionArea onClick={() => handleFileAction(file)}>
-                            <CardMedia
-                                className={classes.media}
-                                image={file.props?.artwork || ''}
-                                title={file.name}
-                            >
-                                {(!file.props?.artwork) && (
-                                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                                        {file.type === FileType.Directory ? <Album sx={{ fontSize: 64, color: 'action.disabled' }} /> : <MusicNote sx={{ fontSize: 64, color: 'action.disabled' }} />}
-                                    </Box>
-                                )}
-                            </CardMedia>
-                            <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-                                <Typography variant="subtitle2" noWrap sx={{ fontSize: '0.85rem' }}>
-                                    {file.name}
-                                </Typography>
-                                {file.type === FileType.File && (
-                                    <Typography variant="caption" color="text.secondary" display="block" noWrap>
-                                        {file.props?.artist}
+                        <Box sx={{ position: 'relative' }}>
+                            <CardActionArea onClick={() => handleFileAction(file)}>
+                                <CardMedia
+                                    className={classes.media}
+                                    image={file.props?.artwork || ''}
+                                    title={file.name}
+                                >
+                                    {(!file.props?.artwork) && (
+                                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                                            {file.type === FileType.Directory ? <Album sx={{ fontSize: 48, color: 'action.disabled' }} /> : <MusicNote sx={{ fontSize: 48, color: 'action.disabled' }} />}
+                                        </Box>
+                                    )}
+                                </CardMedia>
+                                <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                                    <Typography variant="subtitle2" noWrap sx={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                                        {file.name}
                                     </Typography>
-                                )}
-                            </CardContent>
-                        </CardActionArea>
+                                    {file.type === FileType.File && (
+                                        <Typography variant="caption" color="text.secondary" display="block" noWrap sx={{ fontSize: '0.7rem' }}>
+                                            {file.props?.artist}
+                                        </Typography>
+                                    )}
+                                </CardContent>
+                            </CardActionArea>
+                            {file.type === FileType.File && (
+                                <Box sx={{ position: 'absolute', top: 5, right: 5, display: 'flex', gap: 0.5, opacity: currentTrack?.id === file.props?.['id'] ? 1 : 0, transition: 'opacity 0.2s', '.MuiCard-root:hover &': { opacity: 1 } }}>
+                                    <IconButton 
+                                        size="small" 
+                                        sx={{ 
+                                            bgcolor: currentTrack?.id === file.props?.['id'] ? 'primary.main' : 'background.paper', 
+                                            color: currentTrack?.id === file.props?.['id'] ? 'white' : 'inherit',
+                                            '&:hover': { bgcolor: 'primary.main', color: 'white' } 
+                                        }} 
+                                        onClick={(e: any) => { e.stopPropagation(); (currentTrack?.id === file.props?.['id']) ? handleTogglePlay() : handlePlayTrack(file); }}
+                                    >
+                                        {currentTrack?.id === file.props?.['id'] && isPlaying ? <Pause fontSize="inherit" /> : <PlayArrow fontSize="inherit" />}
+                                    </IconButton>
+                                    <IconButton size="small" sx={{ bgcolor: 'background.paper', '&:hover': { bgcolor: 'secondary.main', color: 'white' } }} onClick={(e: any) => { e.stopPropagation(); handleAddToPlaylist([file]); }}>
+                                        <Add fontSize="inherit" />
+                                    </IconButton>
+                                </Box>
+                            )}
+                        </Box>
                     </Card>
                 </Grid>
             ))}
@@ -259,17 +440,55 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
     );
 
     return (
-        <Box className={cx(classes.root, isExpanded && classes.rootExpanded)}>
+        <Box className={cx(classes.root, isExpanded && classes.rootExpanded, isMinimized && classes.minimizedRoot)}>
+            {isMinimized ? (
+                <>
+                    <Tooltip title="Expand Library" placement="right">
+                        <IconButton onClick={onToggleMinimize} size="small">
+                            <GridView />
+                        </IconButton>
+                    </Tooltip>
+                    <Box className={classes.verticalTitle}>
+                        <Typography variant="caption">Music Library</Typography>
+                    </Box>
+                    <Box sx={{ flexGrow: 1 }} />
+                    <Tooltip title="Refresh" placement="right">
+                        <IconButton onClick={handleRefresh} size="small">
+                            <Refresh fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                </>
+            ) : (
+                <>
             <Box className={classes.header}>
                 <Box className={classes.headerActions}>
                     <Typography variant="h6" sx={{ fontWeight: 600 }}>Music Library</Typography>
-                    <Box>
-                        <IconButton size="small" onClick={() => setSettingsOpen(true)}>
-                            <Settings fontSize="small" />
-                        </IconButton>
-                        <IconButton size="small" onClick={onToggleExpand}>
-                            {isExpanded ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}
-                        </IconButton>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Tooltip title="Playlists">
+                            <IconButton size="small" onClick={() => setPlaylistDialogOpen(true)}>
+                                <Album fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Refresh Library">
+                            <IconButton onClick={handleRefresh} size="small">
+                                <Refresh fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Settings">
+                            <IconButton size="small" onClick={() => setSettingsOpen(true)}>
+                                <Settings fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Minimize">
+                            <IconButton size="small" onClick={onToggleMinimize}>
+                                <FullscreenExit fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title={isExpanded ? "Restore" : "Maximize"}>
+                            <IconButton size="small" onClick={onToggleExpand}>
+                                {isExpanded ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}
+                            </IconButton>
+                        </Tooltip>
                     </Box>
                 </Box>
             </Box>
@@ -282,9 +501,8 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
             ) : (
                 <Box className={classes.statusCard}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                             {scanStatus.scanning ? "Scanning..." : "Library Ready"}
-                            {scanStatus.scanning && <Refresh fontSize="inherit" className="rotating" sx={{ ml: 1 }} />}
                         </Typography>
                     </Box>
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
@@ -296,37 +514,28 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
                         sx={{ height: 4, borderRadius: 2, mb: 1 }}
                     />
                     <Box sx={{ display: 'flex', gap: 2 }}>
-                        <Box>
-                            <Typography variant="caption" color="text.secondary">Tracks</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>{scanStatus.files_found || 0}</Typography>
-                        </Box>
-                        <Box>
-                            <Typography variant="caption" color="text.secondary">Artists</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>{scanStatus.artists_found || 0}</Typography>
-                        </Box>
-                        <Box>
-                            <Typography variant="caption" color="text.secondary">Albums</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>{scanStatus.albums_found || 0}</Typography>
-                        </Box>
+                        <Box><Typography variant="caption" color="text.secondary">Tracks</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{scanStatus.files_found}</Typography></Box>
+                        <Box><Typography variant="caption" color="text.secondary">Artists</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{scanStatus.artists_found}</Typography></Box>
+                        <Box><Typography variant="caption" color="text.secondary">Albums</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{scanStatus.albums_found}</Typography></Box>
                     </Box>
                 </Box>
             )}
 
-            <Tabs value={tabValue} onChange={(e: any, v: any) => setTabValue(v)} variant="fullWidth" sx={{ minHeight: 40, borderBottom: 1, borderColor: 'divider' }}>
-                <Tab label="Folders" sx={{ minHeight: 40, fontSize: '0.75rem' }} />
-                <Tab label="Artists" sx={{ minHeight: 40, fontSize: '0.75rem' }} />
-                <Tab label="Albums" sx={{ minHeight: 40, fontSize: '0.75rem' }} />
+            <Tabs value={tabValue} onChange={(_: any, v: number) => setTabValue(v)} variant="scrollable" scrollButtons="auto">
+                <Tab icon={<Folder />} label="Folders" />
+                <Tab icon={<MusicNote />} label="Artists" />
+                <Tab icon={<Album />} label="Albums" />
             </Tabs>
 
             <Paper className={classes.search}>
                 <Search color="disabled" sx={{ fontSize: 20 }} />
-                <InputBase
-                    className={classes.input}
-                    placeholder={`Search ${tabValue === 0 ? "folders" : tabValue === 1 ? "artists" : "albums"}...`}
-                />
-                <IconButton size="small" onClick={() => setViewMode((v: any) => v === 'list' ? 'grid' : 'list')}>
+                <InputBase className={classes.input} placeholder="Search..." />
+                <IconButton size="small" onClick={() => setViewMode((v: 'list' | 'grid') => v === 'list' ? 'grid' : 'list')}>
                     {viewMode === 'list' ? <GridView fontSize="inherit" /> : <List fontSize="inherit" />}
                 </IconButton>
+                {viewMode === 'grid' && (
+                    <Slider size="small" value={gridColumns} min={2} max={10} onChange={handleGridColumnsChange} sx={{ width: 60, ml: 1 }} />
+                )}
             </Paper>
 
             <Box className={classes.browserWrapper}>
@@ -340,25 +549,20 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
                                 manualName={true}
                                 allowMultifileSelection={true}
                                 pathString={currentPath.join('/')}
-                                iconGenerator={(file) => {
-                                    if (file.type === FileType.File && file.props?.artwork) {
-                                        return <img src={file.props.artwork} alt="" style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 2 }} />;
+                                iconGenerator={(file: File) => {
+                                    const isActive = currentTrack?.id === file.props?.['id'];
+                                    if (file.type === FileType.File) {
+                                        if (isActive && isPlaying) return <Pause sx={{ color: 'primary.main' }} />;
+                                        if (isActive) return <PlayArrow sx={{ color: 'primary.main' }} />;
+                                        if (file.props?.artwork) return <img src={file.props.artwork} alt="" style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 2 }} />;
                                     }
                                     return file.type === FileType.Directory ? <Folder sx={{ color: 'primary.main' }} /> : <Description />;
                                 }}
                                 additionalColumns={[{ name: 'name', sortable: true }]}
                                 actions={[
-                                    {
-                                        name: 'Back',
-                                        actionPossible: () => currentPath.length > 0,
-                                        handler: () => setCurrentPath(e => e.slice(0, -1)),
-                                    },
-                                    {
-                                        name: 'Add to Disc',
-                                        icon: <Add />,
-                                        actionPossible: (e) => e.length > 0,
-                                        handler: (e) => handleAddToPlaylist(e),
-                                    }
+                                    { name: 'Back', actionPossible: () => currentPath.length > 0, handler: () => setCurrentPath((prev: string[]) => prev.slice(0, -1)) },
+                                    { name: 'Add to Burn List', icon: <Add />, actionPossible: (e: File[]) => e.length > 0, handler: handleAddToPlaylist },
+                                    { name: 'Play', icon: <PlayArrow />, actionPossible: (e: File[]) => e.length === 1 && e[0].type === FileType.File, handler: (e: File[]) => handlePlayTrack(e[0]) }
                                 ]}
                             />
                         ) : renderGridView(currentFileTree)}
@@ -366,57 +570,140 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
                 )}
                 {tabValue === 1 && (
                     <Box className={classes.tabPanel}>
-                        <Grid container spacing={1}>
-                            {artists.map((artist: string) => (
-                                <Grid item xs={12} key={artist}>
-                                    <Button fullWidth onClick={() => {}} sx={{ justifyContent: 'flex-start', textAlign: 'left', p: 1, textTransform: 'none', borderBottom: 1, borderColor: 'divider' }}>
-                                        <MusicNote sx={{ mr: 1, opacity: 0.5 }} />
-                                        <Typography variant="body2">{artist}</Typography>
-                                    </Button>
-                                </Grid>
-                            ))}
-                        </Grid>
+                        {!filterArtist ? (
+                             <Grid container spacing={2}>
+                                {visualArtists.map((artist: any) => (
+                                    <Grid item xs={12} sm={6} md={12 / gridColumns} key={artist.name}>
+                                        <Card className={classes.card}>
+                                            <CardActionArea onClick={() => setFilterArtist(artist.name)}>
+                                                <CardMedia className={classes.media} image={artist.artwork || ''}>
+                                                    {!artist.artwork && <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><MusicNote sx={{ fontSize: 48, opacity: 0.3 }} /></Box>}
+                                                </CardMedia>
+                                                <CardContent sx={{ p: 1 }}>
+                                                    <Typography variant="subtitle2" noWrap sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{artist.name}</Typography>
+                                                </CardContent>
+                                            </CardActionArea>
+                                        </Card>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        ) : (
+                            <Box>
+                                <Button size="small" onClick={() => setFilterArtist(null)} sx={{ mb: 1 }}>Back to Artists</Button>
+                                <FileBrowser
+                                    fileTree={allTracks.filter((t: File) => t.props?.artist === filterArtist)}
+                                    manualName={true}
+                                    allowMultifileSelection={true}
+                                    pathString={filterArtist}
+                                    iconGenerator={() => <MusicNote />}
+                                    additionalColumns={[{ name: 'name', sortable: true }]}
+                                    actions={[
+                                        { name: 'Add to Burn List', icon: <Add />, actionPossible: (e: File[]) => e.length > 0, handler: handleAddToPlaylist },
+                                        { name: 'Play', icon: <PlayArrow />, actionPossible: (e: File[]) => e.length === 1, handler: (e: File[]) => handlePlayTrack(e[0]) }
+                                    ]}
+                                />
+                            </Box>
+                        )}
                     </Box>
                 )}
                 {tabValue === 2 && (
                     <Box className={classes.tabPanel}>
-                        <Grid container spacing={2}>
-                            {albums.map((album: any, idx: number) => (
-                                <Grid item xs={6} sm={4} md={isExpanded ? 2 : 6} key={idx}>
-                                    <Card className={classes.card}>
-                                        <CardActionArea>
-                                            <CardMedia className={classes.media} image={album.artwork || ''}>
-                                            {!album.artwork && <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Album sx={{ fontSize: 48, opacity: 0.3 }} /></Box>}
-                                            </CardMedia>
-                                            <CardContent sx={{ p: 1 }}>
-                                                <Typography variant="subtitle2" noWrap sx={{ fontSize: '0.8rem' }}>{album.album}</Typography>
-                                                <Typography variant="caption" color="text.secondary" noWrap display="block">{album.artist}</Typography>
-                                            </CardContent>
-                                        </CardActionArea>
-                                    </Card>
-                                </Grid>
-                            ))}
-                        </Grid>
+                        {!filterAlbum ? (
+                            <Grid container spacing={2}>
+                                {albums.map((album: any, idx: number) => (
+                                    <Grid item xs={12} sm={6} md={12 / gridColumns} key={idx}>
+                                        <Card className={classes.card}>
+                                            <CardActionArea onClick={() => { setFilterArtist(album.artist); setFilterAlbum(album.album); }}>
+                                                <CardMedia className={classes.media} image={album.artwork || ''}>
+                                                    {!album.artwork && <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Album sx={{ fontSize: 48, opacity: 0.3 }} /></Box>}
+                                                </CardMedia>
+                                                <CardContent sx={{ p: 1 }}>
+                                                    <Typography variant="subtitle2" noWrap sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{album.album}</Typography>
+                                                    <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ fontSize: '0.7rem' }}>{album.artist}</Typography>
+                                                </CardContent>
+                                            </CardActionArea>
+                                        </Card>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        ) : (
+                            <Box>
+                                <Button size="small" onClick={() => { setFilterAlbum(null); setFilterArtist(null); }} sx={{ mb: 1 }}>Back to Albums</Button>
+                                <FileBrowser
+                                    fileTree={allTracks.filter((t: File) => t.props?.artist === filterArtist && t.props?.album === filterAlbum)}
+                                    manualName={true}
+                                    allowMultifileSelection={true}
+                                    pathString={`${filterArtist}/${filterAlbum}`}
+                                    iconGenerator={() => <MusicNote />}
+                                    additionalColumns={[{ name: 'name', sortable: true }]}
+                                    actions={[
+                                        { name: 'Add to Burn List', icon: <Add />, actionPossible: (e: File[]) => e.length > 0, handler: handleAddToPlaylist },
+                                        { name: 'Play', icon: <PlayArrow />, actionPossible: (e: File[]) => e.length === 1, handler: (e: File[]) => handlePlayTrack(e[0]) }
+                                    ]}
+                                />
+                            </Box>
+                        )}
                     </Box>
                 )}
             </Box>
 
-            {currentAudioUrl && (
-                <Box className={classes.playerMini}>
-                    <audio src={currentAudioUrl} controls autoPlay style={{ height: 32, flexGrow: 1 }} />
-                    <IconButton size="small" onClick={() => setCurrentAudioUrl(null)}>
-                        <Description fontSize="small" />
-                    </IconButton>
+            {uploadedFiles.length > 0 && (
+                <Box sx={{ p: 2, borderTop: `1px solid`, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>Burn Queue</Typography>
+                        <Box sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600 }}>
+                            {uploadedFiles.length}
+                        </Box>
+                    </Box>
+                    <Button variant="contained" size="small" onClick={() => dispatch(convertDialogActions.setVisible(true))}>
+                        Send to Burner
+                    </Button>
                 </Box>
             )}
 
-            <LibrarySettingsDialog 
-                open={settingsOpen} 
-                onClose={() => setSettingsOpen(false)} 
-                onRestart={() => setTimeout(() => window.location.reload(), 3000)}
-                scanStatus={scanStatus}
-                onStartScan={handleStartScan}
-            />
+            {currentTrack && (
+                <Box className={classes.playerMiniModern}>
+                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                            <Avatar variant="rounded" src={currentTrack.artwork} sx={{ width: 40, height: 40 }}><Album /></Avatar>
+                            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                                <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600 }}>{currentTrack.title}</Typography>
+                                <Typography variant="caption" color="textSecondary" noWrap display="block">{currentTrack.artist}</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <IconButton size="small" onClick={handleStopPlayback}><Stop /></IconButton>
+                                <IconButton size="small" onClick={handleTogglePlay} sx={{ color: isPlaying ? 'primary.main' : 'inherit' }}>{isPlaying ? <Pause /> : <PlayArrow />}</IconButton>
+                            </Box>
+                        </Box>
+                        {audioError && <Typography variant="caption" color="error" sx={{ px: 1, display: 'block' }}>{audioError}</Typography>}
+                        <Box sx={{ px: 1 }}>
+                            <Slider size="small" value={currentTime} max={duration || 100} onChange={handleSeek} sx={{ py: 0.5 }} />
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: -1 }}><Typography variant="caption">{formatDuration(currentTime)}</Typography><Typography variant="caption">{formatDuration(duration)}</Typography></Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                            <VolumeUp sx={{ fontSize: 16, opacity: 0.6 }} />
+                            <Slider size="small" value={volume} max={1} step={0.01} onChange={handleVolumeChange} sx={{ width: 80 }} />
+                        </Box>
+                    </Box>
+                </Box>
+            )}
+
+            <LibrarySettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} onRestart={() => window.location.reload()} scanStatus={scanStatus} onStartScan={handleStartScan} />
+            <PlaylistDialog open={playlistDialogOpen} onClose={() => setPlaylistDialogOpen(false)} />
+
+            <Snackbar open={addedSnackbarOpen} autoHideDuration={2000} onClose={() => setAddedSnackbarOpen(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}>
+                <Alert severity="success" sx={{ width: '100%' }}>
+                    Added {lastAddedTitle} to Disc
+                </Alert>
+            </Snackbar>
+
+            <Box sx={{ p: 1, borderTop: '1px solid divider', textAlign: 'center' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.5, fontSize: '0.65rem' }}>
+                    NATIVE ENGINE v1.5.3 • AUDIO DECODER ACTIVE
+                </Typography>
+            </Box>
+            </>
+            )}
         </Box>
     );
 };
