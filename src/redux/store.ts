@@ -12,7 +12,6 @@ import songRecognitionDialog from './song-recognition-dialog-feature';
 import songRecognitionProgressDialog from './song-recognition-progress-dialog-feature';
 import appState, { actions as appActions, buildInitialState as buildInitialAppState } from './app-feature';
 import localLibrary from './local-library-feature';
-import playlist from './playlist-feature';
 import factory from './factory/factory-feature';
 
 import factoryFragmentModeEditDialog from './factory/factory-fragment-mode-edit-dialog-feature';
@@ -38,7 +37,6 @@ const errorCatcher: Middleware = (store) => (next) => async (action) => {
 const reducer = combineReducers({
     contextMenu,
     localLibrary,
-    playlist,
     renameDialog,
     otherDeviceDialog,
     uploadDialog,
@@ -77,12 +75,7 @@ const resetStateReducer: typeof reducer = function (...args) {
 
 export const store = configureStore({
     reducer: resetStateReducer,
-    middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware({
-            serializableCheck: false,
-        })
-            .prepend(errorCatcher)
-            .concat(batchDispatchMiddleware),
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware().prepend(errorCatcher).concat(batchDispatchMiddleware),
 });
 
 const initialState = Object.freeze(store.getState());

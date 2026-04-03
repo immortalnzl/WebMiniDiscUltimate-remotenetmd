@@ -20,7 +20,6 @@ services:
       - music_volume:/music:ro
       - ./.env:/app/.env
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./data:/app/data
     ports:
       - "8001:8000"
     restart: unless-stopped

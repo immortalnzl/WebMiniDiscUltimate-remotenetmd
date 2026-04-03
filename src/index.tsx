@@ -14,14 +14,11 @@ import App from './components/app';
 
 import { MediaRecorderService } from './services/browserintegration/mediarecorder';
 import { BrowserMediaSessionService } from './services/browserintegration/media-session';
-import { listContent, openLocalLibrary, loadLibraryDatabase, loadLibraryStatus, loadArtists, loadAlbums, initLibrary } from './redux/actions';
+import { listContent } from './redux/actions';
 import { sleep } from './utils';
 import { SettingsResetErrorBoundary } from './components/settings-reset-error-boundary';
 serviceRegistry.mediaRecorderService = new MediaRecorderService();
 serviceRegistry.mediaSessionService = new BrowserMediaSessionService(store);
-
-// Initialize Library Service early
-store.dispatch(initLibrary() as any);
 
 Object.defineProperty(window, 'wmdVersion', {
     value: '1.5.3',
@@ -106,30 +103,31 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
         const state = store.getState();
         if (shouldMonitorBeRunning(state)) {
             try {
-                /* Library polling moved to MusicLibrarySidebar for stability */
-
-                // Poll NetMD Device
+                await sleep(250);
                 let deviceStatus = await serviceRegistry.netmdService?.getDeviceStatus();
-                if (deviceStatus) {
-                    if (!deviceStatus.discPresent && state.main.disc !== null) store.dispatch(mainActions.setDisc(null));
-                    if (deviceStatus.discPresent && state.main.disc === null) await listContent(true)(store.dispatch);
-                    if (JSON.stringify(deviceStatus) !== JSON.stringify(state.main.deviceStatus)) {
-                        store.dispatch(mainActions.setDeviceStatus(deviceStatus));
-                    }
-                    const currentFlushability = store.getState().main.flushable;
-                    const serviceFlushability = deviceStatus.canBeFlushed;
-                    if (typeof serviceFlushability === 'boolean' && currentFlushability !== serviceFlushability) {
-                        store.dispatch(mainActions.setFlushable(serviceFlushability));
-                    }
+                if (!deviceStatus) {
+                    setTimeout(monitor, 5000);
+                    return;
                 }
-
+                if (!deviceStatus.discPresent && state.main.disc !== null) store.dispatch(mainActions.setDisc(null));
+                if (deviceStatus.discPresent && state.main.disc === null) await listContent(true)(store.dispatch);
+                if (JSON.stringify(deviceStatus) !== JSON.stringify(state.main.deviceStatus)) {
+                    store.dispatch(mainActions.setDeviceStatus(deviceStatus));
+                }
+                const currentFlushability = store.getState().main.flushable;
+                const serviceFlushability = deviceStatus.canBeFlushed;
+                if (typeof serviceFlushability === 'boolean' && currentFlushability !== serviceFlushability) {
+                    store.dispatch(mainActions.setFlushable(serviceFlushability));
+                }
+                // Since this function doesn't execute if there's any operational dialog on screen
+                // (including the track upload dialog), this won't conflict with anything.
                 if(document.title !== originalApplicationTitle) {
                     document.title = originalApplicationTitle;
                 }
-                
                 await sleep(250);
             } catch (e) {
                 console.error(e);
+                exceptionOccurred = true; // Stop monitor on exception
             }
         }
         setTimeout(monitor, 500);

@@ -308,7 +308,18 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                         </Table>
                     </div>
                 </div>
-                {/* AudioPlayerService handling playback */}
+                {currentAudioUrl && (
+                    <div style={{ marginTop: theme.spacing(2), display: 'flex', alignItems: 'center', gap: theme.spacing(2), padding: theme.spacing(1), border: `1px solid ${theme.palette.divider}`, borderRadius: theme.shape.borderRadius }}>
+                        <PlayArrow color="primary" />
+                        <audio 
+                            src={currentAudioUrl} 
+                            controls 
+                            autoPlay 
+                            style={{ flexGrow: 1, height: 32 }}
+                        />
+                        <Button size="small" onClick={() => setCurrentAudioUrl(null)}>Close Player</Button>
+                    </div>
+                )}
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleClose}>Cancel</Button>

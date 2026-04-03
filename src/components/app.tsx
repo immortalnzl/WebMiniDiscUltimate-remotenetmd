@@ -20,6 +20,7 @@ const Main = lazy(() => import('./main'));
 
 import { MusicLibrarySidebar } from './library-sidebar';
 import { DiscVisualizer } from './disc-visualizer';
+import { AdaptiveFile } from '../utils';
 
 const useStyles = makeStyles()((theme) => ({
     layout: {
@@ -29,59 +30,66 @@ const useStyles = makeStyles()((theme) => ({
         overflow: 'hidden',
     },
     sidebar: {
-        width: '50%',
+        width: '75%',
         flexShrink: 0,
         height: '100%',
-        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        backgroundColor: theme.palette.background.paper,
-        borderRight: `1px solid ${theme.palette.divider}`,
-        display: 'flex',
-        flexDirection: 'column',
+        transition: 'width 0.3s ease-in-out',
+        [belowDesktop(theme)]: {
+            display: 'none',
+        },
     },
     sidebarExpanded: {
-        width: '65%',
-    },
-    sidebarMinimized: {
-        width: 48,
-        '& > *': {
-            opacity: 0,
-        },
-        '& > div:first-of-type': {
-            opacity: 1,
-        }
+        width: '100%',
     },
     mainContent: {
-        width: '50%',
+        width: '25%',
+        flexShrink: 0,
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        padding: 0,
+        padding: theme.spacing(2),
         backgroundColor: theme.palette.background.default,
-        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-in-out',
-        flexShrink: 0,
+        transition: 'opacity 0.3s ease-in-out',
     },
-    mainContentFull: {
-        width: 'calc(100% - 48px)',
-    },
-    visualizerContainer: {
-        position: 'absolute',
-        top: 20,
-        right: 20,
-        zIndex: 100,
+    mainContentHidden: {
+        width: 0,
+        padding: 0,
+        overflow: 'hidden',
+        opacity: 0,
         pointerEvents: 'none',
-        display: 'none', 
-        [theme.breakpoints.up('md')]: {
-            display: 'block',
-        }
     },
     paper: {
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
-        padding: theme.spacing(1),
+        padding: theme.spacing(2),
         flexGrow: 1,
         overflow: 'hidden',
+    },
+    paperShowsList: {
+        [forAnyDesktop(theme)]: {
+            height: 600,
+        },
+        [forWideDesktop(theme)]: {
+            height: 700,
+        },
+    },
+    paperFullHeight: {
+        height: 'calc(100% - 50px)',
+    },
+    layoutFullWidth: {
+        [forAnyDesktop(theme)]: {
+            width: '90%',
+        },
+    },
+    bottomBar: {
+        display: 'flex',
+        alignItems: 'center',
+        [belowDesktop(theme)]: {
+            flexWrap: 'wrap',
+        },
+        marginLeft: -theme.spacing(2),
     },
     copyrightTypography: {
         textAlign: 'center',
@@ -90,10 +98,13 @@ const useStyles = makeStyles()((theme) => ({
         zIndex: theme.zIndex.drawer + 1000,
         color: '#fff',
     },
+    minidiscLogo: {
+        width: 48,
+    },
     controlsContainer: {
         flex: '0 0 auto',
         width: '100%',
-        padding: theme.spacing(1),
+        paddingRight: theme.spacing(8),
         [belowDesktop(theme)]: {
             paddingLeft: 0,
         },
@@ -234,10 +245,11 @@ const lightTheme = createTheme({
 });
 
 const InternalApp = () => {
-    const { mainView, loading } = useShallowEqualSelector((state) => state.appState);
+    const { mainView, loading, pageFullHeight, pageFullWidth } = useShallowEqualSelector((state) => state.appState);
+    const { deviceCapabilities } = useShallowEqualSelector((state) => state.main);
     const { classes, cx } = useStyles();
+    const [uploadedFiles, setUploadedFiles] = React.useState<(File | AdaptiveFile)[]>([]);
     const [isSidebarExpanded, setIsSidebarExpanded] = React.useState(false);
-    const [isSidebarMinimized, setIsSidebarMinimized] = React.useState(false);
 
     return (
         <React.Fragment>
@@ -252,30 +264,39 @@ const InternalApp = () => {
             >
                 <Box className={classes.layout}>
                     {mainView === 'MAIN' && (
-                        <Box className={cx(classes.sidebar, isSidebarExpanded && classes.sidebarExpanded, isSidebarMinimized && classes.sidebarMinimized)}>
+                        <Box className={cx(classes.sidebar, isSidebarExpanded && classes.sidebarExpanded)}>
                             <MusicLibrarySidebar 
+                                setUploadedFiles={setUploadedFiles} 
                                 isExpanded={isSidebarExpanded}
-                                isMinimized={isSidebarMinimized}
-                                onToggleExpand={() => { setIsSidebarExpanded(!isSidebarExpanded); setIsSidebarMinimized(false); }}
-                                onToggleMinimize={() => { setIsSidebarMinimized(!isSidebarMinimized); setIsSidebarExpanded(false); }}
+                                onToggleExpand={() => setIsSidebarExpanded(!isSidebarExpanded)}
                             />
                         </Box>
                     )}
-                    <Box className={cx(classes.mainContent, (mainView === 'MAIN' && isSidebarMinimized) && classes.mainContentFull)}>
+                    <Box className={cx(classes.mainContent, (mainView === 'MAIN' && isSidebarExpanded) && classes.mainContentHidden)}>
                         <Paper className={classes.paper}>
                             {mainView === 'WELCOME' ? <Welcome /> : null}
                             {mainView === 'MAIN' ? (
                                 <>
-                                    <Main />
-                                    <Box className={classes.visualizerContainer}>
-                                        <DiscVisualizer />
-                                    </Box>
+                                    {!isSidebarExpanded && <DiscVisualizer />}
+                                    <Main uploadedFiles={uploadedFiles} setUploadedFiles={setUploadedFiles} />
                                 </>
                              ) : null}
                             {mainView === 'FACTORY' ? <Toc /> : null}
 
                             <Box className={classes.controlsContainer}>{mainView === 'MAIN' ? <Controls /> : null}</Box>
                         </Paper>
+                        <Typography variant="body2" color="textSecondary" className={classes.copyrightTypography}>
+                            {'© '}
+                            <Link rel="noopener noreferrer" color="inherit" target="_blank" href="https://stefano.brilli.me/">
+                                Stefano Brilli
+                            </Link>
+                            {', '}
+                            <Link rel="noopener noreferrer" color="inherit" target="_blank" href="https://github.com/asivery/">
+                                Asivery
+                            </Link>{' '}
+                            {new Date().getFullYear()}
+                            {'.'}
+                        </Typography>
                     </Box>
                 </Box>
             </Suspense>

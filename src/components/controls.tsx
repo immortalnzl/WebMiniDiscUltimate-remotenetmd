@@ -9,10 +9,6 @@ import PauseIcon from '@mui/icons-material/Pause';
 
 import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
-import Slider from '@mui/material/Slider';
-import Typography from '@mui/material/Typography';
-import Avatar from '@mui/material/Avatar';
-import { alpha, useTheme } from '@mui/material/styles';
 
 import { makeStyles } from 'tss-react/mui';
 import { formatTimeFromSeconds, getSortedTracks } from '../utils';
@@ -40,52 +36,19 @@ const useStyles = makeStyles()((theme) => ({
         flex: '1 1 auto',
         position: 'relative',
         cursor: 'pointer',
-        marginLeft: theme.spacing(2),
-        marginRight: theme.spacing(2),
-        padding: theme.spacing(1, 4),
-        borderRadius: theme.spacing(2),
-        backgroundColor: alpha(theme.palette.background.paper, 0.7),
-        backdropFilter: 'blur(10px)',
-        border: `1px solid ${alpha(theme.palette.common.white, 0.1)}`,
-        minWidth: 300,
-        height: 64,
-        display: 'flex',
-        alignItems: 'center',
-        gap: theme.spacing(2),
+        marginLeft: theme.spacing(1.5),
+        marginRight: theme.spacing(1.5),
+        paddingLeft: theme.spacing(3),
+        paddingRight: theme.spacing(3),
+        borderRadius: theme.spacing(3),
+        backgroundColor: theme.palette.background.default,
+        minWidth: 150,
+        height: 48,
         [belowDesktop(theme)]: {
             marginLeft: 0,
-            marginRight: 0,
-            width: '100%',
+            marginRight: theme.spacing(2),
         },
         userSelect: 'none',
-        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-    },
-    lcdTextContainer: {
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        overflow: 'hidden',
-    },
-    lcdTitle: {
-        fontFamily: 'Inter, Roboto, sans-serif',
-        fontWeight: 600,
-        fontSize: '0.9rem',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        color: theme.palette.text.primary,
-    },
-    lcdSubtitle: {
-        fontFamily: 'Inter, Roboto, sans-serif',
-        fontSize: '0.75rem',
-        color: theme.palette.text.secondary,
-    },
-    artwork: {
-        width: 48,
-        height: 48,
-        borderRadius: theme.spacing(1),
-        boxShadow: theme.shadows[2],
     },
     lcdText: {
         overflow: 'hidden',
@@ -147,7 +110,7 @@ const useStyles = makeStyles()((theme) => ({
 
         backgroundRepeat: 'repeat-x',
         backgroundImage:
-            "url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAICAYAAADwdn+XAAABhWlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV9Tix9UBC0i4pChOlkQFREnrUIRKpRaoVUHk0u/oElDkuLiKLgWHPxYrDq4OOvq4CoIgh8gzg5Oii5S4v+SQosYD4778e7e4+4dINRKTDXbxgBVs4xkLCqmM6ti+ysC6EU/ZtApMVOfSyTi8Bxf1/Dx9S7Cs7zP/Tm6lazJAJ9IPMt0wyLeIJ7atHTO+8QhVpAU4nPiUYMuSPzIddnlN855hwWeGTJSyXniELGYb2G5hVnBUIknicOKqlG+kHZZ4bzFWS1VWOOe/IXBrLayzHWaQ4hhEUtIQISMCooowUKEVo0UE0naj3r4Bx1/glwyuYpg5FhAGSokxw/+B7+7NXMT425SMAoEXmz7Yxho3wXqVdv+Prbt+gngfwautKa/XAOmP0mvNrXwEdCzDVxcNzV5D7jcAQaedMmQHMlPU8jlgPcz+qYM0HcLdK25vTX2cfoApKir+A1wcAiM5Cl73ePdHa29/Xum0d8PjEtysaBQHcsAAAAJcEhZcwAALiMAAC4jAXilP3YAAAAHdElNRQfoBRIXCBTPWcirAAAAGXRFWHRDb21tZW50AENyZWF0ZWQgd2l0aCBHSU1QV4EOFwAAABhJREFUKM9jZCAM/uOTZGKgEIwaMBgMAAD0cwEPreO1ugAAAABJRU5ErkJggg==')",
+            "url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAICAYAAADwdn+XAAABhWlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV9Tix9UBC0i4pChOlkQFREnrUIRKpRaoVUHk0u/oElDkuLiKLgWHPxYrDq4OOvq4CoIgh8gzg5Oii5S4v+SQosYD4778e7e4+4dINRKTDXbxgBVs4xkLCqmM6ti+ysC6EU/ZtApMVOfSyTi8Bxf9/Dx9S7Cs7zP/Tm6lazJAJ9IPMt0wyLeIJ7atHTO+8QhVpAU4nPiUYMuSPzIddnlN855hwWeGTJSyXniELGYb2G5hVnBUIknicOKqlG+kHZZ4bzFWS1VWOOe/IXBrLayzHWaQ4hhEUtIQISMCooowUKEVo0UE0naj3r4Bx1/glwyuYpg5FhAGSokxw/+B7+7NXMT425SMAoEXmz7Yxho3wXqVdv+Prbt+gngfwautKa/XAOmP0mvNrXwEdCzDVxcNzV5D7jcAQaedMmQHMlPU8jlgPcz+qYM0HcLdK25vTX2cfoApKir+A1wcAiM5Cl73ePdHa29/Xum0d8PjEtysaBQHcsAAAAJcEhZcwAALiMAAC4jAXilP3YAAAAHdElNRQfoBRIXCBTPWcirAAAAGXRFWHRDb21tZW50AENyZWF0ZWQgd2l0aCBHSU1QV4EOFwAAABhJREFUKM9jZCAM/uOTZGKgEIwaMBgMAAD0cwEPreO1ugAAAABJRU5ErkJggg==')",
         filter: theme.palette.mode === 'dark' ? 'invert(1) contrast(0.5)' : 'contrast(0.1)',
     },
     durationSlowDown: {
@@ -156,6 +119,7 @@ const useStyles = makeStyles()((theme) => ({
 }));
 
 export const Controls = () => {
+    const dispatch = useDispatch();
     // TODO: The shallow equality won't work for these 2 states
     const deviceStatus = useShallowEqualSelector((state) => state.main.deviceStatus);
     const disc = useShallowEqualSelector((state) => state.main.disc);
@@ -164,8 +128,6 @@ export const Controls = () => {
     const deviceCapabilities = useDeviceCapabilities();
 
     const { classes, cx } = useStyles();
-    const theme = useTheme();
-    const dispatch = useDispatch();
     const [lcdScreen, _setLCDScreen] = useState<number>(-1);
     const [trackPercentage, _setTrackPercentage] = useState<number>(0);
     const setLCDScreen = (newScreen: number) => (lcdScreen === newScreen ? void 0 : _setLCDScreen(newScreen));
@@ -396,66 +358,31 @@ export const Controls = () => {
                     </IconButton>
                 </React.Fragment>
             ) : null}
-            <div className={classes.lcd}>
-                {discPresent && (
-                    <Avatar 
-                        variant="rounded" 
-                        src={tracks[deviceStatus?.track ?? 0]?.artwork} 
-                        className={classes.artwork}
+            <div className={classes.lcd} onClick={lcdClickPrevent ? () => setLCDClickPrevent(false) : handleLCDClick}>
+                <div className={classes.lcdText}>
+                    <span
+                        className={cx(lcdScroll ? classes.scrollingStatusMessage : classes.statusMessage, {
+                            [classes.lcdBlink]: disc === null,
+                        })}
+                        ref={lcdRef}
+                        style={
+                            message && lcdScroll > 0
+                                ? { animationDuration: `${lcdScrollDuration}s`, transform: `translate(-${lcdScroll}%)` }
+                                : {}
+                        }
                     >
-                        <DiscFrame style={{ width: 24 }} />
-                    </Avatar>
-                )}
-                
-                <div className={classes.lcdTextContainer}>
-                    <Typography className={classes.lcdTitle}>
-                        {disc === null ? (loading ? 'LOADING...' : 'NO DISC') : (tracks[deviceStatus?.track ?? 0]?.title || 'Untitled Track')}
-                    </Typography>
-                    <Typography className={classes.lcdSubtitle}>
-                        {discPresent && tracks[deviceStatus?.track ?? 0] ? (
-                            `${tracks[deviceStatus?.track ?? 0].artist} • ${tracks[deviceStatus?.track ?? 0].album}`
-                        ) : 'Ready to play'}
-                    </Typography>
-                    
-                    <Box sx={{ width: '100%', mt: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="caption" sx={{ minWidth: 35 }}>
-                            {formatTimeFromSeconds((deviceStatus?.time?.minute ?? 0) * 60 + (deviceStatus?.time?.second ?? 0))}
-                        </Typography>
-                        <Slider
-                            size="small"
-                            value={trackPercentage}
-                            onChange={(e, val) => {
-                                setTrackPercentage(val as number);
-                                setIsSeekingProgressLocked(true);
-                            }}
-                            onChangeCommitted={(e, val) => {
-                                if (deviceStatus?.track !== null && deviceStatus?.track !== undefined) {
-                                    const track = tracks[deviceStatus.track];
-                                    const seekTo = Math.floor(((val as number) * track.duration) / 100);
-                                    dispatch(control('seek', { trackNumber: deviceStatus.track, time: seekTo }));
-                                }
-                                setTimeout(() => setIsSeekingProgressLocked(false), 500);
-                            }}
-                            sx={{
-                                color: 'primary.main',
-                                height: 4,
-                                '& .MuiSlider-thumb': {
-                                    width: 8,
-                                    height: 8,
-                                    transition: '0.3s cubic-bezier(.47,1.64,.41,.8)',
-                                    '&:before': { boxShadow: '0 2px 12px 0 rgba(0,0,0,0.4)' },
-                                    '&:hover, &.Mui-focusVisible': {
-                                        boxShadow: `0px 0px 0px 8px ${alpha(theme.palette.primary.main, 0.16)}`,
-                                    },
-                                    '&.Mui-active': { width: 12, height: 12 },
-                                },
-                                '& .MuiSlider-rail': { opacity: 0.28 },
-                            }}
-                        />
-                        <Typography variant="caption" sx={{ minWidth: 35 }}>
-                            {formatTimeFromSeconds(tracks[deviceStatus?.track ?? 0]?.duration || 0)}
-                        </Typography>
-                    </Box>
+                        {disc === null ? (loading ? 'LOADING...' : 'NO DISC') : message}
+                    </span>
+                </div>
+                <div className={classes.lcdDisc}>
+                    {discPresent && <DiscFrame className={cx(classes.lcdDiscIcon, { [classes.lcdBlink]: paused })} />}
+                </div>
+                <div className={classes.durationHolder} ref={durationHolderRef} onMouseDown={startSeeking}>
+                    <div
+                        className={clsx(classes.duration, { [classes.durationSlowDown]: !isSeeking })}
+                        style={{ flexGrow: trackPercentage }}
+                    ></div>
+                    <div style={{ flexGrow: 100 - trackPercentage }}></div>
                 </div>
             </div>
         </Box>

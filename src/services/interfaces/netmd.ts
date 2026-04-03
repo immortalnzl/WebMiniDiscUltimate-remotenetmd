@@ -116,8 +116,6 @@ export interface Track {
 
     album?: string;
     artist?: string;
-    artwork?: string;
-    has_artwork?: boolean;
 }
 
 export interface Group {
@@ -339,36 +337,9 @@ export function convertGroupToNJS(source: Group): NetMDGroup {
     };
 }
 
-export function convertTrackToWMD(source: NetMDTrack): Track {
-    const title = source.title || '';
-    let artist: string | undefined = undefined;
-    let album: string | undefined = undefined;
-    let displayTitle = title;
-
-    if (!artist && !album) {
-        const separators = [' / ', ' - ', ' | ', '/', '-'];
-        for (const sep of separators) {
-            if (title.includes(sep)) {
-                const parts = title.split(sep).map(p => p.trim());
-                if (parts.length === 3) {
-                    artist = parts[0];
-                    album = parts[1];
-                    displayTitle = parts[2];
-                    break;
-                } else if (parts.length === 2) {
-                    artist = parts[0];
-                    displayTitle = parts[1];
-                    break;
-                }
-            }
-        }
-    }
-
+export function convertTrackToWMD(source: NetMDTrack) {
     return {
         ...source,
-        title: displayTitle,
-        artist,
-        album,
         duration: Math.ceil(source.duration / 512),
         encoding: {
             [Encoding.sp]: source.channel === 1 ? { codec: 'SPM', bitrate: 146 } : { codec: 'SPS', bitrate: 292 },
