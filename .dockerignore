@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+.git
+.idea
+.vscode
+*.log
+backend/venv
+backend/__pycache__
+backend/data
+data
+zip
+tmp
+.gemini
+.agents
+*.zip
+*.ps1

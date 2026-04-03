@@ -240,18 +240,17 @@ function createForcedEncodingText(selectedCodec: Codec, file: { forcedEncoding: 
 }
 
 // `files` always appends to the list
-export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
+export const ConvertDialog = () => {
     const dispatch = useDispatch();
     const { classes, cx } = useStyles();
 
-    const { visible, format, titleFormat, titles } = useShallowEqualSelector((state) => state.convertDialog);
+    const { visible, format, titleFormat, titles, files: reduxFiles } = useShallowEqualSelector((state) => state.convertDialog);
+
     const { fullWidthSupport } = useShallowEqualSelector((state) => state.appState);
     const { disc, deviceCapabilities } = useShallowEqualSelector((state) => state.main);
     const minidiscSpec = serviceRegistry.netmdSpec;
     const isHiMD = minidiscSpec instanceof HiMDSpec;
     const isNetworkWM = minidiscSpec?.specName === 'NetworkWM';
-
-    if (!minidiscSpec && !visible) return null;
 
     const [files, setFiles] = useState<FileWithMetadata[]>([]);
     const [selectedTrackIndex, setSelectedTrack] = useState(-1);
@@ -361,7 +360,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                         if (forcedEncoding !== null && forcedEncoding !== 'ILLEGAL') {
                             // There's an encoding forced by either the SP upload functionality or OMA
                             let asCodec: CodecFamily = forcedEncoding.format!.codec;
-                            const isIllegalForThisFormat = () => !minidiscSpec?.availableFormats.some((e) => e.codec === asCodec);
+                            const isIllegalForThisFormat = () => !minidiscSpec?.availableFormats?.some((e) => e.codec === asCodec);
                             if (isIllegalForThisFormat()) {
                                 // If it's still invalid, do not force an encoding
                                 if (isIllegalForThisFormat()) forcedEncoding = null;
@@ -404,14 +403,16 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
     }, [dispatch, minidiscSpec]);
 
     useEffect(() => {
+        if (!visible) return;
         // Trigger a reset if needed
-        const newFiles = Array.from(props.files);
+        const newFiles = Array.from(reduxFiles);
         loadMetadataFromFiles(newFiles)
             .then((withMetadata) => {
                 setFiles(withMetadata);
             })
             .catch(console.error);
-    }, [props.files, loadMetadataFromFiles, resetDialog]);
+    }, [reduxFiles, loadMetadataFromFiles, resetDialog, visible]);
+
 
     const refreshTitledFiles = useCallback(
         (files: FileWithMetadata[], format: TitleFormatType) => {
@@ -799,12 +800,13 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
             if (accepted.length > 0) {
                 loadMetadataFromFiles(accepted)
                     .then((acceptedTitledFiles) => {
+                        dispatch(convertDialogActions.setFiles([...reduxFiles, ...accepted]));
                         setFiles((files) => files.slice().concat(acceptedTitledFiles));
                     })
                     .catch(console.error);
             }
         },
-        [setFiles, loadMetadataFromFiles]
+        [reduxFiles, loadMetadataFromFiles, dispatch]
     );
     const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
         onDrop,
@@ -815,12 +817,14 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
     const disableRemove = selectedTrackIndex < 0 || selectedTrackIndex >= files.length;
     const handleRemoveSelectedTrack = useCallback(() => {
         const newFileArray = files.filter((f, i) => i !== selectedTrackIndex);
+        const newReduxFiles = reduxFiles.filter((f, i) => i !== selectedTrackIndex);
         setFiles(newFileArray);
+        dispatch(convertDialogActions.setFiles(newReduxFiles));
         if (selectedTrackIndex >= newFileArray.length) {
             setSelectedTrack(newFileArray.length - 1);
         }
         if (newFileArray.length === 0) handleClose();
-    }, [selectedTrackIndex, files, setFiles, handleClose]);
+    }, [selectedTrackIndex, files, reduxFiles, handleClose, dispatch]);
 
     const dialogVisible = useShallowEqualSelector((state) => state.convertDialog.visible);
 
@@ -853,6 +857,8 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
     }, [minidiscSpec]);
 
     const vintageMode = useShallowEqualSelector((state) => state.appState.vintageMode);
+
+    if (!minidiscSpec && !visible) return null;
 
     if (vintageMode) {
         const p = {

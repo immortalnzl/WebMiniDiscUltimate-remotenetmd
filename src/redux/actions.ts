@@ -725,7 +725,7 @@ export function selfTest() {
             {
                 name: 'Full-Width Rename Disc',
                 func: async () => {
-                    const titleToSet = 'Ｓｅｌｆ－Ｔｅｓｔ\u3000Ｆｕｌｌ－Ｗｉｄｔｈ';
+                    const titleToSet = 'Ｓｅｌｆ－Ｔｅｓｔ　Ｆｕｌｌ－Ｗｉｄｔｈ';
                     await netmdService.renameDisc('1', titleToSet);
                     return compareOrThrow((await netmdService.listContent()).fullWidthTitle, titleToSet);
                 },
@@ -742,7 +742,7 @@ export function selfTest() {
             {
                 name: 'Full-Width Rename Track 1',
                 func: async () => {
-                    const titleToSet = 'Ｓｅｌｆ－Ｔｅｓｔ\u3000Ｔｒａｃｋ\u3000Ｆｕｌｌ－Ｗｉｄｔｈ';
+                    const titleToSet = 'Ｓｅｌｆ－Ｔｅｓｔ　Ｔｒａｃｋ　Ｆｕｌｌ－Ｗｉｄｔｈ';
                     await netmdService.renameTrack(1, '2', titleToSet);
                     return compareOrThrow(allTracks(await netmdService.listContent())[1].fullWidthTitle, titleToSet);
                 },
@@ -1656,47 +1656,21 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
     };
 }
 
-export function loadLibraryStatus() {
-    return async function (dispatch: AppDispatch) {
-        try {
-            const resp = await fetch('/api/status');
-            const status = await resp.json();
-            dispatch(localLibraryActions.setScanStatus(status));
-        } catch (e) {
-            console.warn("Failed to load library status:", e);
-        }
-    };
-}
-
-export function loadArtists() {
-    return async function (dispatch: AppDispatch) {
-        try {
-            const resp = await fetch('/api/artists');
-            const artists = await resp.json();
-            dispatch(localLibraryActions.setArtists(artists));
-        } catch (e) {
-            console.warn("Failed to load artists:", e);
-        }
-    };
-}
 
 export function loadAlbums() {
     return async function (dispatch: AppDispatch) {
+        if (!serviceRegistry.libraryService) return;
         try {
-            const resp = await fetch('/api/albums');
-            const albums = await resp.json();
+            const albums = await serviceRegistry.libraryService.getAlbums();
             dispatch(localLibraryActions.setAlbums(albums));
-        } catch (e) {
-            console.warn("Failed to load albums:", e);
-        }
+        } catch (e) {}
     };
 }
 
 export function loadLibraryDatabase(force: boolean = false) {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
-        const { libraryService } = serviceRegistry;
-        if (!libraryService) return;
-
+        if (!serviceRegistry.libraryService) return;
+        const libraryService = serviceRegistry.libraryService!;
         const { database, status } = getState().localLibrary;
         if (!force && (database !== null && Object.keys(database).length > 0)) return;
         if (status === 'Loading database...') return;
@@ -1709,14 +1683,61 @@ export function loadLibraryDatabase(force: boolean = false) {
                 localLibraryActions.setDatabase(db)
             ]));
             // Load extras
-            loadLibraryStatus()(dispatch);
-            loadArtists()(dispatch);
-            loadAlbums()(dispatch);
+            dispatch(loadLibraryStatus());
+            dispatch(loadArtists());
+            dispatch(loadAlbums());
         } catch (e) {
             console.error("Failed to load library database:", e);
             dispatch(localLibraryActions.setStatus('Failed to load library'));
             setTimeout(() => dispatch(localLibraryActions.setStatus(null)), 5000);
         }
+    };
+}
+
+export function initLibrary() {
+    return async function (dispatch: AppDispatch, getState: () => RootState) {
+        const { libraryService, libraryServiceConfig } = getState().appState;
+        if (libraryService !== -1) {
+             try {
+                 serviceRegistry.libraryService = new LibraryServices[libraryService].create(libraryServiceConfig);
+                 // If the library service is a RemoteLibraryService, it also acts as an audio export service
+                 // BUT we don't necessarily want to override the default one yet unless needed.
+                 
+                 // Trigger initial load
+                 dispatch(loadLibraryDatabase(true));
+             } catch (e) {
+                 console.error("Failed to initialize library service:", e);
+             }
+        }
+    };
+}
+
+export function loadLibraryStatus() {
+    return async function (dispatch: AppDispatch, getState: () => RootState) {
+        if (!serviceRegistry.libraryService) return;
+        try {
+            const status = await serviceRegistry.libraryService.getStatus();
+            const oldStatus = getState().localLibrary.scanStatus;
+            
+            dispatch(localLibraryActions.setScanStatus(status));
+            
+            // Trigger database reload when scanning finishes
+            if (oldStatus?.scanning && !status.scanning) {
+                dispatch(loadLibraryDatabase(true));
+                dispatch(loadArtists());
+                dispatch(loadAlbums());
+            }
+        } catch (e) {}
+    };
+}
+
+export function loadArtists() {
+    return async function (dispatch: AppDispatch) {
+        if (!serviceRegistry.libraryService) return;
+        try {
+            const artists = await serviceRegistry.libraryService.getArtists();
+            dispatch(localLibraryActions.setArtists(artists));
+        } catch (e) {}
     };
 }
 

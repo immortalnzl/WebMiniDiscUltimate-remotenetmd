@@ -300,6 +300,78 @@ export function TrackRow({
     );
 }
 
+export interface PendingTrack extends Partial<Track> {
+    index: number;
+    title: string | null;
+    duration: number;
+    isPending: true;
+}
+
+export function PendingTrackRow({
+    track,
+    isHimdTrack,
+    isSelected,
+    onRemove,
+    onSelect,
+}: {
+    track: PendingTrack;
+    isHimdTrack: boolean;
+    isSelected: boolean;
+    onRemove: (idx: number | string) => void;
+    onSelect: (event: React.MouseEvent, idx: number | string) => void;
+    key?: string | number;
+}) {
+    const { classes, cx } = useStyles();
+    const handleRemove = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        onRemove(track.index);
+    }, [onRemove, track.index]);
+
+    const handleSelect = useCallback((e: React.MouseEvent) => {
+        onSelect(e, track.index);
+    }, [onSelect, track.index]);
+
+    return (
+        <TableRow
+            hover
+            selected={isSelected}
+            onClick={handleSelect}
+            color="inherit"
+            className={cx(classes.rowClass, classes.trackRow)}
+            style={{ opacity: 0.7, fontStyle: 'italic' }}
+        >
+            <TableCell className={classes.dragHandleEmpty} />
+            <TableCell className={classes.indexCell}>
+                <span className={classes.trackIndex}>+</span>
+                <IconButton
+                    size="small"
+                    className={cx(classes.controlButtonInTrackCommon, classes.playButtonInTrackList)}
+                    onClick={handleRemove}
+                >
+                    <DeleteIcon fontSize="inherit" />
+                </IconButton>
+            </TableCell>
+            <TableCell className={classes.titleCell} title={track.title ?? ''}>
+                {track.title || `No Title`}
+            </TableCell>
+            {isHimdTrack && (
+                <>
+                    <TableCell className={classes.titleCell} title={track.album ?? ''}>
+                        {track.album || `No Album`}
+                    </TableCell>
+                    <TableCell className={classes.titleCell} title={track.artist ?? ''}>
+                        {track.artist || `No Artist`}
+                    </TableCell>
+                </>
+            )}
+            <TableCell align="right" className={classes.durationCell}>
+                <span className={classes.formatBadge} style={{ backgroundColor: '#888' }}>PENDING</span>
+                <span className={classes.durationCellTime}>{formatTimeFromSeconds(track.duration)}</span>
+            </TableCell>
+        </TableRow>
+    );
+}
+
 interface GroupRowProps {
     group: Group;
     usesHimdTracks?: boolean;

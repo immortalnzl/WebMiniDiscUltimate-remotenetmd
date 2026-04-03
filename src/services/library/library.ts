@@ -6,6 +6,11 @@ export type LocalDatabase = { [filename: string]: LocalDatabase | { artist: stri
 // FIX THIS
 export interface LibraryService {
     getDatabase(): Promise<LocalDatabase>;
+    getStatus(): Promise<any>;
+    getArtists(): Promise<string[]>;
+    getAlbums(): Promise<any[]>;
     processLocalLibraryFile(filePath: string, params: ExportParams): Promise<ArrayBuffer>;
     getAudioUrl(filePath: string): string | null;
+    getPreviewUrl(filePath: string): string | null;
+    getForEncoding(track: any, codec: any): Promise<ArrayBuffer>;
 }

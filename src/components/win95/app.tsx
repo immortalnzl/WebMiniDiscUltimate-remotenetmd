@@ -97,8 +97,6 @@ export const W95App = () => {
         },
     };
 
-    const [uploadedFiles, setUploadedFiles] = useState<(File | AdaptiveFile)[]>([]);
-    
     return (
         <div className={classes.desktop}>
             <GlobalStyles />
@@ -124,7 +122,7 @@ export const W95App = () => {
                     </Toolbar>
                     <>
                         {mainView === 'WELCOME' ? <Welcome /> : null}
-                        {mainView === 'MAIN' ? <Main uploadedFiles={uploadedFiles} setUploadedFiles={setUploadedFiles} /> : null}
+                        {mainView === 'MAIN' ? <Main /> : null}
                     </>
                     <Panel variant="well">
                         &nbsp;

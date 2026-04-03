@@ -303,6 +303,8 @@ export type DisplayTrack = {
 
     album?: string;
     artist?: string;
+    artwork?: string;
+    has_artwork?: boolean;
 };
 
 export function pad(str: string | number, pad: string) {
@@ -339,6 +341,8 @@ export function getSortedTracks(disc: Disc | null): DisplayTrack[] {
 
                     album: track.album,
                     artist: track.artist,
+                    artwork: track.artwork,
+                    has_artwork: track.has_artwork,
                 });
             }
         }

@@ -94,8 +94,6 @@ export const W95Main = (props: {
         duration: number;
         encoding: string;
     }[];
-    uploadedFiles: (File | AdaptiveFile)[];
-    setUploadedFiles: React.Dispatch<React.SetStateAction<(File | AdaptiveFile)[]>>;
     onDrop: (acceptedFiles: File[], rejectedFiles: FileRejection[]) => void;
     getRootProps: (props?: DropzoneRootProps | undefined) => DropzoneRootProps;
     getInputProps: (props?: DropzoneInputProps | undefined) => DropzoneInputProps;
@@ -117,6 +115,7 @@ export const W95Main = (props: {
     const { classes } = useStyles();
     const themeContext = useContext(ThemeContext)!;
     const { mainView } = useShallowEqualSelector((state) => state.appState);
+    const { files: uploadedFiles } = useShallowEqualSelector((state) => state.convertDialog);
 
     const deviceCapabilities = useDeviceCapabilities();
 
@@ -245,7 +244,7 @@ export const W95Main = (props: {
 
             <UploadDialog />
             <ErrorDialog />
-            <ConvertDialog files={props.uploadedFiles} />
+            <ConvertDialog />
             <RenameDialog />
             <RecordDialog />
             <DumpDialog

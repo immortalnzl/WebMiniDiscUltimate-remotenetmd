@@ -9,6 +9,7 @@ export interface LocalLibraryState {
     artists: string[];
     albums: any[];
     scanStatus: any;
+    stagedTracks: any[];
 }
 
 const initialState: LocalLibraryState = {
@@ -18,6 +19,7 @@ const initialState: LocalLibraryState = {
     artists: [],
     albums: [],
     scanStatus: null,
+    stagedTracks: [],
 };
 
 const slice = createSlice({
@@ -42,8 +44,22 @@ const slice = createSlice({
         setScanStatus: (state: LocalLibraryState, action: PayloadAction<any>) => {
             state.scanStatus = action.payload;
         },
+        addToStage: (state: LocalLibraryState, action: PayloadAction<any>) => {
+            state.stagedTracks.push(action.payload);
+        },
+        removeFromStage: (state: LocalLibraryState, action: PayloadAction<number>) => {
+            state.stagedTracks.splice(action.payload, 1);
+        },
+        clearStage: (state: LocalLibraryState) => {
+            state.stagedTracks = [];
+        },
+        reorderStage: (state: LocalLibraryState, action: PayloadAction<{ from: number, to: number }>) => {
+            const [removed] = state.stagedTracks.splice(action.payload.from, 1);
+            state.stagedTracks.splice(action.payload.to, 0, removed);
+        }
     },
 });
 
-export const { actions, reducer } = slice;
-export default enableBatching(reducer);
+export const { actions } = slice;
+export const reducer = enableBatching(slice.reducer) as unknown as typeof slice.reducer;
+export default reducer;

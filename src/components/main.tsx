@@ -48,13 +48,14 @@ import IconButton from '@mui/material/IconButton';
 import Toolbar from '@mui/material/Toolbar';
 import Tooltip from '@mui/material/Tooltip';
 
-import { GroupRow, LeftInNondefaultCodecs, MockTrackRow, TrackRow } from './main-rows';
+import { GroupRow, LeftInNondefaultCodecs, MockTrackRow, TrackRow, PendingTrackRow, PendingTrack } from './main-rows';
 import { RenameDialog } from './rename-dialog';
 import { UploadDialog } from './upload-dialog';
 import { RecordDialog } from './record-dialog';
 import { ErrorDialog } from './error-dialog';
 import { PanicDialog } from './panic-dialog';
 import { ConvertDialog } from './convert-dialog';
+import { UploadSettingsPanel } from './upload-settings-panel';
 import { AboutDialog } from './about-dialog';
 import { DumpDialog } from './dump-dialog';
 import { TopMenu } from './topmenu';
@@ -177,9 +178,9 @@ function getTrackStatus(track: Track, deviceStatus: DeviceStatus | null): 'playi
     }
 }
 
-export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploadedFiles: React.Dispatch<React.SetStateAction<(File | AdaptiveFile)[]>> }) => {
-    const { uploadedFiles, setUploadedFiles } = props;
+export const Main = () => {
     const dispatch = useDispatch();
+    const { files: uploadedFiles } = useShallowEqualSelector((state) => state.convertDialog);
     const disc = useShallowEqualSelector((state) => state.main.disc);
     const flushable = useShallowEqualSelector((state) => state.main.flushable);
     const deviceName = useShallowEqualSelector((state) => state.main.deviceName);
@@ -258,11 +259,11 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
             const bannedTypes = ['audio/mpegurl', 'audio/x-mpegurl'];
             const accepted = acceptedFiles.filter((n) => !bannedTypes.includes(n.type));
             if (accepted.length > 0) {
-                setUploadedFiles(accepted);
+                dispatch(convertDialogActions.setFiles([...uploadedFiles, ...accepted]));
                 dispatch(convertDialogActions.setVisible(true));
             }
         },
-        [dispatch]
+        [dispatch, uploadedFiles]
     );
 
     const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
@@ -274,6 +275,8 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
     const { classes, cx } = useStyles();
     const tracks = useMemo(() => getSortedTracks(disc), [disc]);
     const groupedTracks = useMemo(() => getGroupedTracks(disc), [disc]);
+
+
     const defaultCodecName = minidiscSpec ? getDefaultCodecName(minidiscSpec) : '';
 
     // Action Handlers
@@ -389,9 +392,19 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
 
     const handleDeleteSelected = useCallback(
         (event: React.MouseEvent) => {
-            dispatch(deleteTracks(selected));
+            const discIndices = selected.filter(idx => idx >= 0);
+            const pendingIndices = selected.filter(idx => idx < 0).map(idx => -(idx + 1));
+            
+            if (discIndices.length > 0) {
+                dispatch(deleteTracks(discIndices));
+            }
+            if (pendingIndices.length > 0) {
+                const newFiles = uploadedFiles.filter((_, i) => !pendingIndices.includes(i));
+                dispatch(convertDialogActions.setFiles(newFiles));
+            }
+            setSelected([]);
         },
-        [dispatch, selected]
+        [dispatch, selected, uploadedFiles]
     );
 
     const handleDeleteTrack = useCallback(
@@ -495,10 +508,38 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
     );
 
     const handleOpenLocalLibrary = useCallback(() => {
-        setUploadedFiles([]);
         setUploadMenuAnchorEl(null);
         dispatch(openLocalLibrary());
     }, [dispatch]);
+
+    const handleRemovePending = useCallback((idx: number | string) => {
+        const copy = [...uploadedFiles];
+        if (typeof idx === 'number') {
+            copy.splice(idx, 1);
+        }
+        dispatch(convertDialogActions.setFiles(copy));
+    }, [uploadedFiles, dispatch]);
+
+    const allGroups = useMemo(() => {
+        const list: any[] = [];
+        if (uploadedFiles.length > 0) {
+            list.push({
+                title: "Pending Uploads",
+                index: -100,
+                tracks: uploadedFiles.map((f, i) => ({
+                    index: -1 - i, // Unique negative index to avoid collision with disc tracks
+                    title: (f as any).title || f.name,
+                    artist: (f as any).artist || "",
+                    album: (f as any).album || "",
+                    duration: (f as any).duration || 0,
+                    encoding: { codec: '—' } as any,
+                    isPending: true,
+                } as PendingTrack))
+            });
+        }
+        list.push(...groupedTracks);
+        return list;
+    }, [groupedTracks, uploadedFiles]);
 
     if (vintageMode) {
         const p = {
@@ -514,7 +555,8 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
 
             tracks,
             uploadedFiles,
-            setUploadedFiles,
+            setUploadedFiles: (files: (File | AdaptiveFile)[]) => dispatch(convertDialogActions.setFiles(files)),
+
 
             onDrop,
             getRootProps,
@@ -569,7 +611,7 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
                     <TopMenu tracksSelected={selected} />
                 </span>
             </Box>
-            <Typography component="h2" variant="body2">
+            <Typography component="h2" variant="body2" sx={{ mb: 1 }}>
                 {disc !== null ? (
                     <React.Fragment>
                         <span className={classes.clickableRemainingTime} onClick={() => setShowRemainingSpace(x => !x)}>
@@ -602,10 +644,15 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
                         />
                     </React.Fragment>
                 ) : (
-                    `No disc loaded`
+                    uploadedFiles.length > 0 ? `Device ready for burn` : `No disc loaded`
                 )}
             </Typography>
-            <Toolbar
+            {(() => {
+                const showExtraMetadata =
+                    deviceCapabilities.himdTitles || (disc?.groups.some((g) => g.tracks.some((t) => t.artist || t.album)) ?? false);
+                return (
+                    <>
+                        <Toolbar
                 className={cx(classes.toolbar, {
                     [classes.toolbarHighlight]: selectedCount > 0 || selectedGroupsCount > 0,
                 })}
@@ -720,16 +767,19 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
                     </Tooltip>
                 ) : null}
             </Toolbar>
-            {deviceCapabilities.contentList ? (
-                <Box className={classes.main} {...getRootProps()} id="main">
+
+            <UploadSettingsPanel uploadedFiles={uploadedFiles} />
+
+            {(deviceCapabilities.contentList || uploadedFiles.length > 0) ? (
+                <Box className={classes.main} {...getRootProps()} id="main" sx={{ overflowX: 'auto', flexGrow: 1 }}>
                     <input {...getInputProps()} />
-                    <Table size="small" className={classes.fixedTable}>
+                    <Table size="small" className={classes.fixedTable} sx={{ minWidth: (showExtraMetadata ? 600 : 400) }}>
                         <TableHead>
                             <TableRow>
                                 <TableCell className={classes.dragHandleEmpty}></TableCell>
                                 <TableCell className={classes.indexCell}>#</TableCell>
                                 <TableCell>Title</TableCell>
-                                {deviceCapabilities.himdTitles && (
+                                {showExtraMetadata && (
                                     <>
                                         <TableCell>Album</TableCell>
                                         <TableCell>Artist</TableCell>
@@ -740,9 +790,9 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
                         </TableHead>
                         <DragDropContext onDragEnd={handleDrop}>
                             <TableBody>
-                                {groupedTracks.map((group, index) => (
+                                {allGroups.map((group: any, index) => (
                                     <TableRow key={`${index}`}>
-                                        <TableCell colSpan={4 + (deviceCapabilities.himdTitles ? 2 : 0)} style={{ padding: '0' }}>
+                                        <TableCell colSpan={4 + (showExtraMetadata ? 2 : 0)} style={{ padding: '0' }}>
                                             <Table size="small" className={classes.fixedTable}>
                                                 <Droppable droppableId={`${index}`} key={`${index}`}>
                                                     {(provided: DroppableProvided, snapshot: DroppableStateSnapshot) => (
@@ -751,10 +801,10 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
                                                             ref={provided.innerRef}
                                                             className={cx({ [classes.hoveringOverGroup]: snapshot.isDraggingOver })}
                                                         >
-                                                            <MockTrackRow isHimdTrack={deviceCapabilities.himdTitles} />
+                                                            <MockTrackRow isHimdTrack={showExtraMetadata} />
                                                             {group.title !== null && (
                                                                 <GroupRow
-                                                                    usesHimdTracks={deviceCapabilities.himdTitles}
+                                                                    usesHimdTracks={showExtraMetadata}
                                                                     group={group}
                                                                     onRename={handleRenameGroup}
                                                                     onDelete={handleDeleteGroup}
@@ -765,29 +815,40 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
                                                             {group.title === null && group.tracks.length === 0 && (
                                                                 <TableRow style={{ height: '1px' }} />
                                                             )}
-                                                            {group.tracks.map((t, tidx) => (
-                                                                <Draggable
-                                                                    draggableId={`${group.index}-${t.index}`}
-                                                                    key={`t-${t.index}`}
-                                                                    index={tidx}
-                                                                    isDragDisabled={!deviceCapabilities.metadataEdit}
-                                                                >
-                                                                    {(provided: DraggableProvided) => (
-                                                                        <TrackRow
-                                                                            track={t}
-                                                                            isHimdTrack={deviceCapabilities.himdTitles}
-                                                                            draggableProvided={provided}
-                                                                            inGroup={group.title !== null}
-                                                                            isSelected={selected.includes(t.index)}
-                                                                            trackStatus={getTrackStatus(t, deviceStatus)}
-                                                                            onSelect={handleSelectTrackClick}
-                                                                            onRename={handleRenameTrack}
-                                                                            onTogglePlayPause={handleTogglePlayPauseTrack}
-                                                                            onOpenContextMenu={(e) => handleOpenContextMenu(e, t)}
-                                                                        />
-                                                                    )}
-                                                                </Draggable>
-                                                            ))}
+                                                            {group.tracks.map((t: any, tidx: number) => 
+                                                                t.isPending ? (
+                                                                    <PendingTrackRow 
+                                                                        key={`p-${tidx}`}
+                                                                        track={t}
+                                                                        isHimdTrack={showExtraMetadata}
+                                                                        isSelected={selected.includes(-tidx - 1)}
+                                                                        onSelect={(e) => handleSelectTrackClick(e, -tidx - 1)}
+                                                                        onRemove={handleRemovePending}
+                                                                    />
+                                                                ) : (
+                                                                    <Draggable
+                                                                        draggableId={`${group.index}-${t.index}`}
+                                                                        key={`t-${t.index}`}
+                                                                        index={tidx}
+                                                                        isDragDisabled={!deviceCapabilities.metadataEdit}
+                                                                    >
+                                                                        {(provided: DraggableProvided) => (
+                                                                            <TrackRow
+                                                                                track={t}
+                                                                                isHimdTrack={showExtraMetadata}
+                                                                                draggableProvided={provided}
+                                                                                inGroup={group.title !== null}
+                                                                                isSelected={selected.includes(t.index)}
+                                                                                trackStatus={getTrackStatus(t, deviceStatus)}
+                                                                                onSelect={handleSelectTrackClick}
+                                                                                onRename={handleRenameTrack}
+                                                                                onTogglePlayPause={handleTogglePlayPauseTrack}
+                                                                                onOpenContextMenu={(e) => handleOpenContextMenu(e, t)}
+                                                                            />
+                                                                        )}
+                                                                    </Draggable>
+                                                                )
+                                                            )}
                                                             {provided.placeholder}
                                                         </TableBody>
                                                     )}
@@ -806,6 +867,7 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
                     ) : null}
                 </Box>
             ) : null}
+
             {deviceCapabilities.trackUpload ? (
                 <Fab color="primary" aria-label="add" className={classes.add} onClick={openUploadMenu}>
                     <AddIcon />
@@ -827,7 +889,8 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
             <UploadDialog />
             <RenameDialog />
             <ErrorDialog />
-            <ConvertDialog files={uploadedFiles} />
+            <ConvertDialog />
+
             <RecordDialog />
             <FactoryModeProgressDialog />
             <FactoryModeBadSectorDialog />
@@ -842,9 +905,13 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
             <AboutDialog />
             <ChangelogDialog />
             <SettingsDialog />
-            <LocalLibraryDialog setUploadedFiles={setUploadedFiles} />
+            <LocalLibraryDialog setUploadedFiles={(files) => dispatch(convertDialogActions.setFiles(files))} />
+
             <PanicDialog />
             <ContextMenu onTogglePlayPause={handleTogglePlayPauseTrack} onRename={handleRenameTrack} onDelete={handleDeleteTrack} />
+                    </>
+                );
+            })()}
         </React.Fragment>
     );
 };

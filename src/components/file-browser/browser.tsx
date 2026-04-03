@@ -42,10 +42,13 @@ export interface FileBrowserProps {
 }
 
 export function FileBrowser({ classes, fileTree, additionalColumns, columnNotFoundPlaceholder, allowMultifileSelection, manualName, defaultSorting, onFileSelectionChanged, sorter, actions, onFileDoubleClick, iconGenerator }: FileBrowserProps) {
-    const [selectedRows, setSelectedRows] = useState<number[]>([]);
+    // Use a stable key (name + type) instead of indices for selection persistence across re-renders/polls
+    const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
     const [currentSortingValue, setCurrentSortingValue] = useState<{ by: string, asc: boolean } | null>(defaultSorting ?? null);
     const [sortedFileTree, setSortedFileTree] = useState(fileTree);
     const [visibleActions, setVisibleActions] = useState<number[]>([]);
+
+    const getFileId = (file: File) => `${file.name}-${file.type}`;
 
     useEffect(() => {
         const currentSorter = sorter ?? defaultSorter;
@@ -57,18 +60,22 @@ export function FileBrowser({ classes, fileTree, additionalColumns, columnNotFou
         setSortedFileTree(sortedFiles);
     }, [fileTree, currentSortingValue, sorter]);
 
-    const handleRowClick = useCallback((row: number) => {
+    const handleRowClick = useCallback((index: number) => {
+        const file = sortedFileTree[index];
+        if (!file) return;
+        const id = getFileId(file);
+
         if(allowMultifileSelection) {
-            if(selectedRows.includes(row)) {
-                setSelectedRows(selectedRows.filter(e => e !== row));
+            if(selectedFileIds.includes(id)) {
+                setSelectedFileIds(selectedFileIds.filter(e => e !== id));
             } else {
-                setSelectedRows([...selectedRows, row]);
+                setSelectedFileIds([...selectedFileIds, id]);
             }
         } else {
-            if(selectedRows.includes(row)) setSelectedRows([]);
-            else setSelectedRows([ row ]);
+            if(selectedFileIds.includes(id)) setSelectedFileIds([]);
+            else setSelectedFileIds([ id ]);
         }
-    }, [allowMultifileSelection, selectedRows]);
+    }, [allowMultifileSelection, selectedFileIds, sortedFileTree]);
 
     const sortingClicked = useCallback((fieldName: string) => {
         if(fieldName === currentSortingValue?.by) {
@@ -85,15 +92,16 @@ export function FileBrowser({ classes, fileTree, additionalColumns, columnNotFou
     }, [currentSortingValue]);
 
     useEffect(() => {
-        onFileSelectionChanged?.(selectedRows.map(e => sortedFileTree[e]));
-    }, [selectedRows, onFileSelectionChanged, sortedFileTree]);
+        const selectedFiles = sortedFileTree.filter(f => selectedFileIds.includes(getFileId(f)));
+        onFileSelectionChanged?.(selectedFiles);
+    }, [selectedFileIds, onFileSelectionChanged, sortedFileTree]);
 
     useEffect(() => {
         if(!actions) {
             setVisibleActions([]);
             return;
         }
-        const selectedFiles = selectedRows.map(e => sortedFileTree[e]);
+        const selectedFiles = sortedFileTree.filter(f => selectedFileIds.includes(getFileId(f)));
         const actionsPossible = [];
         for(let i = 0; i<actions.length; i++){
             if(actions[i].actionPossible(selectedFiles)){
@@ -101,11 +109,10 @@ export function FileBrowser({ classes, fileTree, additionalColumns, columnNotFou
             }
         }
         setVisibleActions(actionsPossible);
-    }, [selectedRows, sortedFileTree, actions]);
+    }, [selectedFileIds, sortedFileTree, actions]);
 
-    useEffect(() => {
-        setSelectedRows([])
-    }, [fileTree, setSelectedRows]);
+    // Remove the effect that cleared selectedRows on fileTree change.
+    // Selection now persists based on file identity.
 
     const _iconGenerator = iconGenerator ?? ((e: File) => e.type === FileType.Directory ? <Folder /> : <Description />);
 
@@ -121,7 +128,12 @@ export function FileBrowser({ classes, fileTree, additionalColumns, columnNotFou
                 <div
                     key={i}
                     className={clsx({'filebrowser-action-disabled': !visibleActions.includes(i)}, 'filebrowser-action', classes?.actionButton)}
-                    onClick={() => e.handler(selectedRows.map(e => sortedFileTree[e])) && setSelectedRows([])}
+                    onClick={() => {
+                        const selectedFiles = sortedFileTree.filter(f => selectedFileIds.includes(getFileId(f)));
+                        if (e.handler(selectedFiles)) {
+                            setSelectedFileIds([]);
+                        }
+                    }}
                 >
                     {e.icon} {e.name}
                 </div>
@@ -139,8 +151,8 @@ export function FileBrowser({ classes, fileTree, additionalColumns, columnNotFou
                     <th>{allowMultifileSelection && (
                         <input
                             type="checkbox"
-                            onChange={_ => setSelectedRows(selectedRows.length === fileTree.length ? [] : Array(fileTree.length).fill(0).map((_, i) => i))}
-                            checked={selectedRows.length === fileTree.length}
+                            onChange={_ => setSelectedFileIds(selectedFileIds.length === fileTree.length ? [] : fileTree.map(getFileId))}
+                            checked={selectedFileIds.length > 0 && selectedFileIds.length === fileTree.length}
                         />
                     )}</th>
                     {columns.map((e, i) => 
@@ -158,7 +170,7 @@ export function FileBrowser({ classes, fileTree, additionalColumns, columnNotFou
                 {sortedFileTree.map((e, i) => (
                     <tr
                         key={i}
-                        className={clsx('filebrowser-row', classes?.row, {'filebrowser-row-selected': selectedRows.includes(i)})}
+                        className={clsx('filebrowser-row', classes?.row, {'filebrowser-row-selected': selectedFileIds.includes(getFileId(e))})}
                         onClick={() => handleRowClick(i)}
                         onDoubleClick={() => onFileDoubleClick?.(sortedFileTree[i])}
                     >

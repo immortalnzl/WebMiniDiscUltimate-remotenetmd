@@ -7,13 +7,23 @@ from mutagen.mp3 import MP3
 from mutagen.flac import FLAC
 from mutagen.id3 import ID3, APIC
 import io
+import hashlib
 
 from typing import Dict, Any, Union, Optional, List
 from pathlib import Path
 from datetime import datetime
+import json
+from dotenv import load_dotenv
 
 import requests
 import time
+
+# Load environment variables from .env file
+# Try current dir first, then parent dir (project root)
+if os.path.exists(".env"):
+    load_dotenv(".env")
+elif os.path.exists("../.env"):
+    load_dotenv("../.env")
 
 app = FastAPI()
 
@@ -25,8 +35,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MUSIC_DIR = os.getenv("MUSIC_DIR", "/music")
-DOTENV_PATH = os.getenv("DOTENV_PATH", "/app/.env")
+MUSIC_DIR = os.getenv("MUSIC_PATH", os.getenv("MUSIC_DIR", "/music"))
+DOTENV_PATH = os.getenv("DOTENV_PATH", "../.env" if os.path.exists("../.env") else ".env")
 FILE_EXTENSIONS = [ext.strip().lower() for ext in os.getenv("FILE_EXTENSIONS", ".mp3,.flac,.wav,.m4a,.ogg").split(",") if ext.strip()]
 EXCLUDE_PATTERNS = [p.strip() for p in os.getenv("EXCLUDE_PATTERNS", "@eaDir,#recycle,.DS_Store").split(",") if p.strip()]
 ENABLE_SCRAPING = os.getenv("ENABLE_SCRAPING", "false").lower() == "true"
@@ -42,6 +52,10 @@ _status = {
     "last_error": None
 }
 _log_buffer: List[str] = []
+found_artists = set()
+found_albums = set()
+ARTWORK_CACHE = "data/artwork_cache"
+os.makedirs(ARTWORK_CACHE, exist_ok=True)
 
 def add_log(msg: str):
     print(msg, flush=True)
@@ -130,13 +144,11 @@ async def trigger_scan(background_tasks: BackgroundTasks):
     return {"status": "success", "message": "Scan started in background"}
 
 def run_full_scan():
-    global _db_cache, _status
+    global _db_cache, _status, found_artists, found_albums
     _status["scanning"] = True
     add_log(f"Starting background scan for {MUSIC_DIR}")
     
     new_db = {}
-    found_artists = set()
-    found_albums = set()
     
     _status["files_found"] = 0
     _status["artists_found"] = 0
@@ -147,6 +159,38 @@ def run_full_scan():
     def scan_rec(path: str, current_level_db: Dict[str, Any]):
         global _db_cache, found_artists, found_albums
         if not os.path.exists(path):
+            return
+        
+    new_db = {}
+    db_path = "data/library.json"
+    
+    # Pre-initialize with existing DB if possible
+    if os.path.exists(db_path):
+        try:
+            with open(db_path, "r") as f:
+                new_db = json.load(f)
+                _db_cache = new_db.copy()
+                add_log("Loaded existing library from disk.")
+                # Basic recount for status
+                def count_rec(d, st):
+                    for k, v in d.items():
+                        if isinstance(v, dict):
+                            if "artist" in v:
+                                st["files_found"] += 1
+                                found_artists.add(v["artist"])
+                                found_albums.add(f"{v['artist']} - {v['album']}")
+                            else:
+                                count_rec(v, st)
+                count_rec(new_db, _status)
+                _status["artists_found"] = len(found_artists)
+                _status["albums_found"] = len(found_albums)
+        except Exception as e:
+            add_log(f"Error loading existing library: {e}")
+
+    def scan_rec(path, current_level_db):
+        global _db_cache
+        if not os.path.exists(path):
+            add_log(f"Path not found: {path}")
             return
         
         try:
@@ -161,9 +205,10 @@ def run_full_scan():
                     continue
                 _status["current_activity"] = f"Scanning {entry.name}..."
                 sub_db = {}
+                current_level_db[entry.name] = sub_db 
                 scan_rec(entry.path, sub_db)
-                if sub_db:
-                    current_level_db[entry.name] = sub_db
+                if not sub_db:
+                    del current_level_db[entry.name]
             elif entry.is_file():
                 matches_ext = any(entry.name.lower().endswith(ext) for ext in FILE_EXTENSIONS)
                 if not matches_ext:
@@ -177,7 +222,12 @@ def run_full_scan():
                     if meta.get("artwork"): 
                         artwork = meta["artwork"]
                     elif meta.get("has_artwork"): 
-                        artwork = f"api/get_artwork?file_name={rel_path}"
+                        # Use cached artwork if possible
+                        cache_key = hashlib.md5(entry.path.encode()).hexdigest()
+                        if extract_and_cache_artwork(rel_path, cache_key):
+                            artwork = f"api/get_artwork_cached?key={cache_key}"
+                        else:
+                            artwork = f"api/get_artwork?file_name={rel_path}"
 
                     current_level_db[entry.name] = {
                         "artist": meta["artist"],
@@ -193,11 +243,15 @@ def run_full_scan():
                     _status["artists_found"] = len(found_artists)
                     _status["albums_found"] = len(found_albums)
                     
-                    add_log(f"Indexed: {meta['artist']} - {meta['title']}")
+                    # Log progress instead of every file to avoid I/O bottlenecks
+                    if _status["files_found"] % 50 == 0:
+                        add_log(f"Indexing progress: {_status['files_found']} files...")
+                    
+                    _db_cache = new_db.copy()
 
-                    # Update global cache for live feedback - Every 5 files for 'live' feel
-                    if _status["files_found"] % 5 == 0:
-                        _db_cache = new_db
+                    # Save intermediate progress periodically
+                    if _status["files_found"] % 100 == 0:
+                        save_db(new_db)
 
                 except Exception as e:
                     add_log(f"Error processing {entry.name}: {e}")
@@ -205,13 +259,22 @@ def run_full_scan():
     try:
         scan_rec(MUSIC_DIR, new_db)
         _db_cache = new_db
-        add_log(f"Background scan complete. Found {_status['files_found']} tracks across {_status['artists_found']} artists.")
+        save_db(new_db)
+        add_log(f"Background scan complete. Found {_status['files_found']} tracks.")
     except Exception as e:
         _status["last_error"] = str(e)
         add_log(f"ERROR: Background scan failed: {e}")
     finally:
         _status["scanning"] = False
         _status["current_activity"] = "Idle"
+
+def save_db(db):
+    try:
+        os.makedirs("data", exist_ok=True)
+        with open("data/library.json", "w") as f:
+            json.dump(db, f)
+    except Exception as e:
+        add_log(f"Failed to save library: {e}")
 
 @app.on_event("startup")
 async def startup_event():
@@ -389,6 +452,49 @@ def get_metadata(filepath: str) -> Dict[str, Any]:
         "has_artwork": False
     }
 
+def extract_and_cache_artwork(rel_path: str, cache_key: str):
+    """Extracts artwork from tags and saves to cache."""
+    full_path = os.path.join(MUSIC_DIR, rel_path)
+    cache_path = os.path.join(ARTWORK_CACHE, f"{cache_key}.png")
+    
+    if os.path.exists(cache_path):
+        return True
+
+    # 1. Check folder art first (though we might prefer embedded for "snappiness" if requested)
+    parent_dir = os.path.dirname(full_path)
+    for art_name in ["cover.jpg", "cover.png", "folder.jpg", "folder.png"]:
+        art_path = os.path.join(parent_dir, art_name)
+        if os.path.exists(art_path):
+            try:
+                import shutil
+                shutil.copy(art_path, cache_path)
+                return True
+            except Exception:
+                pass
+
+    # 2. Extract from tags
+    try:
+        data = None
+        if full_path.lower().endswith(".mp3"):
+            audio = ID3(full_path)
+            for tag in audio.values():
+                if isinstance(tag, APIC):
+                    data = tag.data
+                    break
+        elif full_path.lower().endswith(".flac"):
+            audio = FLAC(full_path)
+            if audio.pictures:
+                data = audio.pictures[0].data
+        
+        if data:
+            with open(cache_path, "wb") as f:
+                f.write(data)
+            return True
+    except Exception as e:
+        print(f"Extraction failed for {rel_path}: {e}")
+    
+    return False
+
 # Compatibility alias for /database is handled above
 
 @app.get("/api/get_local")
@@ -398,33 +504,77 @@ def get_local(file_name: str = Query(...)):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(full_path)
 
-@app.get("/api/get_artwork")
-def get_artwork(file_name: str = Query(...)):
-    full_path = os.path.join(MUSIC_DIR, file_name)
-    parent_dir = os.path.dirname(full_path)
-    
-    # 1. Check folder art
-    for art_name in ["cover.jpg", "cover.png", "folder.jpg", "folder.png"]:
-        art_path = os.path.join(parent_dir, art_name)
-        if os.path.exists(art_path):
-            return FileResponse(art_path)
-    
-    # 2. Extract from tags
-    try:
-        if full_path.lower().endswith(".mp3"):
-            audio = ID3(full_path)
-            for tag in audio.values():
-                if isinstance(tag, APIC):
-                    return StreamingResponse(io.BytesIO(tag.data), media_type=tag.mime)
-        elif full_path.lower().endswith(".flac"):
-            audio = FLAC(full_path)
-            if audio.pictures:
-                pic = audio.pictures[0]
-                return StreamingResponse(io.BytesIO(pic.data), media_type=pic.mime)
-    except Exception:
-        pass
-        
     raise HTTPException(status_code=404, detail="Artwork not found")
+
+@app.get("/api/get_artwork_cached")
+def get_artwork_cached(key: str = Query(...)):
+    cache_path = os.path.join(ARTWORK_CACHE, f"{key}.png")
+    if os.path.exists(cache_path):
+        return FileResponse(cache_path)
+    raise HTTPException(status_code=404, detail="Cached artwork not found")
+
+@app.get("/api/preview")
+def get_preview(file_name: str = Query(...)):
+    print(f"Preview request for: {file_name}", flush=True)
+    full_path = os.path.join(MUSIC_DIR, file_name)
+    if not os.path.exists(full_path):
+        print(f"File NOT found: {full_path}", flush=True)
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Optimization: Faster probing, immediate output, and AUDIO ONLY
+    cmd = [
+        "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+        "-i", full_path,
+        "-vn", "-sn", # Disable video and subtitles (prevents cover art issues)
+        "-acodec", "libmp3lame", "-ab", "128k", 
+        "-ar", "44100", "-ac", "2",
+        "-map_metadata", "-1",
+        "-f", "mp3", "pipe:1"
+    ]
+    
+    print(f"Starting ffmpeg for preview: {' '.join(cmd)}", flush=True)
+    # Using DEVNULL for stderr by default to avoid deadlock; 
+    # we'll check for return codes and process life instead.
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    
+    if process.stdout is None:
+        raise HTTPException(status_code=500, detail="FFmpeg pipe error")
+
+    def iterfile():
+        try:
+            # smaller first chunk for faster "first byte" response
+            first_chunk = process.stdout.read(4096)
+            if not first_chunk:
+                print(f"FFmpeg produced no output for {file_name}", flush=True)
+                return
+
+            yield first_chunk
+            
+            while True:
+                chunk = process.stdout.read(16384)
+                if not chunk:
+                    break
+                yield chunk
+        except Exception as e:
+            print(f"Streaming error: {e}", flush=True)
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=0.5)
+                except:
+                    process.kill()
+            
+    # Removing Accept-Ranges as live transcode doesn't support seeking without complex server-side logic
+    # Adding nosniff to prevent browsers from misinterpreting the stream
+    return StreamingResponse(iterfile(), media_type="audio/mpeg", headers={
+        "Connection": "keep-alive",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "X-Content-Type-Options": "nosniff",
+        "Pragma": "no-cache",
+        "Expires": "0",
+        "Content-Disposition": f'inline; filename="{os.path.basename(file_name)}.mp3"'
+    })
 
 @app.get("/api/transcode_local")
 def transcode_local(file_name: str = Query(...), type: str = Query(...)):
@@ -451,11 +601,11 @@ def transcode_local(file_name: str = Query(...), type: str = Query(...)):
         "-f", "wav", "pipe:1"
     ]
     
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     if process.stdout is None:
          raise HTTPException(status_code=500, detail="FFmpeg failed")
     return StreamingResponse(process.stdout, media_type="audio/wav")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)

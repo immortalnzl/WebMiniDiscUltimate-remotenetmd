@@ -79,16 +79,16 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
             const process = (db: LocalDatabase) => {
                 for (const key in db) {
                     const entry = db[key];
-                    if ('artist' in entry) {
+                    if (entry && typeof entry === 'object' && 'artist' in entry) {
                         const track = entry as any;
-                        if (track.artwork) {
+                        if (track.artwork && !track.artwork.startsWith('http')) {
                             const artURL = new URL(this.address, window.location.origin);
                             const [path, search] = track.artwork.split('?');
                             artURL.pathname = path;
                             artURL.search = search || '';
                             track.artwork = artURL.href;
                         }
-                    } else {
+                    } else if (entry && typeof entry === 'object') {
                         process(entry as LocalDatabase);
                     }
                 }
@@ -102,17 +102,43 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
         }
     }
 
+    async getStatus(): Promise<any> {
+        const resp = await fetch('/api/status?cache=' + Math.random());
+        return resp.json();
+    }
+
+    async getArtists(): Promise<string[]> {
+        const resp = await fetch('/api/artists?cache=' + Math.random());
+        return resp.json();
+    }
+
+    async getAlbums(): Promise<any[]> {
+        const resp = await fetch('/api/albums?cache=' + Math.random());
+        const json = await resp.json();
+        // Process artwork URLs for albums too
+        return json.map((album: any) => {
+            if (album.artwork && !album.artwork.startsWith('http')) {
+                const artURL = new URL(this.address, window.location.origin);
+                const [path, search] = album.artwork.split('?');
+                artURL.pathname = path;
+                artURL.search = search || '';
+                return { ...album, artwork: artURL.href };
+            }
+            return album;
+        });
+    }
+
     async processLocalLibraryFile(filePath: string, params: ExportParams): Promise<ArrayBuffer> {
         if (params.format.codec === 'PCM' || params.format.codec === 'MP3') {
-            // Fetch the file normally, then transcode to PCM / MP3
+            // Use address as base, avoid double /api
             const rawURL = new URL(this.address, window.location.origin);
-            if (!rawURL.pathname.endsWith('/')) rawURL.pathname += '/';
-            rawURL.pathname += 'get_local';
+            const pathBase = rawURL.pathname.endsWith('/') ? rawURL.pathname : rawURL.pathname + '/';
+            rawURL.pathname = pathBase + 'get_local';
             rawURL.searchParams.set('file_name', filePath);
             let response: Response | null = null;
             for(let i = 0; i<MAX_TRIES; i++){
                 try{
-                    response = await fetch(rawURL);
+                    response = await fetch(rawURL.href);
                     break;
                 }catch(ex){
                     console.log("Error while fetching: " + ex);
@@ -180,9 +206,27 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
 
     getAudioUrl(filePath: string): string {
         const url = new URL(this.address, window.location.origin);
-        if (!url.pathname.endsWith('/')) url.pathname += '/';
-        url.pathname += 'get_local';
+        const pathBase = url.pathname.endsWith('/') ? url.pathname : url.pathname + '/';
+        url.pathname = pathBase + 'get_local';
         url.searchParams.set('file_name', filePath);
         return url.href;
+    }
+
+    getPreviewUrl(filePath: string): string {
+        const url = new URL(this.address, window.location.origin);
+        const pathBase = url.pathname.endsWith('/') ? url.pathname : url.pathname + '/';
+        url.pathname = pathBase + 'preview';
+        url.searchParams.set('file_name', filePath);
+        return url.href;
+    }
+
+    async getForEncoding(track: any, codec: any): Promise<ArrayBuffer> {
+        return this.processLocalLibraryFile(track.id || track.file, {
+            format: {
+                bitrate: codec.bitrate,
+                codec: codec.codec as any,
+            },
+            lastInBatch: false,
+        });
     }
 }
