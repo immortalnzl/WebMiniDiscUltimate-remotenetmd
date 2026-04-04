@@ -310,6 +310,9 @@ export function pad(str: string | number, pad: string) {
 }
 
 export function formatTimeFromSeconds(seconds: number, withHours = true) {
+    if (!Number.isFinite(seconds) || seconds < 0) {
+        seconds = 0;
+    }
     seconds = Math.ceil(seconds);
     const s = seconds % 60;
     seconds = (seconds - s) / 60; // min

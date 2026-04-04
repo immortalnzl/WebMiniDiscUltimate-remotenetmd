@@ -27,8 +27,8 @@ const slice = createSlice({
         loadPlaylists: (state: PlaylistState, action: PayloadAction<Playlist[]>) => {
             state.playlists = action.payload;
         },
-        createPlaylist: (state: PlaylistState, action: PayloadAction<{ name: string }>) => {
-            const id = `playlist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        createPlaylist: (state: PlaylistState, action: PayloadAction<{ name: string; id?: string }>) => {
+            const id = action.payload.id ?? `playlist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             const newPlaylist: Playlist = {
                 id,
                 name: action.payload.name,

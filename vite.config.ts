@@ -25,6 +25,7 @@ export default ({ mode }) => {
       }),
       VitePWA({
         registerType: 'autoUpdate',
+        injectRegister: null,
         manifestFilename: 'manifest.json',
         manifest: {
           "short_name": "Web MiniDisc",

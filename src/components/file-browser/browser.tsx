@@ -19,6 +19,7 @@ export interface Action {
 
 export interface FileBrowserProps {
     onFileSelectionChanged?: (filePath: File[]) => void;
+    onFileClick?: (file: File) => void;
     onFileDoubleClick?: (filePath: File) => void;
     fileTree: File[];
     allowMultifileSelection?: boolean;
@@ -41,7 +42,7 @@ export interface FileBrowserProps {
     defaultSorting?: { by: string, asc: boolean };
 }
 
-export function FileBrowser({ classes, fileTree, additionalColumns, columnNotFoundPlaceholder, allowMultifileSelection, manualName, defaultSorting, onFileSelectionChanged, sorter, actions, onFileDoubleClick, iconGenerator }: FileBrowserProps) {
+export function FileBrowser({ classes, fileTree, additionalColumns, columnNotFoundPlaceholder, allowMultifileSelection, manualName, defaultSorting, onFileSelectionChanged, onFileClick, sorter, actions, onFileDoubleClick, iconGenerator }: FileBrowserProps) {
     const [selectedRows, setSelectedRows] = useState<number[]>([]);
     const [currentSortingValue, setCurrentSortingValue] = useState<{ by: string, asc: boolean } | null>(defaultSorting ?? null);
     const [sortedFileTree, setSortedFileTree] = useState(fileTree);
@@ -58,6 +59,9 @@ export function FileBrowser({ classes, fileTree, additionalColumns, columnNotFou
     }, [fileTree, currentSortingValue, sorter]);
 
     const handleRowClick = useCallback((row: number) => {
+        if (sortedFileTree[row]) {
+            onFileClick?.(sortedFileTree[row]);
+        }
         if(allowMultifileSelection) {
             if(selectedRows.includes(row)) {
                 setSelectedRows(selectedRows.filter(e => e !== row));
@@ -68,7 +72,7 @@ export function FileBrowser({ classes, fileTree, additionalColumns, columnNotFou
             if(selectedRows.includes(row)) setSelectedRows([]);
             else setSelectedRows([ row ]);
         }
-    }, [allowMultifileSelection, selectedRows]);
+    }, [allowMultifileSelection, selectedRows, sortedFileTree, onFileClick]);
 
     const sortingClicked = useCallback((fieldName: string) => {
         if(fieldName === currentSortingValue?.by) {

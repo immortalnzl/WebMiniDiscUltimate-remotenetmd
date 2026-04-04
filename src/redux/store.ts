@@ -12,6 +12,7 @@ import songRecognitionDialog from './song-recognition-dialog-feature';
 import songRecognitionProgressDialog from './song-recognition-progress-dialog-feature';
 import appState, { actions as appActions, buildInitialState as buildInitialAppState } from './app-feature';
 import localLibrary from './local-library-feature';
+import playlist from './playlist-feature';
 import factory from './factory/factory-feature';
 
 import factoryFragmentModeEditDialog from './factory/factory-fragment-mode-edit-dialog-feature';
@@ -37,6 +38,7 @@ const errorCatcher: Middleware = (store) => (next) => async (action) => {
 const reducer = combineReducers({
     contextMenu,
     localLibrary,
+    playlist,
     renameDialog,
     otherDeviceDialog,
     uploadDialog,

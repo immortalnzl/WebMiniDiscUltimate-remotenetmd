@@ -13,7 +13,6 @@ import {
 } from 'react-beautiful-dnd';
 import { listContent, deleteTracks, moveTrack, groupTracks, deleteGroups, dragDropTrack, ejectDisc, flushDevice } from '../redux/actions';
 import { actions as renameDialogActions, RenameType } from '../redux/rename-dialog-feature';
-import { actions as convertDialogActions } from '../redux/convert-dialog-feature';
 import { actions as dumpDialogActions } from '../redux/dump-dialog-feature';
 import { actions as appStateActions } from '../redux/app-feature';
 import { actions as contextMenuActions } from '../redux/context-menu-feature';
@@ -99,6 +98,16 @@ const useStyles = makeStyles()((theme) => ({
             marginRight: theme.spacing(-2),
         },
     },
+    mainVirtualDisc: {
+        marginLeft: 0,
+        marginRight: 0,
+        paddingLeft: theme.spacing(2),
+        paddingRight: theme.spacing(2),
+        [forAnyDesktop(theme)]: {
+            paddingLeft: theme.spacing(3),
+            paddingRight: theme.spacing(3),
+        },
+    },
     toolbar: {
         marginTop: theme.spacing(2),
         marginLeft: theme.spacing(-2),
@@ -177,7 +186,10 @@ function getTrackStatus(track: Track, deviceStatus: DeviceStatus | null): 'playi
     }
 }
 
-export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploadedFiles: React.Dispatch<React.SetStateAction<(File | AdaptiveFile)[]>> }) => {
+export const Main = (props: {
+    uploadedFiles: (File | AdaptiveFile)[];
+    setUploadedFiles: React.Dispatch<React.SetStateAction<(File | AdaptiveFile)[]>>;
+}) => {
     const { uploadedFiles, setUploadedFiles } = props;
     const dispatch = useDispatch();
     const disc = useShallowEqualSelector((state) => state.main.disc);
@@ -258,11 +270,10 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
             const bannedTypes = ['audio/mpegurl', 'audio/x-mpegurl'];
             const accepted = acceptedFiles.filter((n) => !bannedTypes.includes(n.type));
             if (accepted.length > 0) {
-                setUploadedFiles(accepted);
-                dispatch(convertDialogActions.setVisible(true));
+                setUploadedFiles((prev) => [...prev, ...accepted]);
             }
         },
-        [dispatch]
+        [setUploadedFiles]
     );
 
     const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
@@ -275,6 +286,8 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
     const tracks = useMemo(() => getSortedTracks(disc), [disc]);
     const groupedTracks = useMemo(() => getGroupedTracks(disc), [disc]);
     const defaultCodecName = minidiscSpec ? getDefaultCodecName(minidiscSpec) : '';
+    const isVirtualDisc = !!disc && disc.writeProtected && !disc.writable;
+    const canShowContentList = deviceCapabilities.contentList || isVirtualDisc;
 
     // Action Handlers
     const handleSelectTrackClick = useCallback(
@@ -478,6 +491,10 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
         );
     }, [tracks, selected]);
 
+    const handleClearQueue = useCallback(() => {
+        setUploadedFiles([]);
+    }, [setUploadedFiles]);
+
     const selectedCount = selected.length;
     const selectedGroupsCount = selectedGroups.length;
 
@@ -630,7 +647,7 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
                         {disc ? disc?.title || `Untitled Disc` : ''}
                     </Typography>
                 )}
-                {selectedCount > 0 ? (
+                {!isVirtualDisc && selectedCount > 0 ? (
                     <React.Fragment>
                         <Tooltip title={`${deviceCapabilities.trackDownload ? 'Download' : 'Record'} from MD`}>
                             <Button
@@ -645,7 +662,7 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
                     </React.Fragment>
                 ) : null}
 
-                {selectedCount > 0 ? (
+                {!isVirtualDisc && selectedCount > 0 ? (
                     <Tooltip title="Delete">
                         <span>
                             <IconButton
@@ -660,7 +677,7 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
                     </Tooltip>
                 ) : null}
 
-                {selectedCount > 0 ? (
+                {!isVirtualDisc && selectedCount > 0 ? (
                     <Tooltip title={canGroup ? 'Group' : ''}>
                         <span>
                             <IconButton
@@ -675,7 +692,7 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
                     </Tooltip>
                 ) : null}
 
-                {selectedCount > 0 ? (
+                {!isVirtualDisc && selectedCount > 0 ? (
                     <Tooltip title="Rename">
                         <span>
                             <IconButton
@@ -690,7 +707,7 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
                     </Tooltip>
                 ) : null}
 
-                {selectedGroupsCount > 0 ? (
+                {!isVirtualDisc && selectedGroupsCount > 0 ? (
                     <Tooltip title="Ungroup">
                         <span>
                             <IconButton
@@ -705,7 +722,7 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
                     </Tooltip>
                 ) : null}
 
-                {selectedGroupsCount > 0 ? (
+                {!isVirtualDisc && selectedGroupsCount > 0 ? (
                     <Tooltip title="Rename Group">
                         <span>
                             <IconButton
@@ -720,93 +737,123 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
                     </Tooltip>
                 ) : null}
             </Toolbar>
-            {deviceCapabilities.contentList ? (
-                <Box className={classes.main} {...getRootProps()} id="main">
-                    <input {...getInputProps()} />
-                    <Table size="small" className={classes.fixedTable}>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell className={classes.dragHandleEmpty}></TableCell>
-                                <TableCell className={classes.indexCell}>#</TableCell>
-                                <TableCell>Title</TableCell>
-                                {deviceCapabilities.himdTitles && (
-                                    <>
-                                        <TableCell>Album</TableCell>
-                                        <TableCell>Artist</TableCell>
-                                    </>
-                                )}
-                                <TableCell align="right">Duration</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <DragDropContext onDragEnd={handleDrop}>
-                            <TableBody>
-                                {groupedTracks.map((group, index) => (
-                                    <TableRow key={`${index}`}>
-                                        <TableCell colSpan={4 + (deviceCapabilities.himdTitles ? 2 : 0)} style={{ padding: '0' }}>
-                                            <Table size="small" className={classes.fixedTable}>
-                                                <Droppable droppableId={`${index}`} key={`${index}`}>
-                                                    {(provided: DroppableProvided, snapshot: DroppableStateSnapshot) => (
-                                                        <TableBody
-                                                            {...provided.droppableProps}
-                                                            ref={provided.innerRef}
-                                                            className={cx({ [classes.hoveringOverGroup]: snapshot.isDraggingOver })}
-                                                        >
-                                                            <MockTrackRow isHimdTrack={deviceCapabilities.himdTitles} />
-                                                            {group.title !== null && (
-                                                                <GroupRow
-                                                                    usesHimdTracks={deviceCapabilities.himdTitles}
-                                                                    group={group}
-                                                                    onRename={handleRenameGroup}
-                                                                    onDelete={handleDeleteGroup}
-                                                                    isSelected={selectedGroups.includes(group.index)}
-                                                                    onSelect={handleSelectGroupClick}
-                                                                />
-                                                            )}
-                                                            {group.title === null && group.tracks.length === 0 && (
-                                                                <TableRow style={{ height: '1px' }} />
-                                                            )}
-                                                            {group.tracks.map((t, tidx) => (
-                                                                <Draggable
-                                                                    draggableId={`${group.index}-${t.index}`}
-                                                                    key={`t-${t.index}`}
-                                                                    index={tidx}
-                                                                    isDragDisabled={!deviceCapabilities.metadataEdit}
-                                                                >
-                                                                    {(provided: DraggableProvided) => (
-                                                                        <TrackRow
-                                                                            track={t}
-                                                                            isHimdTrack={deviceCapabilities.himdTitles}
-                                                                            draggableProvided={provided}
-                                                                            inGroup={group.title !== null}
-                                                                            isSelected={selected.includes(t.index)}
-                                                                            trackStatus={getTrackStatus(t, deviceStatus)}
-                                                                            onSelect={handleSelectTrackClick}
-                                                                            onRename={handleRenameTrack}
-                                                                            onTogglePlayPause={handleTogglePlayPauseTrack}
-                                                                            onOpenContextMenu={(e) => handleOpenContextMenu(e, t)}
-                                                                        />
-                                                                    )}
-                                                                </Draggable>
-                                                            ))}
-                                                            {provided.placeholder}
-                                                        </TableBody>
-                                                    )}
-                                                </Droppable>
-                                            </Table>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </DragDropContext>
-                    </Table>
-                    {isDragActive && deviceCapabilities.trackUpload ? (
-                        <Backdrop className={classes.backdrop} open={isDragActive}>
-                            Drop your Music to Upload
-                        </Backdrop>
-                    ) : null}
-                </Box>
+            {canShowContentList ? (
+                isVirtualDisc ? (
+                    <Box className={cx(classes.main, classes.mainVirtualDisc)} {...getRootProps()} id="main">
+                        <input {...getInputProps()} />
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.2, m: 0 }}>
+                                Burn Queue
+                            </Typography>
+                            <Box>
+                                <Button size="small" color="secondary" onClick={handleClearQueue} disabled={uploadedFiles.length === 0}>
+                                    Clear
+                                </Button>
+                            </Box>
+                        </Box>
+                        {uploadedFiles.length === 0 ? (
+                            <Typography variant="body2" sx={{ color: 'text.secondary', m: 0 }}>
+                                Queue is empty. Add tracks from the library.
+                            </Typography>
+                        ) : (
+                            <Box sx={{ mt: 1 }}>
+                                <ConvertDialog files={uploadedFiles} inline inlineVisible={true} />
+                            </Box>
+                        )}
+                        {isDragActive ? (
+                            <Backdrop className={classes.backdrop} open={isDragActive}>
+                                Drop your Music to Add to Queue
+                            </Backdrop>
+                        ) : null}
+                    </Box>
+                ) : (
+                    <Box className={classes.main} {...getRootProps()} id="main">
+                        <input {...getInputProps()} />
+                        <Table size="small" className={classes.fixedTable}>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell className={classes.dragHandleEmpty}></TableCell>
+                                    <TableCell className={classes.indexCell}>#</TableCell>
+                                    <TableCell>Title</TableCell>
+                                    {deviceCapabilities.himdTitles && (
+                                        <>
+                                            <TableCell>Album</TableCell>
+                                            <TableCell>Artist</TableCell>
+                                        </>
+                                    )}
+                                    <TableCell align="right">Duration</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <DragDropContext onDragEnd={handleDrop}>
+                                <TableBody>
+                                    {groupedTracks.map((group, index) => (
+                                        <TableRow key={`${index}`}>
+                                            <TableCell colSpan={4 + (deviceCapabilities.himdTitles ? 2 : 0)} style={{ padding: '0' }}>
+                                                <Table size="small" className={classes.fixedTable}>
+                                                    <Droppable droppableId={`${index}`} key={`${index}`}>
+                                                        {(provided: DroppableProvided, snapshot: DroppableStateSnapshot) => (
+                                                            <TableBody
+                                                                {...provided.droppableProps}
+                                                                ref={provided.innerRef}
+                                                                className={cx({ [classes.hoveringOverGroup]: snapshot.isDraggingOver })}
+                                                            >
+                                                                <MockTrackRow isHimdTrack={deviceCapabilities.himdTitles} />
+                                                                {group.title !== null && (
+                                                                    <GroupRow
+                                                                        usesHimdTracks={deviceCapabilities.himdTitles}
+                                                                        group={group}
+                                                                        onRename={handleRenameGroup}
+                                                                        onDelete={handleDeleteGroup}
+                                                                        isSelected={selectedGroups.includes(group.index)}
+                                                                        onSelect={handleSelectGroupClick}
+                                                                    />
+                                                                )}
+                                                                {group.title === null && group.tracks.length === 0 && (
+                                                                    <TableRow style={{ height: '1px' }} />
+                                                                )}
+                                                                {group.tracks.map((t, tidx) => (
+                                                                    <Draggable
+                                                                        draggableId={`${group.index}-${t.index}`}
+                                                                        key={`t-${t.index}`}
+                                                                        index={tidx}
+                                                                        isDragDisabled={!deviceCapabilities.metadataEdit}
+                                                                    >
+                                                                        {(provided: DraggableProvided) => (
+                                                                            <TrackRow
+                                                                                track={t}
+                                                                                isHimdTrack={deviceCapabilities.himdTitles}
+                                                                                draggableProvided={provided}
+                                                                                inGroup={group.title !== null}
+                                                                                isSelected={selected.includes(t.index)}
+                                                                                trackStatus={getTrackStatus(t, deviceStatus)}
+                                                                                onSelect={handleSelectTrackClick}
+                                                                                onRename={handleRenameTrack}
+                                                                                onTogglePlayPause={handleTogglePlayPauseTrack}
+                                                                                onOpenContextMenu={(e) => handleOpenContextMenu(e, t)}
+                                                                            />
+                                                                        )}
+                                                                    </Draggable>
+                                                                ))}
+                                                                {provided.placeholder}
+                                                            </TableBody>
+                                                        )}
+                                                    </Droppable>
+                                                </Table>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </DragDropContext>
+                        </Table>
+                        {isDragActive && deviceCapabilities.trackUpload ? (
+                            <Backdrop className={classes.backdrop} open={isDragActive}>
+                                Drop your Music to Upload
+                            </Backdrop>
+                        ) : null}
+                    </Box>
+                )
             ) : null}
-            {deviceCapabilities.trackUpload ? (
+            {deviceCapabilities.trackUpload && !isVirtualDisc ? (
                 <Fab color="primary" aria-label="add" className={classes.add} onClick={openUploadMenu}>
                     <AddIcon />
                 </Fab>
@@ -827,7 +874,7 @@ export const Main = (props: { uploadedFiles: (File | AdaptiveFile)[], setUploade
             <UploadDialog />
             <RenameDialog />
             <ErrorDialog />
-            <ConvertDialog files={uploadedFiles} />
+            {!isVirtualDisc && <ConvertDialog files={uploadedFiles} />}
             <RecordDialog />
             <FactoryModeProgressDialog />
             <FactoryModeBadSectorDialog />

@@ -165,7 +165,7 @@ export const DiscVisualizer = () => {
 
             <Box className={classes.meta}>
                 <Typography variant="subtitle2">
-                    {disc ? (disc.title || "Untitled Disc") : "No Disc"}
+                    {disc ? (disc.title || "Untitled Disc") : "Select Disc"}
                 </Typography>
                 {currentTrackIndex >= 0 && (
                     <Typography variant="caption" color="textSecondary">

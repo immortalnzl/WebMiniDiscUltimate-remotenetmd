@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useDispatch, useShallowEqualSelector } from '../frontend-utils';
 import { actions as playlistActions } from '../redux/playlist-feature';
-import { actions as convertDialogActions } from '../redux/convert-dialog-feature';
 import {
     Dialog,
     DialogTitle,
@@ -87,9 +86,10 @@ const useStyles = makeStyles()((theme) => ({
 interface PlaylistDialogProps {
     open: boolean;
     onClose: () => void;
+    onBurn: (tracks: any[]) => void;
 }
 
-export const PlaylistDialog: React.FC<PlaylistDialogProps> = ({ open, onClose }) => {
+export const PlaylistDialog: React.FC<PlaylistDialogProps> = ({ open, onClose, onBurn }) => {
     const { classes } = useStyles();
     const dispatch = useDispatch();
     const playlists = useShallowEqualSelector((state: any) => state.playlist.playlists);
@@ -103,6 +103,8 @@ export const PlaylistDialog: React.FC<PlaylistDialogProps> = ({ open, onClose })
     useEffect(() => {
         if (playlists.length > 0) {
             localStorage.setItem('playlists', JSON.stringify(playlists));
+        } else {
+            localStorage.removeItem('playlists');
         }
     }, [playlists]);
 
@@ -113,13 +115,28 @@ export const PlaylistDialog: React.FC<PlaylistDialogProps> = ({ open, onClose })
             try {
                 const parsed = JSON.parse(saved);
                 dispatch(playlistActions.loadPlaylists(parsed));
+                if (parsed.length > 0 && !currentPlaylistId) {
+                    dispatch(playlistActions.setCurrentPlaylist(parsed[0].id));
+                }
             } catch (e) {
                 console.error('Failed to load playlists', e);
             }
         }
-    }, []);
+    }, [dispatch, currentPlaylistId]);
 
     const currentPlaylist = playlists.find((p: any) => p.id === currentPlaylistId);
+
+    const withArtworkSize = useCallback((url?: string, size: number = 96) => {
+        if (!url) return '';
+        try {
+            const parsed = new URL(url, window.location.origin);
+            if (!parsed.pathname.includes('/api/get_artwork')) return url;
+            parsed.searchParams.set('size', `${size}`);
+            return parsed.toString();
+        } catch {
+            return url;
+        }
+    }, []);
 
     const handleCreatePlaylist = useCallback(() => {
         if (newPlaylistName.trim()) {
@@ -162,11 +179,10 @@ export const PlaylistDialog: React.FC<PlaylistDialogProps> = ({ open, onClose })
 
     const handleBurnPlaylist = useCallback(() => {
         if (currentPlaylist && currentPlaylist.tracks.length > 0) {
-            dispatch(convertDialogActions.setFiles(currentPlaylist.tracks));
-            dispatch(convertDialogActions.setVisible(true));
+            onBurn(currentPlaylist.tracks);
             onClose();
         }
-    }, [currentPlaylist, dispatch, onClose]);
+    }, [currentPlaylist, onClose, onBurn]);
 
     return (
         <Dialog
@@ -258,7 +274,7 @@ export const PlaylistDialog: React.FC<PlaylistDialogProps> = ({ open, onClose })
                         <>
                             <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, borderBottom: `1px solid`, borderColor: 'divider' }}>
                                 {currentPlaylist.artwork && (
-                                    <img src={currentPlaylist.artwork} alt={currentPlaylist.name} style={{ width: 60, height: 60, borderRadius: 8, objectFit: 'cover' }} />
+                                    <img src={withArtworkSize(currentPlaylist.artwork, 96)} alt={currentPlaylist.name} style={{ width: 60, height: 60, borderRadius: 8, objectFit: 'cover' }} />
                                 )}
                                 <Box sx={{ flexGrow: 1 }}>
                                     {editingId === currentPlaylist.id ? (
@@ -310,7 +326,7 @@ export const PlaylistDialog: React.FC<PlaylistDialogProps> = ({ open, onClose })
                                                 <CardMedia
                                                     component="img"
                                                     className={classes.trackMedia}
-                                                    image={track.artwork || ''}
+                                                    image={withArtworkSize(track.artwork, 96)}
                                                     alt={track.title}
                                                     onError={(e) => {
                                                         (e.target as any).style.display = 'none';

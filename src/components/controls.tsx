@@ -9,12 +9,20 @@ import PauseIcon from '@mui/icons-material/Pause';
 
 import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
 
 import { makeStyles } from 'tss-react/mui';
-import { formatTimeFromSeconds, getSortedTracks } from '../utils';
+import { formatTimeFromSeconds, getSortedTracks, loadPreference, savePreference } from '../utils';
 import { belowDesktop, useDeviceCapabilities, useShallowEqualSelector } from '../frontend-utils';
 import { control } from '../redux/actions';
 import { useDispatch } from '../frontend-utils';
+import { actions as mainActions } from '../redux/main-feature';
+import { DefaultMinidiscSpec, MinidiscSpec } from '../services/interfaces/netmd';
+import { HiMDSpec } from '../services/interfaces/himd';
+import serviceRegistry from '../services/registry';
 
 import MDIcon0 from '../images/md0.svg?react';
 import MDIcon1 from '../images/md1.svg?react';
@@ -116,6 +124,21 @@ const useStyles = makeStyles()((theme) => ({
     durationSlowDown: {
         transition: 'flex-grow linear 0.5s',
     },
+    virtualDiscRow: {
+        display: 'flex',
+        alignItems: 'center',
+        marginLeft: theme.spacing(1.5),
+        marginRight: theme.spacing(1.5),
+        marginTop: theme.spacing(0.5),
+        [belowDesktop(theme)]: {
+            width: '100%',
+            marginLeft: 0,
+            marginRight: theme.spacing(2),
+        },
+    },
+    virtualDiscSelect: {
+        minWidth: 180,
+    },
 }));
 
 export const Controls = () => {
@@ -124,6 +147,7 @@ export const Controls = () => {
     const deviceStatus = useShallowEqualSelector((state) => state.main.deviceStatus);
     const disc = useShallowEqualSelector((state) => state.main.disc);
     const loading = useShallowEqualSelector((state) => state.appState.loading);
+    const [virtualDiscType, setVirtualDiscType] = useState<string>(loadPreference('virtualDiscType', ''));
 
     const deviceCapabilities = useDeviceCapabilities();
 
@@ -150,6 +174,57 @@ export const Controls = () => {
         dispatch(control('pause'));
     }, [dispatch]);
 
+    const applyVirtualDisc = useCallback((value: string) => {
+        if (!value) {
+            dispatch(mainActions.setDisc(null));
+            dispatch(mainActions.setDeviceStatus(null));
+            savePreference('virtualDiscType', '');
+            return;
+        }
+
+        let total = 80 * 60;
+        let spec: MinidiscSpec = new DefaultMinidiscSpec();
+        let title = `${value}min Disc`;
+
+        if (value === '60' || value === '74' || value === '80') {
+            total = parseInt(value, 10) * 60;
+        } else if (value === 'HIMD') {
+            total = 305758208;
+            spec = new HiMDSpec();
+            title = 'Hi-MD Disc';
+        }
+
+        serviceRegistry.netmdSpec = spec;
+        dispatch(
+            mainActions.setDisc({
+                title,
+                fullWidthTitle: '',
+                writable: false,
+                writeProtected: true,
+                used: 0,
+                left: total,
+                total,
+                trackCount: 0,
+                groups: [{ index: 0, title: null, fullWidthTitle: null, tracks: [] }],
+            })
+        );
+        dispatch(
+            mainActions.setDeviceStatus({
+                discPresent: true,
+                track: 0,
+                time: { minute: 0, second: 0, frame: 0 },
+                state: 'ready',
+            } as any)
+        );
+        savePreference('virtualDiscType', value);
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (disc === null && !loading && virtualDiscType) {
+            applyVirtualDisc(virtualDiscType);
+        }
+    }, [disc, loading, virtualDiscType, applyVirtualDisc]);
+
     const [isSeeking, setIsSeeking] = useState(false);
     const [isSeekingProgressLocked, setIsSeekingProgressLocked] = useState(false);
     const [lcdClickPrevent, setLCDClickPrevent] = useState(false);
@@ -160,49 +235,99 @@ export const Controls = () => {
     const discPresent = deviceStatus?.discPresent ?? false;
     const paused = deviceStatus?.state === 'paused';
     const tracks = useMemo(() => getSortedTracks(disc), [disc]);
-    if (!discPresent) {
-        message = ``;
-        setLCDScreen(-1);
-        setTrackPercentage(0);
-    } else if (deviceState === 'readingTOC') {
-        message = 'READING TOC';
-        setLCDScreen(-1);
-        setTrackPercentage(0);
-    } else if (tracks.length === 0) {
-        message = `BLANKDISC`;
-        setLCDScreen(-1);
-        setTrackPercentage(0);
-    } else if (deviceStatus && deviceStatus.track !== null && tracks[deviceStatus.track]) {
-        const track = tracks[deviceStatus.track];
-        const title = track.fullWidthTitle || track.title;
-        let currentTimeSecs = (deviceStatus.time?.minute ?? 0) * 60 + (deviceStatus.time?.second ?? 0);
-        message = (deviceStatus.track + 1).toString().padStart(3, '0') + (title ? ' - ' + title : '');
-        const messageIsTime = () =>
-            (message = `${formatTimeFromSeconds(currentTimeSecs, false)} / ${formatTimeFromSeconds(track.duration, false)}`);
-        switch (lcdScreen) {
-            // -1, 0 - use default
-            case 1: // Elapsed Time
+    const noDiscMessage = loading ? 'LOADING...' : virtualDiscType ? 'LOADING...' : 'SELECT DISC';
+
+    const lcdDerived = useMemo(() => {
+        let nextLcdScreen = lcdScreen;
+        let nextTrackPercentage = trackPercentage;
+        let updateLcd = false;
+        let updateTrack = false;
+        let nextMessage = ``;
+
+        if (!discPresent) {
+            nextMessage = ``;
+            if (lcdScreen !== -1) {
+                nextLcdScreen = -1;
+                updateLcd = true;
+            }
+            if (trackPercentage !== 0) {
+                nextTrackPercentage = 0;
+                updateTrack = true;
+            }
+        } else if (deviceState === 'readingTOC') {
+            nextMessage = 'READING TOC';
+            if (lcdScreen !== -1) {
+                nextLcdScreen = -1;
+                updateLcd = true;
+            }
+            if (trackPercentage !== 0) {
+                nextTrackPercentage = 0;
+                updateTrack = true;
+            }
+        } else if (tracks.length === 0) {
+            nextMessage = `BLANKDISC`;
+            if (lcdScreen !== -1) {
+                nextLcdScreen = -1;
+                updateLcd = true;
+            }
+            if (trackPercentage !== 0) {
+                nextTrackPercentage = 0;
+                updateTrack = true;
+            }
+        } else if (deviceStatus && deviceStatus.track !== null && tracks[deviceStatus.track]) {
+            const track = tracks[deviceStatus.track];
+            const title = track.fullWidthTitle || track.title;
+            let currentTimeSecs = (deviceStatus.time?.minute ?? 0) * 60 + (deviceStatus.time?.second ?? 0);
+            nextMessage = (deviceStatus.track + 1).toString().padStart(3, '0') + (title ? ' - ' + title : '');
+            const messageIsTime = () =>
+                (nextMessage = `${formatTimeFromSeconds(currentTimeSecs, false)} / ${formatTimeFromSeconds(track.duration, false)}`);
+            switch (lcdScreen) {
+                // -1, 0 - use default
+                case 1: // Elapsed Time
+                    messageIsTime();
+                    break;
+                case 2:
+                    const timeDiff = track.duration - currentTimeSecs;
+                    nextMessage = `-${formatTimeFromSeconds(timeDiff, false)}`;
+                    break;
+            }
+            if (isSeekingProgressLocked) {
+                currentTimeSecs = Math.floor((trackPercentage * track.duration) / 100);
+            } else {
+                const nextPerc = Math.floor((currentTimeSecs / Math.max(1, track.duration)) * 100);
+                if (nextPerc !== trackPercentage) {
+                    nextTrackPercentage = nextPerc;
+                    updateTrack = true;
+                }
+            }
+            if (isSeeking) {
                 messageIsTime();
-                break;
-            case 2:
-                const timeDiff = track.duration - currentTimeSecs;
-                message = `-${formatTimeFromSeconds(timeDiff, false)}`;
-                break;
+            }
+            if (lcdScreen === -1) {
+                nextLcdScreen = 0;
+                updateLcd = true;
+            }
         }
-        if (isSeekingProgressLocked) {
-            currentTimeSecs = Math.floor((trackPercentage * track.duration) / 100);
-        } else {
-            setTrackPercentage(Math.floor((currentTimeSecs / Math.max(1, track.duration)) * 100));
+
+        return {
+            message: nextMessage,
+            nextLcdScreen,
+            updateLcd,
+            nextTrackPercentage,
+            updateTrack,
+        };
+    }, [discPresent, deviceState, tracks, deviceStatus, lcdScreen, trackPercentage, isSeeking, isSeekingProgressLocked]);
+
+    message = lcdDerived.message;
+
+    useEffect(() => {
+        if (lcdDerived.updateLcd) {
+            setLCDScreen(lcdDerived.nextLcdScreen);
         }
-        if (isSeeking) {
-            messageIsTime();
+        if (lcdDerived.updateTrack) {
+            setTrackPercentage(lcdDerived.nextTrackPercentage);
         }
-        // Is locked on a certain message, but can allow other?
-        if (lcdScreen === -1) {
-            // Unlock it
-            setLCDScreen(0);
-        }
-    }
+    }, [lcdDerived, setLCDScreen, setTrackPercentage]);
 
     const [lcdScroll, setLcdScroll] = useState(0);
     const [lcdScrollDuration, setLcdScrollDuration] = useState(0);
@@ -362,7 +487,7 @@ export const Controls = () => {
                 <div className={classes.lcdText}>
                     <span
                         className={cx(lcdScroll ? classes.scrollingStatusMessage : classes.statusMessage, {
-                            [classes.lcdBlink]: disc === null,
+                            [classes.lcdBlink]: disc === null && loading,
                         })}
                         ref={lcdRef}
                         style={
@@ -371,7 +496,7 @@ export const Controls = () => {
                                 : {}
                         }
                     >
-                        {disc === null ? (loading ? 'LOADING...' : 'NO DISC') : message}
+                        {disc === null ? noDiscMessage : message}
                     </span>
                 </div>
                 <div className={classes.lcdDisc}>
@@ -385,6 +510,29 @@ export const Controls = () => {
                     <div style={{ flexGrow: 100 - trackPercentage }}></div>
                 </div>
             </div>
+            {(disc === null || virtualDiscType) && !loading ? (
+                <Box className={classes.virtualDiscRow}>
+                    <FormControl size="small" className={classes.virtualDiscSelect}>
+                        <InputLabel id="virtual-disc-label">Virtual Disc</InputLabel>
+                        <Select
+                            labelId="virtual-disc-label"
+                            label="Virtual Disc"
+                            value={virtualDiscType}
+                            onChange={(e) => {
+                                const value = e.target.value as string;
+                                setVirtualDiscType(value);
+                                applyVirtualDisc(value);
+                            }}
+                        >
+                            <MenuItem value="">No Virtual Disc</MenuItem>
+                            <MenuItem value="60">60 min</MenuItem>
+                            <MenuItem value="74">74 min</MenuItem>
+                            <MenuItem value="80">80 min</MenuItem>
+                            <MenuItem value="HIMD">Hi-MD (1GB)</MenuItem>
+                        </Select>
+                    </FormControl>
+                </Box>
+            ) : null}
         </Box>
     );
 };

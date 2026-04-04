@@ -19,6 +19,7 @@ services:
     volumes:
       - music_volume:/music:ro
       - ./.env:/app/.env
+      - ./backend/data:/app/backend/data
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "8001:8000"

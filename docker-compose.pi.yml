@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  frontend:
+    image: webminidisc-frontend:pi
+    container_name: webminidisc-frontend
+
+  backend:
+    image: webminidisc-backend:pi
+    container_name: webminidisc-backend

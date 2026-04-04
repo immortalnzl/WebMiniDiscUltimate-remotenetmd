@@ -70,10 +70,13 @@ const FolderPicker = ({ open, onClose, onSelect, initialPath }: { open: boolean,
 
 export const LibrarySettingsDialog = ({ 
     open, onClose, onRestart, 
-    scanStatus, onStartScan 
+    scanStatus, onStartScan, onStartIncrementalScan, onRefreshMetadataArtwork
 }: { 
     open: boolean, onClose: () => void, onRestart: () => void,
-    scanStatus: any, onStartScan: () => void
+    scanStatus: any,
+    onStartScan: () => void,
+    onStartIncrementalScan: () => void,
+    onRefreshMetadataArtwork: () => void
 }) => {
     const dialogRef = React.useRef<HTMLDivElement>(null);
     const logRef = React.useRef<HTMLPreElement>(null);
@@ -104,8 +107,11 @@ export const LibrarySettingsDialog = ({
         FILE_EXTENSIONS: '',
         EXCLUDE_PATTERNS: '',
         ENABLE_SCRAPING: 'true',
+        AUTO_SCAN_INTERVAL_MINUTES: '0',
         VOLUME_TYPE: 'none',
-        VOLUME_OPTIONS: 'bind'
+        VOLUME_OPTIONS: 'bind',
+        SMB_USERNAME: '',
+        SMB_PASSWORD: ''
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -120,13 +126,31 @@ export const LibrarySettingsDialog = ({
                     return r.json();
                 })
                 .then(data => {
+                    const volumeType = data.VOLUME_TYPE || 'none';
+                    const volumeOptions = data.VOLUME_OPTIONS || 'bind';
+                    let smbUsername = data.SMB_USERNAME || '';
+                    let smbPassword = data.SMB_PASSWORD || '';
+                    if (volumeType === 'cifs' && (!smbUsername || !smbPassword)) {
+                        const parts = String(volumeOptions).split(',');
+                        for (const p of parts) {
+                            const [rawKey, ...rest] = p.split('=');
+                            const key = (rawKey || '').trim().toLowerCase();
+                            const value = rest.join('=').trim();
+                            if (!value) continue;
+                            if (key === 'username' || key === 'user') smbUsername = smbUsername || value;
+                            if (key === 'password' || key === 'pass') smbPassword = smbPassword || value;
+                        }
+                    }
                     setSettings({
                         MUSIC_PATH: data.MUSIC_PATH || '/music',
                         FILE_EXTENSIONS: data.FILE_EXTENSIONS || '.mp3,.flac,.wav,.m4a,.ogg',
                         EXCLUDE_PATTERNS: data.EXCLUDE_PATTERNS || '@eaDir,#recycle,.DS_Store',
                         ENABLE_SCRAPING: data.ENABLE_SCRAPING || 'true',
-                        VOLUME_TYPE: data.VOLUME_TYPE || 'none',
-                        VOLUME_OPTIONS: data.VOLUME_OPTIONS || 'bind'
+                        AUTO_SCAN_INTERVAL_MINUTES: data.AUTO_SCAN_INTERVAL_MINUTES || '0',
+                        VOLUME_TYPE: volumeType,
+                        VOLUME_OPTIONS: volumeOptions,
+                        SMB_USERNAME: smbUsername,
+                        SMB_PASSWORD: smbPassword
                     });
                     setLoading(false);
                     setError(null);
@@ -142,10 +166,27 @@ export const LibrarySettingsDialog = ({
         setLoading(true);
         setError(null);
         try {
+            const payload = { ...settings } as any;
+            if (payload.VOLUME_TYPE === 'cifs') {
+                const username = (payload.SMB_USERNAME || '').trim();
+                const password = (payload.SMB_PASSWORD || '').trim();
+                const extras = String(payload.VOLUME_OPTIONS || '')
+                    .split(',')
+                    .map((s: string) => s.trim())
+                    .filter((s: string) => !!s)
+                    .filter((s: string) => {
+                        const k = s.split('=')[0]?.trim().toLowerCase();
+                        return !['username', 'user', 'password', 'pass'].includes(k);
+                    });
+                const authParts: string[] = [];
+                if (username) authParts.push(`username=${username}`);
+                if (password) authParts.push(`password=${password}`);
+                payload.VOLUME_OPTIONS = [...authParts, ...extras].join(',');
+            }
             const resp = await fetch('/api/storage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(settings)
+                body: JSON.stringify(payload)
             });
             
             if (!resp.ok) throw new Error('Save failed');
@@ -214,6 +255,29 @@ export const LibrarySettingsDialog = ({
                                 helperText="e.g. vers=3.0,user=guest"
                             />
                         </Box>
+                        {settings.VOLUME_TYPE === 'cifs' && (
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                <TextField
+                                    label="SMB Username"
+                                    value={settings.SMB_USERNAME}
+                                    onChange={(e: any) => setSettings({ ...settings, SMB_USERNAME: e.target.value })}
+                                    fullWidth
+                                    size="small"
+                                    disabled={loading}
+                                    autoComplete="username"
+                                />
+                                <TextField
+                                    label="SMB Password"
+                                    type="password"
+                                    value={settings.SMB_PASSWORD}
+                                    onChange={(e: any) => setSettings({ ...settings, SMB_PASSWORD: e.target.value })}
+                                    fullWidth
+                                    size="small"
+                                    disabled={loading}
+                                    autoComplete="current-password"
+                                />
+                            </Box>
+                        )}
 
                         <TextField 
                             label="File Extensions" 
@@ -241,19 +305,47 @@ export const LibrarySettingsDialog = ({
                             }
                             label="Enable MusicBrainz Metadata Scraping"
                         />
+                        <TextField
+                            label="Scheduled Incremental Scan Interval (minutes)"
+                            type="number"
+                            value={settings.AUTO_SCAN_INTERVAL_MINUTES}
+                            onChange={(e: any) => setSettings({ ...settings, AUTO_SCAN_INTERVAL_MINUTES: e.target.value })}
+                            fullWidth
+                            disabled={loading}
+                            helperText="0 disables schedule. Example: 30 scans for new files every 30 minutes."
+                            inputProps={{ min: 0, step: 1 }}
+                        />
                         
                         <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, gap: 1, flexWrap: 'wrap' }}>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Library Maintenance</Typography>
-                                <Button 
-                                    size="small" 
-                                    variant="outlined" 
-                                    startIcon={<Refresh className={scanStatus?.scanning ? "rotating" : ""} />} 
-                                    onClick={onStartScan}
-                                    disabled={scanStatus?.scanning}
-                                >
-                                    {scanStatus?.scanning ? "Scanning..." : "Start Full Scan"}
-                                </Button>
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        startIcon={<Refresh className={scanStatus?.scanning ? "rotating" : ""} />}
+                                        onClick={onStartIncrementalScan}
+                                        disabled={scanStatus?.scanning}
+                                    >
+                                        {scanStatus?.scanning ? "Scanning..." : "Scan New Files"}
+                                    </Button>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={onRefreshMetadataArtwork}
+                                        disabled={scanStatus?.scanning}
+                                    >
+                                        Update Metadata / Artwork
+                                    </Button>
+                                    <Button 
+                                        size="small" 
+                                        variant="outlined" 
+                                        onClick={onStartScan}
+                                        disabled={scanStatus?.scanning}
+                                    >
+                                        Full Rescan
+                                    </Button>
+                                </Box>
                             </Box>
                             
                             <Box sx={{ 

@@ -124,7 +124,12 @@ export const W95App = () => {
                     </Toolbar>
                     <>
                         {mainView === 'WELCOME' ? <Welcome /> : null}
-                        {mainView === 'MAIN' ? <Main uploadedFiles={uploadedFiles} setUploadedFiles={setUploadedFiles} /> : null}
+                        {mainView === 'MAIN' ? (
+                        <Main
+                            uploadedFiles={uploadedFiles}
+                            setUploadedFiles={setUploadedFiles}
+                        />
+                        ) : null}
                     </>
                     <Panel variant="well">
                         &nbsp;

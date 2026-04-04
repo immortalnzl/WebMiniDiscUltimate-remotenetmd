@@ -12,7 +12,6 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Slide, { SlideProps } from '@mui/material/Slide';
 import Button from '@mui/material/Button';
-import { useTheme } from '@mui/material/styles';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -26,6 +25,7 @@ import { LocalDatabase } from '../services/library/library';
 import { File, FileBrowser } from './file-browser/browser';
 import { Add, ArrowUpward, Description, Folder, PlayArrow } from '@mui/icons-material';
 import { dirSorter, FileType } from './file-browser/utils';
+import { PreviewPlayer } from './preview-player';
 
 const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
@@ -94,7 +94,6 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
 
     const { classes } = useStyles();
     const dispatch = useDispatch();
-    const theme = useTheme();
 
     const { visible, database, status } = useShallowEqualSelector((state) => state.localLibrary);
     const { visible: convertDialogVisible } = useShallowEqualSelector((state) => state.convertDialog);
@@ -149,6 +148,14 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
             addFiles([ file ]);
         }
     }, [addFiles, setCurrentPath]);
+
+    const handleRowClick = useCallback((file: File) => {
+        if (file.type !== FileType.File) return;
+        const url = serviceRegistry.libraryService?.getAudioUrl(file.props!['id']);
+        if (url) {
+            setCurrentAudioUrl(url);
+        }
+    }, []);
 
     const handleAddAllSelected = useCallback((files: File[]) => {
         const process = (path: string[], files: File[]): File[] => {
@@ -221,6 +228,7 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                             <FileBrowser
                                 fileTree={currentFileTree}
                                 onFileDoubleClick={handleFileAction}
+                                onFileClick={handleRowClick}
                                 columnNotFoundPlaceholder=''
                                 manualName={true}
                                 allowMultifileSelection={true}
@@ -309,15 +317,8 @@ export const LocalLibraryDialog = ({ setUploadedFiles }: { setUploadedFiles: (fi
                     </div>
                 </div>
                 {currentAudioUrl && (
-                    <div style={{ marginTop: theme.spacing(2), display: 'flex', alignItems: 'center', gap: theme.spacing(2), padding: theme.spacing(1), border: `1px solid ${theme.palette.divider}`, borderRadius: theme.shape.borderRadius }}>
-                        <PlayArrow color="primary" />
-                        <audio 
-                            src={currentAudioUrl} 
-                            controls 
-                            autoPlay 
-                            style={{ flexGrow: 1, height: 32 }}
-                        />
-                        <Button size="small" onClick={() => setCurrentAudioUrl(null)}>Close Player</Button>
+                    <div style={{ marginTop: 16 }}>
+                        <PreviewPlayer sourceUrl={currentAudioUrl} onClose={() => setCurrentAudioUrl(null)} />
                     </div>
                 )}
             </DialogContent>

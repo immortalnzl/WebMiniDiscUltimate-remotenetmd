@@ -19,6 +19,7 @@ import { actions as appActions } from '../redux/app-feature';
 import { convertAndUpload, openLocalLibrary } from '../redux/actions';
 
 import Dialog from '@mui/material/Dialog';
+import Box from '@mui/material/Box';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -56,7 +57,7 @@ import { FileRejection, useDropzone } from 'react-dropzone';
 import Backdrop from '@mui/material/Backdrop';
 import { W95ConvertDialog } from './win95/convert-dialog';
 import { HiMDSpec } from '../services/interfaces/himd';
-import { Capability, Codec, CodecFamily, Disc, getCodecFromIndex, getDefaultCodec, getDefaultCodecName } from '../services/interfaces/netmd';
+import { Capability, Codec, CodecFamily, Disc, RecordingCodec, getCodecFromIndex, getDefaultCodec, getDefaultCodecName } from '../services/interfaces/netmd';
 import serviceRegistry from '../services/registry';
 import Link from '@mui/material/Link';
 import Table from '@mui/material/Table';
@@ -65,6 +66,8 @@ import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import { LeftInNondefaultCodecs } from './main-rows';
+
+const emptyFormats: RecordingCodec[] = [];
 
 const Transition = React.forwardRef(function Transition(props: SlideProps, ref: React.Ref<unknown>) {
     return <Slide direction="up" ref={ref} {...props} />;
@@ -240,7 +243,7 @@ function createForcedEncodingText(selectedCodec: Codec, file: { forcedEncoding: 
 }
 
 // `files` always appends to the list
-export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
+export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: boolean; inlineVisible?: boolean; onRequestClose?: () => void }) => {
     const dispatch = useDispatch();
     const { classes, cx } = useStyles();
 
@@ -250,8 +253,8 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
     const minidiscSpec = serviceRegistry.netmdSpec;
     const isHiMD = minidiscSpec instanceof HiMDSpec;
     const isNetworkWM = minidiscSpec?.specName === 'NetworkWM';
-
-    if (!minidiscSpec && !visible) return null;
+    const availableFormats = minidiscSpec?.availableFormats ?? emptyFormats;
+    const effectiveVisible = props.inline ? !!props.inlineVisible : visible;
 
     const [files, setFiles] = useState<FileWithMetadata[]>([]);
     const [selectedTrackIndex, setSelectedTrack] = useState(-1);
@@ -361,7 +364,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                         if (forcedEncoding !== null && forcedEncoding !== 'ILLEGAL') {
                             // There's an encoding forced by either the SP upload functionality or OMA
                             let asCodec: CodecFamily = forcedEncoding.format!.codec;
-                            const isIllegalForThisFormat = () => !minidiscSpec?.availableFormats.some((e) => e.codec === asCodec);
+                            const isIllegalForThisFormat = () => !availableFormats.some((e) => e.codec === asCodec);
                             if (isIllegalForThisFormat()) {
                                 // If it's still invalid, do not force an encoding
                                 if (isIllegalForThisFormat()) forcedEncoding = null;
@@ -383,7 +386,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                 setLoadingMetadata(false);
                 return titledFiles;
             },
-        [minidiscSpec?.availableFormats]
+        [availableFormats]
     );
 
     const resetDialog = useCallback(() => {
@@ -519,8 +522,12 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
     const handleClose = useCallback(() => {
         setFiles([]);
         resetDialog();
-        dispatch(convertDialogActions.setVisible(false));
-    }, [dispatch, resetDialog]);
+        if (props.inline) {
+            props.onRequestClose?.();
+        } else {
+            dispatch(convertDialogActions.setVisible(false));
+        }
+    }, [dispatch, resetDialog, props]);
 
     const handleChangeFormat = useCallback(
         (_ev: SyntheticEvent, newFormatIndex?: number) => {
@@ -557,9 +564,13 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
     );
 
     const [tracksOrderVisible, setTracksOrderVisible] = useState(false);
+    const showTracks = props.inline ? true : tracksOrderVisible;
     const handleToggleTracksOrder = useCallback(() => {
         setTracksOrderVisible((tracksOrderVisible) => !tracksOrderVisible);
-    }, [setTracksOrderVisible]);
+        if (!props.inline) {
+            dispatch(convertDialogActions.setVisible(true));
+        }
+    }, [setTracksOrderVisible, props, dispatch]);
 
     const [enableReplayGain, setEnableReplayGain] = useState(false);
 
@@ -849,12 +860,14 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
     const isSelectedUnsupported = serviceRegistry.audioExportService?.getSupport(currentlySelectedCodec.codec) === 'unsupported';
     const formatsSupport = useMemo(() => {
         if (!minidiscSpec) return [];
-        return minidiscSpec.availableFormats.map((e) => serviceRegistry.audioExportService?.getSupport(e.codec) ?? 'unsupported');
-    }, [minidiscSpec]);
+        return availableFormats.map((e) => serviceRegistry.audioExportService?.getSupport(e.codec) ?? 'unsupported');
+    }, [minidiscSpec, availableFormats]);
 
     const vintageMode = useShallowEqualSelector((state) => state.appState.vintageMode);
 
-    if (vintageMode) {
+    if (!minidiscSpec && !effectiveVisible) return null;
+
+    if (vintageMode && !props.inline) {
         const p = {
             visible,
             codecFamilyIndex: currentlySelectedCodecIndex[0],
@@ -896,16 +909,8 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
         return <W95ConvertDialog {...p} />;
     }
 
-    return (
-        <Dialog
-            open={visible}
-            maxWidth={'xs'}
-            fullWidth={true}
-            TransitionComponent={Transition as any}
-            aria-labelledby="convert-dialog-slide-title"
-            aria-describedby="convert-dialog-slide-description"
-            classes={{ paper: cx({ [classes.himdDialog]: usesHimdTitles }) }}
-        >
+    const dialogBody = (
+        <React.Fragment>
             <DialogTitle id="convert-dialog-slide-title">Upload Settings</DialogTitle>
             <DialogContent className={classes.dialogContent}>
                 <div className={classes.formatAndTitle}>
@@ -914,7 +919,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                             Recording Mode
                         </Typography>
                         <ToggleButtonGroup value={currentlySelectedCodecIndex[0]} exclusive onChange={handleChangeFormat} size="small">
-                            {minidiscSpec?.availableFormats.map((e, idx) => (
+                            {availableFormats.map((e, idx) => (
                                 <ToggleButton
                                     disabled={formatsSupport[idx] === 'unsupported'}
                                     classes={{
@@ -961,7 +966,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                                         input={<Input />}
                                         onChange={handleChangeBitrate}
                                     >
-                                        {minidiscSpec?.availableFormats
+                                        {availableFormats
                                             .find((e) => e.codec === currentlySelectedCodec.codec)
                                             ?.availableBitrates?.map((e) => (
                                                 <MenuItem value={e} key={`bitratesel-${e}`}>
@@ -1021,11 +1026,11 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                         Total:{' '}
                         {isUsingFrames ? 
                             <TooltipOrDefault
-                                tooltipEnabled={(minidiscSpec?.availableFormats.length ?? 0) > 1}
+                                tooltipEnabled={availableFormats.length > 1}
                                 title={LeftInNondefaultCodecs((disc?.left ?? 0) - availableSPSeconds)}
                                 arrow
                             >
-                                <span className={cx({ [classes.timeTooltip]: (minidiscSpec?.availableFormats.length ?? 0) > 1 })}>
+                                <span className={cx({ [classes.timeTooltip]: availableFormats.length > 1 })}>
                                     {secondsToHumanReadable((disc?.left ?? 0) - availableSPSeconds)} {thisSpecDefaultCodecName} time{' '}
                                 </span>
                             </TooltipOrDefault>
@@ -1044,10 +1049,10 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                         Remaining:{' '}
                         {isUsingFrames ? 
                             <TooltipOrDefault
-                                tooltipEnabled={(minidiscSpec?.availableFormats.length ?? 0) > 1}
+                                tooltipEnabled={availableFormats.length > 1}
                                 title={
                                     <React.Fragment>
-                                        {minidiscSpec?.availableFormats.map((e, i) =>
+                                        {availableFormats.map((e, i) =>
                                             e.codec === (minidiscSpec ? getDefaultCodec(minidiscSpec).codec : 'SP') ? null : (
                                                 <React.Fragment key={`totalrem-${i}`}>
                                                     <span>{`${secondsToHumanReadable(
@@ -1067,7 +1072,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                                 }
                                 arrow
                             >
-                                <span className={cx({ [classes.timeTooltip]: (minidiscSpec?.availableFormats.length ?? 0) > 1 })}>
+                                <span className={cx({ [classes.timeTooltip]: availableFormats.length > 1 })}>
                                     {secondsToHumanReadable(availableSPSeconds)} {thisSpecDefaultCodecName} time
                                 </span>
                             </TooltipOrDefault>
@@ -1091,9 +1096,8 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                 <Typography component="h3" color="error" hidden={!loadingMetadata} style={{ marginTop: '1em' }} align="center">
                     Reading Metadata...
                 </Typography>
-                <Accordion expanded={tracksOrderVisible} className={classes.tracksOrderAccordion} square={true}>
-                    <div></div>
-                    <div {...getRootProps()} style={{ outline: 'none' }}>
+                {showTracks && (
+                    <Box className={classes.tracksOrderAccordionDetail} {...getRootProps()} style={{ outline: 'none' }}>
                         <Toolbar variant="dense" className={classes.toolbarHighlight}>
                             {serviceRegistry.libraryService && (
                                 <IconButton
@@ -1135,11 +1139,9 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                             </IconButton>
                         </Toolbar>
                         {!usesHimdTitles ? (
-                            <AccordionDetails className={classes.tracksOrderAccordionDetail}>
-                                <List dense={true} disablePadding={false} className={classes.trackList}>
-                                    {renderTracks()}
-                                </List>
-                            </AccordionDetails>
+                            <List dense={true} disablePadding={false} className={classes.trackList}>
+                                {renderTracks()}
+                            </List>
                         ) : (
                             <Table size="small" className={classes.fixedTable}>
                                 <TableHead>
@@ -1158,8 +1160,8 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                             Drop your Music to add it to the queue
                         </Backdrop>
                         <input {...getInputProps()} />
-                    </div>
-                </Accordion>
+                    </Box>
+                )}
                 <Accordion className={classes.advancedOptionsAccordion} square={true}>
                     <AccordionSummary expandIcon={<ExpandMoreIcon />} className={classes.advancedOptionsAccordionSummary}>
                         Advanced Options
@@ -1182,9 +1184,11 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                 </Accordion>
             </DialogContent>
             <DialogActions>
-                <Button onClick={handleToggleTracksOrder} disabled={loadingMetadata} className={classes.showTracksOrderBtn}>
-                    {`${tracksOrderVisible ? 'Hide' : 'Show'} Tracks`}
-                </Button>
+                {!props.inline && (
+                    <Button onClick={handleToggleTracksOrder} disabled={loadingMetadata} className={classes.showTracksOrderBtn}>
+                        {`${tracksOrderVisible ? 'Hide' : 'Show'} Tracks`}
+                    </Button>
+                )}
                 <div className={classes.spacer}></div>
                 <Button onClick={handleClose} disabled={loadingMetadata}>
                     Cancel
@@ -1193,6 +1197,24 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[] }) => {
                     Ok
                 </Button>
             </DialogActions>
+        </React.Fragment>
+    );
+
+    if (props.inline) {
+        return <Box>{dialogBody}</Box>;
+    }
+
+    return (
+        <Dialog
+            open={effectiveVisible}
+            maxWidth={'xs'}
+            fullWidth={true}
+            TransitionComponent={Transition as any}
+            aria-labelledby="convert-dialog-slide-title"
+            aria-describedby="convert-dialog-slide-description"
+            classes={{ paper: cx({ [classes.himdDialog]: usesHimdTitles }) }}
+        >
+            {dialogBody}
         </Dialog>
     );
 };

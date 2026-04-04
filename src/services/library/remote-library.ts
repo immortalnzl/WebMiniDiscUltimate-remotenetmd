@@ -83,9 +83,11 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
                         const track = entry as any;
                         if (track.artwork) {
                             const artURL = new URL(this.address, window.location.origin);
-                            const [path, search] = track.artwork.split('?');
-                            artURL.pathname = path;
-                            artURL.search = search || '';
+                            const raw = new URL(track.artwork, window.location.origin);
+                            artURL.pathname = raw.pathname;
+                            raw.searchParams.forEach((value, key) => {
+                                artURL.searchParams.set(key, value);
+                            });
                             track.artwork = artURL.href;
                         }
                     } else {
@@ -181,7 +183,7 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
     getAudioUrl(filePath: string): string {
         const url = new URL(this.address, window.location.origin);
         if (!url.pathname.endsWith('/')) url.pathname += '/';
-        url.pathname += 'get_local';
+        url.pathname += 'get_local_preview';
         url.searchParams.set('file_name', filePath);
         return url.href;
     }

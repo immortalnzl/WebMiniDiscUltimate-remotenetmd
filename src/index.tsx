@@ -9,6 +9,8 @@ import serviceRegistry from './services/registry';
 import { store } from './redux/store';
 import { actions as appActions } from './redux/app-feature';
 import { actions as mainActions } from './redux/main-feature';
+import { AudioServices } from './services/audio-export-service-manager';
+import { LibraryServices } from './services/library-services';
 
 import App from './components/app';
 
@@ -19,9 +21,19 @@ import { sleep } from './utils';
 import { SettingsResetErrorBoundary } from './components/settings-reset-error-boundary';
 serviceRegistry.mediaRecorderService = new MediaRecorderService();
 serviceRegistry.mediaSessionService = new BrowserMediaSessionService(store);
+const initialLibraryService = store.getState().appState.libraryService;
+if (initialLibraryService !== -1) {
+    serviceRegistry.libraryService = new LibraryServices[initialLibraryService].create(
+        store.getState().appState.libraryServiceConfig
+    );
+}
+serviceRegistry.audioExportService = new AudioServices[store.getState().appState.audioExportService].create(
+    store.getState().appState.audioExportServiceConfig
+);
+serviceRegistry.audioExportService?.init?.();
 
 Object.defineProperty(window, 'wmdVersion', {
-    value: '1.5.3',
+    value: '1.5.4',
     writable: false,
 });
 
@@ -29,6 +41,45 @@ const originalApplicationTitle = document.title;
 
 if (localStorage.getItem('version') !== (window as any).wmdVersion) {
     store.dispatch(appActions.showChangelogDialog(true));
+}
+
+const BUILD_STAMP_KEY = 'wmd_build_stamp';
+const CACHE_RESET_GUARD_KEY = 'wmd_cache_reset_once';
+
+async function forceRefreshOnNewBuild() {
+    const current = (window as any).wmdVersion as string;
+    const previous = localStorage.getItem(BUILD_STAMP_KEY);
+    const alreadyReset = sessionStorage.getItem(CACHE_RESET_GUARD_KEY) === current;
+
+    if (previous === current || alreadyReset) {
+        localStorage.setItem(BUILD_STAMP_KEY, current);
+        return;
+    }
+
+    localStorage.setItem(BUILD_STAMP_KEY, current);
+    sessionStorage.setItem(CACHE_RESET_GUARD_KEY, current);
+
+    try {
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map((r) => r.unregister()));
+        }
+    } catch {
+        // best effort
+    }
+
+    try {
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+    } catch {
+        // best effort
+    }
+
+    const next = new URL(window.location.href);
+    next.searchParams.set('v', current);
+    window.location.replace(next.toString());
 }
 
 (function setupEventHandlers() {
@@ -74,6 +125,8 @@ if (localStorage.getItem('version') !== (window as any).wmdVersion) {
         deferredPrompt = e;
     });
 })();
+
+forceRefreshOnNewBuild();
 
 (function statusMonitorManager() {
     // Polls the device for its state while playing tracks

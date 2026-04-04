@@ -4,6 +4,7 @@ import { belowDesktop, forAnyDesktop, forWideDesktop, useShallowEqualSelector, u
 import CssBaseline from '@mui/material/CssBaseline';
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
+import LinearProgress from '@mui/material/LinearProgress';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { makeStyles } from 'tss-react/mui';
 
@@ -17,9 +18,9 @@ const Toc = lazy(() => import('./factory/factory'));
 const Controls = lazy(() => import('./controls'));
 const Welcome = lazy(() => import('./welcome'));
 const Main = lazy(() => import('./main'));
-
-import { MusicLibrarySidebar } from './library-sidebar';
-import { DiscVisualizer } from './disc-visualizer';
+const MusicLibrarySidebar = lazy(() => import('./library-sidebar').then((module) => ({ default: module.MusicLibrarySidebar })));
+const DiscVisualizer = lazy(() => import('./disc-visualizer').then((module) => ({ default: module.DiscVisualizer })));
+const PlaylistDialog = lazy(() => import('./playlist-dialog').then((module) => ({ default: module.PlaylistDialog })));
 import { AdaptiveFile } from '../utils';
 
 const useStyles = makeStyles()((theme) => ({
@@ -30,7 +31,8 @@ const useStyles = makeStyles()((theme) => ({
         overflow: 'hidden',
     },
     sidebar: {
-        width: '75%',
+        width: '65%',
+        flexBasis: '65%',
         flexShrink: 0,
         height: '100%',
         transition: 'width 0.3s ease-in-out',
@@ -40,9 +42,11 @@ const useStyles = makeStyles()((theme) => ({
     },
     sidebarExpanded: {
         width: '100%',
+        flexBasis: '100%',
     },
     mainContent: {
-        width: '25%',
+        width: '35%',
+        flexBasis: '35%',
         flexShrink: 0,
         height: '100%',
         display: 'flex',
@@ -54,6 +58,7 @@ const useStyles = makeStyles()((theme) => ({
     },
     mainContentHidden: {
         width: 0,
+        flexBasis: 0,
         padding: 0,
         overflow: 'hidden',
         opacity: 0,
@@ -250,6 +255,8 @@ const InternalApp = () => {
     const { classes, cx } = useStyles();
     const [uploadedFiles, setUploadedFiles] = React.useState<(File | AdaptiveFile)[]>([]);
     const [isSidebarExpanded, setIsSidebarExpanded] = React.useState(false);
+    const [playlistDialogOpen, setPlaylistDialogOpen] = React.useState(false);
+    const [nowPlayingOpen, setNowPlayingOpen] = React.useState(false);
 
     return (
         <React.Fragment>
@@ -265,11 +272,17 @@ const InternalApp = () => {
                 <Box className={classes.layout}>
                     {mainView === 'MAIN' && (
                         <Box className={cx(classes.sidebar, isSidebarExpanded && classes.sidebarExpanded)}>
-                            <MusicLibrarySidebar 
-                                setUploadedFiles={setUploadedFiles} 
-                                isExpanded={isSidebarExpanded}
-                                onToggleExpand={() => setIsSidebarExpanded(!isSidebarExpanded)}
-                            />
+                            <Suspense fallback={<Box sx={{ p: 2 }}><LinearProgress /></Box>}>
+                                <MusicLibrarySidebar 
+                                    setUploadedFiles={setUploadedFiles}
+                                    isExpanded={isSidebarExpanded}
+                                    onOpenPlaylists={() => setPlaylistDialogOpen(true)}
+                                    onToggleExpand={() => setIsSidebarExpanded(!isSidebarExpanded)}
+                                    showNowPlaying={nowPlayingOpen}
+                                    onOpenNowPlaying={() => setNowPlayingOpen(true)}
+                                    onCloseNowPlaying={() => setNowPlayingOpen(false)}
+                                />
+                            </Suspense>
                         </Box>
                     )}
                     <Box className={cx(classes.mainContent, (mainView === 'MAIN' && isSidebarExpanded) && classes.mainContentHidden)}>
@@ -277,13 +290,22 @@ const InternalApp = () => {
                             {mainView === 'WELCOME' ? <Welcome /> : null}
                             {mainView === 'MAIN' ? (
                                 <>
-                                    {!isSidebarExpanded && <DiscVisualizer />}
-                                    <Main uploadedFiles={uploadedFiles} setUploadedFiles={setUploadedFiles} />
+                                    {!isSidebarExpanded && (
+                                        <Suspense fallback={null}>
+                                            <DiscVisualizer />
+                                        </Suspense>
+                                    )}
+                                    <Main
+                                        uploadedFiles={uploadedFiles}
+                                        setUploadedFiles={setUploadedFiles}
+                                    />
                                 </>
                              ) : null}
                             {mainView === 'FACTORY' ? <Toc /> : null}
 
-                            <Box className={classes.controlsContainer}>{mainView === 'MAIN' ? <Controls /> : null}</Box>
+                            <Box className={classes.controlsContainer}>
+                                {mainView === 'MAIN' ? <Controls /> : null}
+                            </Box>
                         </Paper>
                         <Typography variant="body2" color="textSecondary" className={classes.copyrightTypography}>
                             {'© '}
@@ -306,6 +328,15 @@ const InternalApp = () => {
                     <CircularProgress color="info" />
                 </Backdrop>
             ) : null}
+            <Suspense fallback={null}>
+                <PlaylistDialog
+                    open={playlistDialogOpen}
+                    onClose={() => setPlaylistDialogOpen(false)}
+                    onBurn={(tracks) => {
+                        setUploadedFiles(tracks);
+                    }}
+                />
+            </Suspense>
         </React.Fragment>
     );
 };
