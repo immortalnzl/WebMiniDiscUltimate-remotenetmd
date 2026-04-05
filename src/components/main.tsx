@@ -11,7 +11,7 @@ import {
     DroppableProvided,
     DroppableStateSnapshot,
 } from 'react-beautiful-dnd';
-import { listContent, deleteTracks, moveTrack, groupTracks, deleteGroups, dragDropTrack, ejectDisc, flushDevice } from '../redux/actions';
+import { listContent, deleteTracks, moveTrack, groupTracks, deleteGroups, dragDropTrack, ejectDisc, flushDevice, pair } from '../redux/actions';
 import { actions as renameDialogActions, RenameType } from '../redux/rename-dialog-feature';
 import { actions as dumpDialogActions } from '../redux/dump-dialog-feature';
 import { actions as appStateActions } from '../redux/app-feature';
@@ -64,6 +64,7 @@ import { W95Main } from './win95/main';
 import { useMemo } from 'react';
 import { ChangelogDialog } from './changelog-dialog';
 import { DefaultMinidiscSpec, getDefaultCodecName, Track } from '../services/interfaces/netmd';
+import { HiMDSpec } from '../services/interfaces/himd';
 import { FactoryModeNoticeDialog } from './factory/factory-notice-dialog';
 import { FactoryModeProgressDialog } from './factory/factory-progress-dialog';
 import { SongRecognitionDialog } from './song-recognition-dialog';
@@ -74,7 +75,11 @@ import { DiscProtectedDialog } from './disc-protected-dialog';
 import { ContextMenu } from './context-menu';
 import { LocalLibraryDialog } from './local-library';
 import { Menu, MenuItem } from '@mui/material';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
 import serviceRegistry from '../services/registry';
+import { createService, getServiceSpec } from '../services/interface-service-manager';
 
 // TODO jss-to-tss-react codemod: Unable to handle style definition reliably. Unsupported arrow function syntax.
 //Unexpected value type of ConditionalExpression.
@@ -195,6 +200,8 @@ function getTrackStatus(track: Track, deviceStatus: DeviceStatus | null): 'playi
     }
 }
 
+type VirtualDiscSize = '60' | '74' | '80' | 'HIMD';
+
 export const Main = (props: {
     uploadedFiles: (File | AdaptiveFile)[];
     setUploadedFiles: React.Dispatch<React.SetStateAction<(File | AdaptiveFile)[]>>;
@@ -206,6 +213,8 @@ export const Main = (props: {
     const deviceName = useShallowEqualSelector((state) => state.main.deviceName);
     const deviceStatus = useShallowEqualSelector((state) => state.main.deviceStatus);
     const factoryModeRippingInMainUi = useShallowEqualSelector((state) => state.appState.factoryModeRippingInMainUi);
+    const { availableServices, lastSelectedService } = useShallowEqualSelector((state) => state.appState);
+    const connectingInProgress = useShallowEqualSelector((state) => state.appState.connectingInProgress);
     const { vintageMode } = useShallowEqualSelector((state) => state.appState);
 
     const [selected, setSelected] = React.useState<number[]>([]);
@@ -213,6 +222,7 @@ export const Main = (props: {
     const [lastClicked, setLastClicked] = useState(-1);
     const [moveMenuAnchorEl, setMoveMenuAnchorEl] = React.useState<null | HTMLElement>(null);
     const [showRemainingSpace, setShowRemainingSpace] = useState(true);
+    const [virtualDiscTarget, setVirtualDiscTarget] = useState<VirtualDiscSize>('80');
 
     const deviceCapabilities = useDeviceCapabilities();
     const minidiscSpec = serviceRegistry.netmdSpec;
@@ -527,22 +537,46 @@ export const Main = (props: {
     }, [dispatch]);
 
     const handleOpenConnect = useCallback(() => {
-        dispatch(appStateActions.setMainView('WELCOME'));
-    }, [dispatch]);
+        const selected = availableServices[lastSelectedService];
+        if (!selected) {
+            dispatch(appStateActions.setMainView('WELCOME'));
+            return;
+        }
+        const instance = createService(selected);
+        const spec = getServiceSpec(selected);
+        if (instance && spec) {
+            dispatch(pair(instance, spec));
+        } else {
+            dispatch(appStateActions.setMainView('WELCOME'));
+        }
+    }, [dispatch, availableServices, lastSelectedService]);
 
-    const handleUseVirtualDisc = useCallback(() => {
-        serviceRegistry.netmdSpec = new DefaultMinidiscSpec();
+    const handleUseVirtualDisc = useCallback((size: VirtualDiscSize = '80') => {
+        let total = 80 * 60;
+        let title = '80min Disc';
+        let spec: DefaultMinidiscSpec | HiMDSpec = new DefaultMinidiscSpec();
+
+        if (size === '60' || size === '74' || size === '80') {
+            total = parseInt(size, 10) * 60;
+            title = `${size}min Disc`;
+        } else if (size === 'HIMD') {
+            total = 305758208;
+            title = 'Hi-MD Disc';
+            spec = new HiMDSpec();
+        }
+
+        serviceRegistry.netmdSpec = spec;
         dispatch(
             batchActions([
                 mainActions.setDeviceName('Virtual MD Disc'),
                 mainActions.setDisc({
-                    title: '80min Disc',
+                    title,
                     fullWidthTitle: '',
                     writable: false,
                     writeProtected: true,
                     used: 0,
-                    left: 80 * 60,
-                    total: 80 * 60,
+                    left: total,
+                    total,
                     trackCount: 0,
                     groups: [{ index: 0, title: null, fullWidthTitle: null, tracks: [] }],
                 }),
@@ -784,7 +818,16 @@ export const Main = (props: {
                             <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.2, m: 0 }}>
                                 Burn Queue
                             </Typography>
-                            <Box>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color="primary"
+                                    onClick={handleOpenConnect}
+                                    disabled={connectingInProgress}
+                                >
+                                    {connectingInProgress ? 'Connecting...' : 'Connect NetMD Device'}
+                                </Button>
                                 <Button size="small" color="secondary" onClick={handleClearQueue} disabled={uploadedFiles.length === 0}>
                                     Clear
                                 </Button>
@@ -889,6 +932,46 @@ export const Main = (props: {
                                 Drop your Music to Upload
                             </Backdrop>
                         ) : null}
+                        <Box sx={{ mt: 2 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.2, m: 0 }}>
+                                    Burn Queue
+                                </Typography>
+                                <Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <FormControl size="small" sx={{ minWidth: 146 }}>
+                                            <InputLabel id="prepare-virtual-disc-label">Prepare Disc</InputLabel>
+                                            <Select
+                                                labelId="prepare-virtual-disc-label"
+                                                value={virtualDiscTarget}
+                                                label="Prepare Disc"
+                                                onChange={(e) => setVirtualDiscTarget(e.target.value as VirtualDiscSize)}
+                                            >
+                                                <MenuItem value="60">60 min</MenuItem>
+                                                <MenuItem value="74">74 min</MenuItem>
+                                                <MenuItem value="80">80 min</MenuItem>
+                                                <MenuItem value="HIMD">Hi-MD (1GB)</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                        <Button size="small" variant="outlined" onClick={() => handleUseVirtualDisc(virtualDiscTarget)}>
+                                            Use Virtual
+                                        </Button>
+                                        <Button size="small" color="secondary" onClick={handleClearQueue} disabled={uploadedFiles.length === 0}>
+                                            Clear
+                                        </Button>
+                                    </Box>
+                                </Box>
+                            </Box>
+                            {uploadedFiles.length === 0 ? (
+                                <Typography variant="body2" sx={{ color: 'text.secondary', m: 0 }}>
+                                    Queue is empty. Add tracks from the library.
+                                </Typography>
+                            ) : (
+                                <Box sx={{ mt: 1 }}>
+                                    <ConvertDialog files={uploadedFiles} inline inlineVisible={true} />
+                                </Box>
+                            )}
+                        </Box>
                     </Box>
                 )
             ) : (
@@ -896,7 +979,7 @@ export const Main = (props: {
                     <Button variant="contained" color="primary" onClick={handleOpenConnect}>
                         Connect
                     </Button>
-                    <Button size="small" onClick={handleUseVirtualDisc}>
+                    <Button size="small" onClick={() => handleUseVirtualDisc()}>
                         Use Virtual MD Disc
                     </Button>
                 </Box>

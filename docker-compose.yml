@@ -1,6 +1,14 @@
 version: '3.8'
 
 services:
+  atrac-api:
+    image: "${ATRAC_API_IMAGE:-seedstohr/atrac-api:latest}"
+    platform: "${ATRAC_API_PLATFORM:-linux/amd64}"
+    container_name: webminidisc-atrac-api
+    profiles:
+      - hq-atrac
+    restart: unless-stopped
+
   frontend:
     build: .
     container_name: webminidisc-frontend

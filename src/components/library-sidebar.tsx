@@ -317,10 +317,10 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
                 name: pathTokens[pathTokens.length - 1] || 'unknown.unk',
                 duration: props['duration'],
                 artwork: props['artwork'],
-                getForEncoding: async (params) => {
+                getForEncoding: async (params, callback) => {
                     const { libraryService } = serviceRegistry;
                     if (!libraryService) throw new Error('Library service not available');
-                    return libraryService.processLocalLibraryFile(props['id'], params);
+                    return libraryService.processLocalLibraryFile(props['id'], params, callback);
                 },
             };
         }) as AdaptiveFile[];
@@ -522,16 +522,18 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
         (index: number) => {
             setPreviewQueue((prev) => {
                 const next = prev.filter((_, i) => i !== index);
+                if (next.length === 0) {
+                    setPreviewIndex(-1);
+                    setCurrentAudioUrl(null);
+                    setPreviewTrack(null);
+                    setCurrentTrackId(null);
+                    setPreviewPlaying(false);
+                    return next;
+                }
                 if (previewIndex === index) {
                     setPreviewIndex(next.length ? Math.min(index, next.length - 1) : -1);
-                    if (next.length === 0) {
-                        setCurrentAudioUrl(null);
-                        setPreviewTrack(null);
-                        setCurrentTrackId(null);
-                    } else {
-                        const fallbackIndex = Math.min(index, next.length - 1);
-                        setCurrentTrackId(next[fallbackIndex]?.id || null);
-                    }
+                    const fallbackIndex = Math.min(index, next.length - 1);
+                    setCurrentTrackId(next[fallbackIndex]?.id || null);
                 } else if (previewIndex > index) {
                     setPreviewIndex(previewIndex - 1);
                 }
@@ -540,6 +542,15 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
         },
         [previewIndex]
     );
+
+    const clearQueue = useCallback(() => {
+        setPreviewQueue([]);
+        setPreviewIndex(-1);
+        setCurrentAudioUrl(null);
+        setPreviewTrack(null);
+        setCurrentTrackId(null);
+        setPreviewPlaying(false);
+    }, []);
 
     const moveQueueItem = useCallback((index: number, direction: 'up' | 'down') => {
         setPreviewQueue((prev) => {
@@ -589,10 +600,10 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
                 name: item.title || 'unknown.unk',
                 duration: item.duration || 0,
                 artwork: item.artwork,
-                getForEncoding: async (params) => {
+                getForEncoding: async (params, callback) => {
                     const { libraryService } = serviceRegistry;
                     if (!libraryService) throw new Error('Library service not available');
-                    return libraryService.processLocalLibraryFile(item.id, params);
+                    return libraryService.processLocalLibraryFile(item.id, params, callback);
                 },
             };
             setUploadedFiles((prev) => [...prev, adaptive]);
@@ -608,10 +619,10 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
             name: item.title || 'unknown.unk',
             duration: item.duration || 0,
             artwork: item.artwork,
-            getForEncoding: async (params: any) => {
+            getForEncoding: async (params: any, callback?: (obj: { state: number; total: number }) => void) => {
                 const { libraryService } = serviceRegistry;
                 if (!libraryService) throw new Error('Library service not available');
-                return libraryService.processLocalLibraryFile(item.id, params);
+                return libraryService.processLocalLibraryFile(item.id, params, callback);
             },
         })) as AdaptiveFile[];
         setUploadedFiles((prev) => [...prev, ...adaptives]);
@@ -630,10 +641,10 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
                 name: item.title || 'unknown.unk',
                 duration: 0,
                 artwork: item.artwork,
-                getForEncoding: async (params) => {
+                getForEncoding: async (params, callback) => {
                     const { libraryService } = serviceRegistry;
                     if (!libraryService) throw new Error('Library service not available');
-                    return libraryService.processLocalLibraryFile(item.id, params);
+                    return libraryService.processLocalLibraryFile(item.id, params, callback);
                 },
             };
             dispatch(playlistActions.addTrackToPlaylist({ playlistId: id, track: adaptive }));
@@ -1011,6 +1022,7 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
                                 onAddItemToBurn={addQueueItemToBurn}
                                 onAddAllToBurn={addAllQueueToBurn}
                                 onSavePlaylist={saveQueueAsPlaylist}
+                                onClearQueue={clearQueue}
                                 onOpenLabelMaker={openLabelMaker}
                                 currentAudioUrl={currentAudioUrl}
                                 previewDuration={previewTrack?.duration}

@@ -51,7 +51,7 @@ export interface AdaptiveFile {
     artist: string;
     duration: number;
     artwork?: string;
-    getForEncoding(encoding: ExportParams): Promise<ArrayBuffer>;
+    getForEncoding(encoding: ExportParams, callback?: (obj: { state: number; total: number }) => void): Promise<ArrayBuffer>;
 }
 
 export type TitledFile = {

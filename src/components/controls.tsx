@@ -462,6 +462,8 @@ export const Controls = () => {
         return <W95Controls {...p} />;
     }
 
+    const showVirtualDiscPicker = !loading && (Boolean(virtualDiscType) || Boolean(disc && disc.writeProtected && !disc.writable));
+
     return (
         <Box className={classes.container}>
             {deviceCapabilities.playbackControl ? (
@@ -510,7 +512,7 @@ export const Controls = () => {
                     <div style={{ flexGrow: 100 - trackPercentage }}></div>
                 </div>
             </div>
-            {(disc === null || virtualDiscType) && !loading ? (
+            {showVirtualDiscPicker ? (
                 <Box className={classes.virtualDiscRow}>
                     <FormControl size="small" className={classes.virtualDiscSelect}>
                         <InputLabel id="virtual-disc-label">Virtual Disc</InputLabel>

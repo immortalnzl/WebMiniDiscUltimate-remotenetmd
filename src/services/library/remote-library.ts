@@ -104,7 +104,11 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
         }
     }
 
-    async processLocalLibraryFile(filePath: string, params: ExportParams): Promise<ArrayBuffer> {
+    async processLocalLibraryFile(
+        filePath: string,
+        params: ExportParams,
+        callback?: (obj: { state: number; total: number }) => void
+    ): Promise<ArrayBuffer> {
         if (params.format.codec === 'PCM' || params.format.codec === 'MP3') {
             // Fetch the file normally, then transcode to PCM / MP3
             const rawURL = new URL(this.address, window.location.origin);
@@ -159,6 +163,13 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
             encodingURL.searchParams.set('type', encoderFormat);
             encodingURL.searchParams.set('file_name', filePath);
             if (enableReplayGain !== undefined) encodingURL.searchParams.set('applyReplaygain', enableReplayGain.toString());
+            const total = 100;
+            let progress = 1;
+            callback?.({ state: progress, total });
+            const progressTimer = setInterval(() => {
+                progress = Math.min(95, progress + 2);
+                callback?.({ state: progress, total });
+            }, 750);
             let response: Response | null = null;
             for(let i = 0; i<MAX_TRIES; i++){
                 try{
@@ -166,16 +177,26 @@ export class RemoteLibraryService extends DefaultFfmpegAudioExportService implem
                     if(response === null) {
                         throw new Error("Failed to convert audio!");
                     }
+                    if (!response.ok) {
+                        const detail = await response.text();
+                        throw new Error(`Remote encoder error (${response.status}): ${detail || response.statusText}`);
+                    }
                     const source = await response.arrayBuffer();
                     const content = new Uint8Array(source);
                     const file = new File([content], 'test.at3');
-                    const headerLength = (await getATRACWAVEncoding(file))!.headerLength;
+                    const wavInfo = await getATRACWAVEncoding(file);
+                    if (!wavInfo) {
+                        throw new Error('Remote encoder returned non-ATRAC WAV payload');
+                    }
+                    const headerLength = wavInfo.headerLength;
+                    clearInterval(progressTimer);
+                    callback?.({ state: total, total });
                     return source.slice(headerLength);
                 }catch(ex){
                     console.log("Error while fetching: " + ex);
                 }
             }
-
+            clearInterval(progressTimer);
             throw new Error("Failed to transcode audio!");
         }
     }

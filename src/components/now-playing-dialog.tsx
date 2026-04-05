@@ -211,6 +211,7 @@ const NowPlayingContent = ({
     onAddAllToBurn,
     onAddItemToBurn,
     onSavePlaylist,
+    onClearQueue,
     onOpenLabelMaker,
     onOpenArtist,
     onOpenAlbum,
@@ -239,6 +240,7 @@ const NowPlayingContent = ({
     onAddAllToBurn?: () => void;
     onAddItemToBurn?: (index: number) => void;
     onSavePlaylist?: () => void;
+    onClearQueue?: () => void;
     onOpenLabelMaker?: () => void;
     onOpenArtist?: () => void;
     onOpenAlbum?: () => void;
@@ -439,6 +441,9 @@ const NowPlayingContent = ({
                                     <Button size="small" variant="outlined" onClick={onSavePlaylist} disabled={!queue?.length}>
                                         Save as Playlist
                                     </Button>
+                                    <Button size="small" variant="outlined" color="secondary" onClick={onClearQueue} disabled={!queue?.length}>
+                                        Clear Queue
+                                    </Button>
                                 </Box>
                             </Box>
                             <Box
@@ -555,6 +560,7 @@ export const NowPlayingPanel = ({
     onAddAllToBurn,
     onAddItemToBurn,
     onSavePlaylist,
+    onClearQueue,
     onOpenLabelMaker,
     onOpenArtist,
     onOpenAlbum,
@@ -583,6 +589,7 @@ export const NowPlayingPanel = ({
     onAddAllToBurn?: () => void;
     onAddItemToBurn?: (index: number) => void;
     onSavePlaylist?: () => void;
+    onClearQueue?: () => void;
     onOpenLabelMaker?: () => void;
     onOpenArtist?: () => void;
     onOpenAlbum?: () => void;
@@ -613,6 +620,7 @@ export const NowPlayingPanel = ({
             onAddAllToBurn={onAddAllToBurn}
             onAddItemToBurn={onAddItemToBurn}
             onSavePlaylist={onSavePlaylist}
+            onClearQueue={onClearQueue}
             onOpenLabelMaker={onOpenLabelMaker}
             onOpenArtist={onOpenArtist}
             onOpenAlbum={onOpenAlbum}

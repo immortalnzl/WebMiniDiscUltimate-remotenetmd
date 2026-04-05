@@ -1514,7 +1514,7 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
                         if ((f.file as any).getForEncoding) {
                             // It's an adaptive file
                             const file = f.file as AdaptiveFile;
-                            data = await file.getForEncoding(exportParams);
+                            data = await file.getForEncoding(exportParams, updateEncodeProgressCallback);
                             convertNext();
                             resolve({ file: f, data: data });
                         } else {

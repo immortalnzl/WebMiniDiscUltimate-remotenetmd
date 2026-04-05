@@ -1,5 +1,5 @@
-from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi import FastAPI, HTTPException, Query, BackgroundTasks, UploadFile, File
+from fastapi.responses import FileResponse, StreamingResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import subprocess
@@ -9,6 +9,7 @@ from mutagen.id3 import ID3, APIC
 import io
 import hashlib
 import json
+import tempfile
 
 from typing import Dict, Any, Union, Optional, List
 from pathlib import Path
@@ -931,15 +932,113 @@ def transcode_local(file_name: str = Query(...), type: str = Query(...)):
         codec = "atrac3p"
     
     cmd = [
-        "ffmpeg", "-i", full_path,
-        "-acodec", codec, "-ab", bitrate,
-        "-f", "wav", "pipe:1"
+        "ffmpeg",
+        "-i",
+        full_path,
+        "-acodec",
+        codec,
+        "-ab",
+        bitrate,
+        "-f",
+        "wav",
+        "pipe:1",
     ]
-    
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if process.stdout is None:
-         raise HTTPException(status_code=500, detail="FFmpeg failed")
-    return StreamingResponse(process.stdout, media_type="audio/wav")
+
+    process = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if process.returncode == 0 and process.stdout:
+        return Response(content=process.stdout, media_type="audio/wav")
+
+    ffmpeg_error = process.stderr.decode(errors="ignore")
+    add_log(f"Local ffmpeg ATRAC transcode failed ({type}): {ffmpeg_error[:240]}")
+
+    # Fallback: if local ffmpeg lacks ATRAC encoders on ARM, try the sidecar ATRAC API.
+    atrac_remote_url = os.getenv("ATRAC_REMOTE_URL", "http://atrac-api:5000/transcode").strip()
+    try:
+        with open(full_path, "rb") as input_file:
+            remote_resp = requests.post(
+                atrac_remote_url,
+                params={"type": type},
+                files={"file": (os.path.basename(full_path), input_file, "application/octet-stream")},
+                timeout=600,
+            )
+        if remote_resp.ok and remote_resp.content:
+            add_log(f"Remote ATRAC fallback succeeded ({type}) via {atrac_remote_url}")
+            return Response(content=remote_resp.content, media_type="audio/wav")
+        add_log(
+            f"Remote ATRAC fallback failed ({type}): HTTP {remote_resp.status_code} {remote_resp.text[:240]}"
+        )
+    except Exception as remote_ex:
+        add_log(f"Remote ATRAC fallback exception ({type}): {remote_ex}")
+
+    raise HTTPException(status_code=500, detail=f"ATRAC transcode failed. ffmpeg: {ffmpeg_error[:400]}")
+
+
+def _atrac_codec_and_bitrate(transcode_type: str):
+    bitrate = "132k"
+    codec = "atrac3"
+    if transcode_type == "LP2":
+        bitrate = "132k"
+        codec = "atrac3"
+    elif transcode_type == "LP4":
+        bitrate = "66k"
+        codec = "atrac3"
+    elif transcode_type.startswith("PLUS") and len(transcode_type) > 4:
+        bitrate = transcode_type[4:] + "k"
+        codec = "atrac3p"
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported transcode type: {transcode_type}")
+    return codec, bitrate
+
+
+def _run_ffmpeg_transcode(input_path: str, transcode_type: str):
+    codec, bitrate = _atrac_codec_and_bitrate(transcode_type)
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_path,
+        "-acodec",
+        codec,
+        "-ab",
+        bitrate,
+        "-f",
+        "wav",
+        "pipe:1",
+    ]
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if proc.returncode != 0:
+        err = proc.stderr.decode(errors="ignore")
+        raise HTTPException(status_code=500, detail=f"FFmpeg failed: {err[:600]}")
+    return proc.stdout
+
+
+@app.post("/api/transcode")
+@app.post("/transcode")
+async def transcode_upload(
+    file: UploadFile = File(...),
+    type: str = Query(...),
+    applyReplaygain: Optional[bool] = Query(None),  # kept for API compatibility
+):
+    suffix = Path(file.filename or "input.bin").suffix or ".bin"
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp_path = tmp.name
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                tmp.write(chunk)
+
+        data = _run_ffmpeg_transcode(tmp_path, type)
+        return Response(content=data, media_type="audio/wav")
+    finally:
+        await file.close()
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     import uvicorn

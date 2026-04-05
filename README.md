@@ -1,58 +1,65 @@
 # WebMiniDisc Pro - Self-Hosted with Music Library
 
-This setup allows you to host WebMiniDisc Pro locally and access your music collection (e.g., from a NAS or server) directly within the web interface.
+This setup lets you host WebMiniDisc Pro locally and browse your music collection (NAS/server/local folder) directly in the web UI.
 
 ## Credits
-This project is built on top of the excellent work by [Asivery](https://github.com/asivery/) and the original Web MiniDisc Pro contributors.
+This project is built on top of the excellent work by [Asivery](https://github.com/asivery/) and the original Web MiniDisc Pro contributors.  
 Huge thanks to Asivery for creating and maintaining the core project that made this build possible.
 
 ## Quick Start
 
-1.  **Configure Music Source**:
-    Open the `.env` file. You can use a local folder or a network share (SMB/NFS).
-    
-    **For SMB (Network Share):**
-    ```env
-    MUSIC_PATH=//10.1.4.10/Music
-    VOLUME_TYPE=cifs
-    VOLUME_OPTIONS=username=YOUR_USER,password=YOUR_PASS,vers=3.0
-    ```
-    
-    **For Local Folder:**
-    ```env
-    MUSIC_PATH=Z:/media/Music
-    VOLUME_TYPE=none
-    VOLUME_OPTIONS=bind
-    ```
+1. **Configure Music Source** in `.env`.
 
-2.  **Launch Containers**:
-    Run the following command in your terminal:
-    ```bash
-    docker compose up -d
-    ```
+For SMB (network share):
+```env
+MUSIC_PATH=//10.1.4.10/Music
+VOLUME_TYPE=cifs
+VOLUME_OPTIONS=username=YOUR_USER,password=YOUR_PASS,vers=3.0
+```
 
-3.  **Access the App**:
-    Open your browser and go to `http://<YOUR_SERVER_IP>:8443`.
+For local folder:
+```env
+MUSIC_PATH=Z:/media/Music
+VOLUME_TYPE=none
+VOLUME_OPTIONS=bind
+```
 
-4.  **Configure the Library**:
-    *   In WebMiniDisc Pro, click the **Settings** (gear icon).
-    *   Scroll down to the **Library** section.
-    *   Set **Library to use** to `Remote Library`.
-    *   Set **Server Address** to `http://<YOUR_SERVER_IP>:8000/`.
-    *   Click **Save and Reload**.
+2. **Launch Containers**
+```bash
+docker compose up -d
+```
 
-5.  **Browse your Music**:
-    Click the **Music Library** icon in the app. You can now browse your folders, see **Album Art**, and select tracks to send to your MiniDisc player!
+3. **Access the App** at `https://<YOUR_SERVER_IP>:8443`.
+
+4. **Configure Library in UI**
+- Open **Settings**.
+- In **Library**, set **Library to use** = `Remote Library`.
+- Set **Server Address** = `http://<YOUR_SERVER_IP>:8000/`.
+- Click **Save and Reload**.
+
+5. **Browse Music**
+- Open the music library and browse folders/artists/albums.
+
+6. **Optional: Bundled Self-Hosted ATRAC API (HQ path)**
+- The compose files include optional sidecar profile `hq-atrac`.
+- Start with:
+```bash
+docker compose --profile hq-atrac up -d
+```
+- In **Settings -> Encoding**, use `Remote ATRAC Encoder` and set **Server Address** to `/atrac/` (or `https://<YOUR_SERVER_IP>:8443/atrac/`).
+- On ARM64 (Pi), enable Docker x86 emulation:
+```bash
+docker run --privileged --rm tonistiigi/binfmt --install amd64
+docker run --privileged --rm tonistiigi/binfmt --install i386
+```
+- Pi deploy scripts (`deploy-bpi.ps1` / `deploy_bpi.ps1`) now auto-enable this profile and binfmt handlers.
 
 ## Features Added
-*   **Remote Library Support**: Fully integrated with the WebMiniDisc Pro frontend.
-*   **Album Art**: Automatically extracts cover art from ID3/FLAC tags or looks for `cover.jpg` in folders.
-*   **Server-Side Transcoding**: High-quality ATRAC encoding is handled by the backend server using FFmpeg.
+- Remote library support integrated with WebMiniDisc Pro frontend.
+- Album art from embedded tags and local folder art (`cover.jpg`, `folder.jpg`, etc.).
+- Optional self-hosted ATRAC sidecar reverse-proxied behind `/atrac/`.
 
-## Important Note: WebUSB & HTTPS
-WebUSB (required to talk to your MiniDisc player) is only available in **secure contexts**.
-*   **Localhost**: works normally (`http://localhost:8443`).
-*   **IP Address**: If accessing via a server IP (e.g., `http://192.168.1.10:8443`), you must enable the `unsafely-treat-insecure-origin-as-secure` flag in Chrome/Edge:
-    1.  Go to `chrome://flags/#unsafely-treat-insecure-origin-as-secure`.
-    2.  Add `http://<YOUR_SERVER_IP>:8443` to the list.
-    3.  Relaunch the browser.
+## Important Note: WebUSB and HTTPS
+WebUSB (required for NetMD device access) works only in secure contexts.
+- `localhost` works directly.
+- For LAN IP access, trust your HTTPS cert or use browser secure-origin override flags for your host.

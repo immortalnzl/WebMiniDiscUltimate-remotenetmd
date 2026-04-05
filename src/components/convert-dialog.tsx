@@ -130,6 +130,12 @@ const useStyles = makeStyles()((theme) => ({
     showTracksOrderBtn: {
         marginLeft: theme.spacing(1),
     },
+    burnConfirmButton: {
+        minWidth: 132,
+        height: 44,
+        fontWeight: 700,
+        letterSpacing: 0.8,
+    },
     tracksOrderAccordion: {
         '&:before': {
             opacity: 0,
@@ -912,7 +918,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
     const dialogBody = (
         <React.Fragment>
             <DialogTitle id="convert-dialog-slide-title">Upload Settings</DialogTitle>
-            <DialogContent className={classes.dialogContent}>
+            <DialogContent className={classes.dialogContent} sx={props.inline ? { overflowY: 'visible' } : undefined}>
                 <div className={classes.formatAndTitle}>
                     <FormControl>
                         <Typography component="label" variant="caption" color="textSecondary">
@@ -1097,7 +1103,15 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
                     Reading Metadata...
                 </Typography>
                 {showTracks && (
-                    <Box className={classes.tracksOrderAccordionDetail} {...getRootProps()} style={{ outline: 'none' }}>
+                    <Box
+                        className={classes.tracksOrderAccordionDetail}
+                        {...getRootProps()}
+                        style={{
+                            outline: 'none',
+                            maxHeight: props.inline ? 'none' : undefined,
+                            overflow: props.inline ? 'visible' : undefined,
+                        }}
+                    >
                         <Toolbar variant="dense" className={classes.toolbarHighlight}>
                             {serviceRegistry.libraryService && (
                                 <IconButton
@@ -1190,11 +1204,20 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
                     </Button>
                 )}
                 <div className={classes.spacer}></div>
-                <Button onClick={handleClose} disabled={loadingMetadata}>
-                    Cancel
-                </Button>
-                <Button onClick={handleConvert} disabled={loadingMetadata || availableDurationUnits < 0 || isSelectedUnsupported}>
-                    Ok
+                {!props.inline && (
+                    <Button onClick={handleClose} disabled={loadingMetadata}>
+                        Cancel
+                    </Button>
+                )}
+                <Button
+                    onClick={handleConvert}
+                    disabled={loadingMetadata || availableDurationUnits < 0 || isSelectedUnsupported}
+                    variant={props.inline ? 'contained' : 'text'}
+                    color="primary"
+                    size={props.inline ? 'large' : 'medium'}
+                    className={cx({ [classes.burnConfirmButton]: props.inline })}
+                >
+                    {props.inline ? 'BURN' : 'Ok'}
                 </Button>
             </DialogActions>
         </React.Fragment>
