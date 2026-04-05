@@ -16,6 +16,7 @@ export interface ConvertDialogFeature {
         fullWidthTitle: string;
         duration: number;
         forcedEncoding: ForcedEncodingFormat;
+        selectedEncoding: ForcedEncodingFormat;
         bytesToSkip: number;
         artist?: string;
         album?: string;
@@ -52,6 +53,7 @@ const slice = createSlice({
                     fullWidthTitle: string;
                     duration: number;
                     forcedEncoding: ForcedEncodingFormat;
+                    selectedEncoding: ForcedEncodingFormat;
                     bytesToSkip: number;
                     artist?: string;
                     album?: string;

@@ -1,7 +1,7 @@
 import { AppDispatch, RootState } from './redux/store';
 import { Mutex } from 'async-mutex';
 import * as mm from 'music-metadata';
-import { Disc, Group, Track } from './services/interfaces/netmd';
+import { Codec, Disc, Group, Track } from './services/interfaces/netmd';
 import { createWorker } from '@ffmpeg/ffmpeg';
 import { ForcedEncodingFormat } from './redux/convert-dialog-feature';
 import { HiMDKBPSToFrameSize } from 'himd-js';
@@ -59,6 +59,7 @@ export type TitledFile = {
     title: string;
     fullWidthTitle: string;
     forcedEncoding: ForcedEncodingFormat;
+    selectedEncoding?: Codec | null;
     bytesToSkip: number;
     artist: string;
     album: string;

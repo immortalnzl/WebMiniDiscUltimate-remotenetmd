@@ -1487,8 +1487,9 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
                 if (f.forcedEncoding === null) {
                     // This is not an ATRAC file
                     converted[j] = new Promise(async (resolve, reject) => {
+                        const targetFormat = f.selectedEncoding ?? format;
                         let audioExportFormat: ExportParams['format'];
-                        switch (format.codec) {
+                        switch (targetFormat.codec) {
                             case 'SPS':
                             case 'SPM':
                                 audioExportFormat = {
@@ -1498,8 +1499,8 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
                                 break;
                             default:
                                 audioExportFormat = {
-                                    codec: format.codec,
-                                    bitrate: format.bitrate,
+                                    codec: targetFormat.codec,
+                                    bitrate: targetFormat.bitrate,
                                 };
                                 break;
                         }
@@ -1616,7 +1617,7 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
             } else {
                 try {
                     // SPS / SPM was filtered out before
-                    const formatOverride: Codec = (file.forcedEncoding as Codec | null) ?? format;
+                    const formatOverride: Codec = (file.forcedEncoding as Codec | null) ?? file.selectedEncoding ?? format;
                     await netmdService?.upload(
                         usesHiMDTitles ? { title, artist: file.artist, album: file.album } : halfWidthTitle,
                         fullWidthTitle,

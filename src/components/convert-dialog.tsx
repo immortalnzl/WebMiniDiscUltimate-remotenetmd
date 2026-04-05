@@ -135,6 +135,15 @@ const useStyles = makeStyles()((theme) => ({
         height: 44,
         fontWeight: 700,
         letterSpacing: 0.8,
+        color: '#fff',
+        backgroundColor: '#d32f2f',
+        '&:hover': {
+            backgroundColor: '#b71c1c',
+        },
+        '&.Mui-disabled': {
+            color: 'rgba(255,255,255,0.65)',
+            backgroundColor: 'rgba(211,47,47,0.45)',
+        },
     },
     tracksOrderAccordion: {
         '&:before': {
@@ -227,6 +236,7 @@ type FileWithMetadata = {
     artist: string;
     duration: number;
     forcedEncoding: ForcedEncodingFormat;
+    selectedEncoding: ForcedEncodingFormat;
     bytesToSkip: number;
 };
 
@@ -246,6 +256,20 @@ function createForcedEncodingText(selectedCodec: Codec, file: { forcedEncoding: 
         return '';
     }
     return remapTable[fullCodecName] ?? fullCodecName;
+}
+
+function createCodecOptionLabel(codec: Codec) {
+    if (codec.codec === 'AT3') {
+        if (codec.bitrate === 132 || codec.bitrate === 105) return 'LP2';
+        if (codec.bitrate === 66) return 'LP4';
+    }
+    if (codec.codec === 'A3+') {
+        return `Hi-MD ${codec.bitrate}kbps`;
+    }
+    if (codec.codec === 'SPS') return 'SP';
+    if (codec.codec === 'SPM') return 'MONO';
+    if (codec.codec === 'MP3') return `MP3 ${codec.bitrate}kbps`;
+    return `${codec.codec}${codec.bitrate ? ` ${codec.bitrate}kbps` : ''}`;
 }
 
 // `files` always appends to the list
@@ -319,6 +343,16 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
         if (!minidiscSpec) return true;
         return minidiscSpec.measurementUnits === 'frames';
     }, [minidiscSpec]);
+    const perTrackCodecOptions = useMemo(() => {
+        if (!minidiscSpec) return [] as Codec[];
+        const options: Codec[] = [];
+        for (const family of minidiscSpec.availableFormats) {
+            for (const bitrate of family.availableBitrates) {
+                options.push({ codec: family.codec, bitrate });
+            }
+        }
+        return options;
+    }, [minidiscSpec]);
 
     const loadMetadataFromFiles = useMemo(
         () =>
@@ -340,6 +374,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
                             // TODO: Should the local library allow upload of preencoded ATRAC files?
                             bytesToSkip: 0,
                             forcedEncoding: null,
+                            selectedEncoding: null,
                         });
                         continue;
                     } else {
@@ -384,6 +419,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
                                 file,
                                 ...metadata,
                                 forcedEncoding: forcedEncoding?.format ?? null,
+                                selectedEncoding: null,
                                 bytesToSkip: forcedEncoding?.headerLength ?? 0,
                             });
                         }
@@ -463,6 +499,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
                                 fullWidthSupport && deviceSupportsFullWidth && fullWidth !== halfAsFull ? fullWidth : '', // If there are no differences between half and full width, skip the full width
                             duration: file.duration,
                             forcedEncoding: file.forcedEncoding,
+                            selectedEncoding: file.selectedEncoding,
                             bytesToSkip: file.bytesToSkip,
                             album: file.album,
                             artist: file.artist,
@@ -594,7 +631,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
             if (!b.forcedEncoding || (b.forcedEncoding.codec === 'MP3' && currentlySelectedCodec.codec !== 'MP3')) {
                 // MP3 forcedEncoding only suggests the target bitrate when the user selects 'MP3' as the recording format
                 // MP3 can never be 'forced', like LP2 can f.ex.
-                return total + minidiscSpec.translateToDefaultMeasuringModeFrom(currentlySelectedCodec, b.duration);
+                    return total + minidiscSpec.translateToDefaultMeasuringModeFrom(b.selectedEncoding ?? currentlySelectedCodec, b.duration);
             }
             return total + minidiscSpec.translateToDefaultMeasuringModeFrom(b.forcedEncoding, b.duration);
         }, 0);
@@ -608,7 +645,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
             if (!b.forcedEncoding || (b.forcedEncoding.codec === 'MP3' && currentlySelectedCodec.codec !== 'MP3')) {
                 // MP3 forcedEncoding only suggests the target bitrate when the user selects 'MP3' as the recording format
                 // MP3 can never be 'forced', like LP2 can f.ex.
-                return total + minidiscSpec.translateToDefaultMeasuringModeFrom(currentlySelectedCodec, b.duration);
+                    return total + minidiscSpec.translateToDefaultMeasuringModeFrom(b.selectedEncoding ?? currentlySelectedCodec, b.duration);
             }
             const codec: Codec = {
                 bitrate: b.forcedEncoding.bitrate,
@@ -686,7 +723,10 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
             if(isUsingFrames) {
                 fileLength = file.duration;
             } else {
-                fileLength = minidiscSpec.translateToDefaultMeasuringModeFrom(file.forcedEncoding ?? currentlySelectedCodec, file.duration);
+                  fileLength = minidiscSpec.translateToDefaultMeasuringModeFrom(
+                      file.forcedEncoding ?? file.selectedEncoding ?? currentlySelectedCodec,
+                      file.duration
+                  );
             }
             current -= fileLength;
             const { halfWidth, fullWidth } = minidiscSpec.getCharactersForTitle({
@@ -720,7 +760,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
                         }
                         primary={`${file.fullWidthTitle && file.fullWidthTitle + ' / '}${file.title}`}
                         secondary={
-                            <span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                 {fileLengthPresentationFunction(fileLength)}
                                 {file.forcedEncoding && (
                                     <Tooltip title="Forced format - this file will be uploaded as-is. Recording mode will be disregarded for it">
@@ -728,6 +768,30 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
                                             &nbsp;{createForcedEncodingText(currentlySelectedCodec, file)}
                                         </span>
                                     </Tooltip>
+                                )}
+                                {!file.forcedEncoding && (
+                                    <FormControl size="small" sx={{ minWidth: 130 }}>
+                                        <Select
+                                            value={
+                                                file.selectedEncoding
+                                                    ? `${file.selectedEncoding.codec}:${file.selectedEncoding.bitrate}`
+                                                    : '__global__'
+                                            }
+                                            onChange={(ev) => handleChangeTrackEncoding(i, ev.target.value as string)}
+                                            input={<Input />}
+                                        >
+                                            <MenuItem value="__global__">
+                                                Global ({createCodecOptionLabel(currentlySelectedCodec)})
+                                            </MenuItem>
+                                            {perTrackCodecOptions
+                                                .filter((opt) => serviceRegistry.audioExportService?.getSupport(opt.codec) !== 'unsupported')
+                                                .map((opt) => (
+                                                    <MenuItem key={`track-enc-${i}-${opt.codec}-${opt.bitrate}`} value={`${opt.codec}:${opt.bitrate}`}>
+                                                        {createCodecOptionLabel(opt)}
+                                                    </MenuItem>
+                                                ))}
+                                        </Select>
+                                    </FormControl>
                                 )}
                             </span>
                         }
@@ -747,6 +811,8 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
         classes.nameNotFit,
         classes.forcedEncodingLabel,
         currentlySelectedCodec,
+        perTrackCodecOptions,
+        handleChangeTrackEncoding,
         minidiscSpec,
     ]);
 
@@ -782,12 +848,36 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
                     <TableCell>{file.album}</TableCell>
                     <TableCell>{file.artist}</TableCell>
                     <TableCell>
-                        {secondsToHumanReadable(file.duration)}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            {secondsToHumanReadable(file.duration)}
                         {file.forcedEncoding && (
                             <Tooltip title="Forced format - this file will be uploaded as-is. Recording mode will be disregarded for it">
                                 <span className={classes.forcedEncodingLabel}>&nbsp;{createForcedEncodingText(currentlySelectedCodec, file)}</span>
                             </Tooltip>
                         )}
+                            {!file.forcedEncoding && (
+                                <FormControl size="small" sx={{ minWidth: 130 }}>
+                                    <Select
+                                        value={
+                                            file.selectedEncoding
+                                                ? `${file.selectedEncoding.codec}:${file.selectedEncoding.bitrate}`
+                                                : '__global__'
+                                        }
+                                        onChange={(ev) => handleChangeTrackEncoding(i, ev.target.value as string)}
+                                        input={<Input />}
+                                    >
+                                        <MenuItem value="__global__">Global ({createCodecOptionLabel(currentlySelectedCodec)})</MenuItem>
+                                        {perTrackCodecOptions
+                                            .filter((opt) => serviceRegistry.audioExportService?.getSupport(opt.codec) !== 'unsupported')
+                                            .map((opt) => (
+                                                <MenuItem key={`himd-track-enc-${i}-${opt.codec}-${opt.bitrate}`} value={`${opt.codec}:${opt.bitrate}`}>
+                                                    {createCodecOptionLabel(opt)}
+                                                </MenuItem>
+                                            ))}
+                                    </Select>
+                                </FormControl>
+                            )}
+                        </span>
                     </TableCell>
                 </TableRow>
             );
@@ -806,6 +896,8 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
         classes.forcedEncodingLabel,
         minidiscSpec,
         currentlySelectedCodec,
+        perTrackCodecOptions,
+        handleChangeTrackEncoding,
     ]);
 
     // Add/Remove tracks
@@ -841,6 +933,29 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
 
     const dialogVisible = useShallowEqualSelector((state) => state.convertDialog.visible);
 
+    function handleChangeTrackEncoding(index: number, value: string) {
+        setFiles((prev) => {
+            const next = [...prev];
+            const track = next[index];
+            if (!track || track.forcedEncoding) return prev;
+            if (value === '__global__') {
+                next[index] = { ...track, selectedEncoding: null };
+                return next;
+            }
+            const [codec, bitrate] = value.split(':');
+            const parsedBitrate = parseInt(bitrate, 10);
+            if (!codec || Number.isNaN(parsedBitrate)) return prev;
+            next[index] = {
+                ...track,
+                selectedEncoding: {
+                    codec: codec as any,
+                    bitrate: parsedBitrate,
+                },
+            };
+            return next;
+        });
+    }
+
     const handleConvert = useCallback(() => {
         handleClose();
         setEnableReplayGain(false);
@@ -851,6 +966,7 @@ export const ConvertDialog = (props: { files: (File | AdaptiveFile)[]; inline?: 
                     file: files[i].file,
                     artist: n.artist ?? '',
                     album: n.album ?? '',
+                    selectedEncoding: n.selectedEncoding ?? null,
                     // Exception: If an MP3 file was selected, do not 'force' upload it - treat it merely as a suggestion for the bitrate
                     forcedEncoding: n.forcedEncoding?.codec === 'MP3' && currentlySelectedCodec.codec !== 'MP3' ? null : n.forcedEncoding,
                 })),
