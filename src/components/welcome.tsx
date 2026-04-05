@@ -13,6 +13,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import IconButton from '@mui/material/IconButton';
+import Button from '@mui/material/Button';
 
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -39,7 +40,10 @@ import { AboutDialog } from './about-dialog';
 
 import { actions as otherDialogActions } from '../redux/other-device-feature';
 import { actions as appActions } from '../redux/app-feature';
+import { actions as mainActions } from '../redux/main-feature';
 import { initializeParameters } from '../custom-parameters';
+import { DefaultMinidiscSpec } from '../services/interfaces/netmd';
+import serviceRegistry from '../services/registry';
 
 const useStyles = makeStyles()((theme) => ({
     main: {
@@ -193,6 +197,35 @@ export const Welcome = (props: {}) => {
         );
     };
 
+    const handleUseVirtualDisc = useCallback(() => {
+        serviceRegistry.netmdSpec = new DefaultMinidiscSpec();
+        dispatch(
+            batchActions([
+                appActions.setMainView('MAIN'),
+                appActions.setPairingFailed(false),
+                appActions.setPairingMessage(''),
+                mainActions.setDeviceName('Virtual MD Disc'),
+                mainActions.setDisc({
+                    title: '80min Disc',
+                    fullWidthTitle: '',
+                    writable: false,
+                    writeProtected: true,
+                    used: 0,
+                    left: 80 * 60,
+                    total: 80 * 60,
+                    trackCount: 0,
+                    groups: [{ index: 0, title: null, fullWidthTitle: null, tracks: [] }],
+                }),
+                mainActions.setDeviceStatus({
+                    discPresent: true,
+                    track: 0,
+                    time: { minute: 0, second: 0, frame: 0 },
+                    state: 'ready',
+                } as any),
+            ])
+        );
+    }, [dispatch]);
+
     return (
         <React.Fragment>
             <Box className={classes.headBox}>
@@ -222,6 +255,9 @@ export const Welcome = (props: {}) => {
                                 dropdownMapping={mapToEntry}
                                 loading={connectingInProgress}
                             />
+                            <Button size="small" onClick={handleUseVirtualDisc} className={classes.spacing}>
+                                Use Virtual MD Disc
+                            </Button>
 
                             <FormControl
                                 error={true}

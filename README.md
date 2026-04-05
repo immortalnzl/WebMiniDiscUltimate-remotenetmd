@@ -2,6 +2,10 @@
 
 This setup allows you to host WebMiniDisc Pro locally and access your music collection (e.g., from a NAS or server) directly within the web interface.
 
+## Credits
+This project is built on top of the excellent work by [Asivery](https://github.com/asivery/) and the original Web MiniDisc Pro contributors.
+Huge thanks to Asivery for creating and maintaining the core project that made this build possible.
+
 ## Quick Start
 
 1.  **Configure Music Source**:

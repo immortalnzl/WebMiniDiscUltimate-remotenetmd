@@ -16,6 +16,7 @@ import { actions as renameDialogActions, RenameType } from '../redux/rename-dial
 import { actions as dumpDialogActions } from '../redux/dump-dialog-feature';
 import { actions as appStateActions } from '../redux/app-feature';
 import { actions as contextMenuActions } from '../redux/context-menu-feature';
+import { actions as mainActions } from '../redux/main-feature';
 
 import { DeviceStatus } from 'netmd-js';
 import { control, openLocalLibrary } from '../redux/actions';
@@ -62,7 +63,7 @@ import Button from '@mui/material/Button';
 import { W95Main } from './win95/main';
 import { useMemo } from 'react';
 import { ChangelogDialog } from './changelog-dialog';
-import { getDefaultCodecName, Track } from '../services/interfaces/netmd';
+import { DefaultMinidiscSpec, getDefaultCodecName, Track } from '../services/interfaces/netmd';
 import { FactoryModeNoticeDialog } from './factory/factory-notice-dialog';
 import { FactoryModeProgressDialog } from './factory/factory-progress-dialog';
 import { SongRecognitionDialog } from './song-recognition-dialog';
@@ -169,6 +170,14 @@ const useStyles = makeStyles()((theme) => ({
     },
     clickableRemainingTime: {
         cursor: 'pointer',
+    },
+    connectFallback: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: theme.spacing(1),
+        paddingTop: theme.spacing(3),
     },
 }));
 
@@ -517,6 +526,36 @@ export const Main = (props: {
         dispatch(openLocalLibrary());
     }, [dispatch]);
 
+    const handleOpenConnect = useCallback(() => {
+        dispatch(appStateActions.setMainView('WELCOME'));
+    }, [dispatch]);
+
+    const handleUseVirtualDisc = useCallback(() => {
+        serviceRegistry.netmdSpec = new DefaultMinidiscSpec();
+        dispatch(
+            batchActions([
+                mainActions.setDeviceName('Virtual MD Disc'),
+                mainActions.setDisc({
+                    title: '80min Disc',
+                    fullWidthTitle: '',
+                    writable: false,
+                    writeProtected: true,
+                    used: 0,
+                    left: 80 * 60,
+                    total: 80 * 60,
+                    trackCount: 0,
+                    groups: [{ index: 0, title: null, fullWidthTitle: null, tracks: [] }],
+                }),
+                mainActions.setDeviceStatus({
+                    discPresent: true,
+                    track: 0,
+                    time: { minute: 0, second: 0, frame: 0 },
+                    state: 'ready',
+                } as any),
+            ])
+        );
+    }, [dispatch]);
+
     if (vintageMode) {
         const p = {
             disc,
@@ -852,7 +891,16 @@ export const Main = (props: {
                         ) : null}
                     </Box>
                 )
-            ) : null}
+            ) : (
+                <Box className={classes.connectFallback}>
+                    <Button variant="contained" color="primary" onClick={handleOpenConnect}>
+                        Connect
+                    </Button>
+                    <Button size="small" onClick={handleUseVirtualDisc}>
+                        Use Virtual MD Disc
+                    </Button>
+                </Box>
+            )}
             {deviceCapabilities.trackUpload && !isVirtualDisc ? (
                 <Fab color="primary" aria-label="add" className={classes.add} onClick={openUploadMenu}>
                     <AddIcon />
