@@ -14,11 +14,32 @@
 
 # misc
 .DS_Store
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 *.local
+*.tmp
+*.tar
+*.tar.gz
+*.zip
+*.exe
+
+# local agent/config secrets
+.claude/
+.node/
+
+# local deployment scripts with credentials
+deploy.ps1
+deploy_bpi.ps1
+deploy-bpi.ps1
+
+# local library/cache data
+backend/data/library.json
+backend/data/artwork_cache/
+backend/data/preview_cache/
+backend/__pycache__/
 
 npm-debug.log*
 yarn-debug.log*
