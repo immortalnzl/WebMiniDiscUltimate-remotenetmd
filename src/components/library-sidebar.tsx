@@ -264,7 +264,7 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
     }, [database, currentPath]);
 
     useEffect(() => {
-        const load = () => {
+        const loadAll = () => {
             const { libraryService } = serviceRegistry;
             if (libraryService) {
                 dispatch(loadLibraryDatabase());
@@ -273,8 +273,15 @@ export const MusicLibrarySidebar = ({ setUploadedFiles, isExpanded, onToggleExpa
                 dispatch(loadAlbums());
             }
         };
-        load();
-        const interval = setInterval(load, scanStatus?.scanning ? 3000 : 30000); 
+        const loadStatusOnly = () => {
+            const { libraryService } = serviceRegistry;
+            if (libraryService) {
+                dispatch(loadLibraryStatus());
+            }
+        };
+
+        loadAll();
+        const interval = setInterval(scanStatus?.scanning ? loadAll : loadStatusOnly, scanStatus?.scanning ? 3000 : 30000);
         return () => clearInterval(interval);
     }, [dispatch, scanStatus?.scanning]);
 

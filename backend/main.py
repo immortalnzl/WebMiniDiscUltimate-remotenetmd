@@ -43,6 +43,9 @@ _artist_dirs: Dict[str, List[str]] = {}
 _artist_fallback_file: Dict[str, str] = {}
 _artist_art_miss_until: Dict[str, float] = {}
 _year_lookup_cache: Dict[str, Optional[str]] = {}
+_track_art_by_title: Dict[str, str] = {}
+_track_art_by_artist_title: Dict[str, str] = {}
+_track_art_by_album_title: Dict[str, str] = {}
 _status = {
     "scanning": False,
     "files_found": 0,
@@ -115,9 +118,34 @@ def save_db_cache_to_disk(data: Dict[str, Any]):
 
 def rebuild_artist_indexes_from_db(db: Dict[str, Any]):
     global _artist_dirs, _artist_fallback_file, _artist_art_miss_until
+    global _track_art_by_title, _track_art_by_artist_title, _track_art_by_album_title
     _artist_dirs = {}
     _artist_fallback_file = {}
     _artist_art_miss_until = {}
+    _track_art_by_title = {}
+    _track_art_by_artist_title = {}
+    _track_art_by_album_title = {}
+
+    def norm_text(value: str) -> str:
+        return " ".join((value or "").strip().lower().split())
+
+    def add_track_index(rel_file: str, artist: str, album: str, title: str):
+        rel_file = rel_file.replace("\\", "/").strip("/")
+        if not rel_file:
+            return
+        t = norm_text(title)
+        a = norm_text(artist)
+        al = norm_text(album)
+        if t and t not in _track_art_by_title:
+            _track_art_by_title[t] = rel_file
+        if t and a:
+            k = f"{a}|{t}"
+            if k not in _track_art_by_artist_title:
+                _track_art_by_artist_title[k] = rel_file
+        if t and al:
+            k = f"{al}|{t}"
+            if k not in _track_art_by_album_title:
+                _track_art_by_album_title[k] = rel_file
 
     def add_artist_dir(artist: str, rel_dir: str):
         if not artist:
@@ -139,9 +167,12 @@ def rebuild_artist_indexes_from_db(db: Dict[str, Any]):
                     rel_file = "/".join(parts + [key])
                     rel_dir = "/".join(parts)
                     artist = value.get("artist", "")
+                    album = value.get("album", "")
+                    title = value.get("title", key)
                     add_artist_dir(artist, rel_dir)
                     if artist and artist not in _artist_fallback_file:
                         _artist_fallback_file[artist] = rel_file
+                    add_track_index(rel_file, artist, album, title)
                 else:
                     walk(value, parts + [key])
 
@@ -257,6 +288,36 @@ def get_albums():
                     collect(v)
     collect(_db_cache)
     return sorted(list(albums.values()), key=lambda x: (x["artist"], x["album"]))
+
+@app.get("/api/find_artwork")
+def find_artwork(
+    title: str = Query(""),
+    artist: str = Query(""),
+    album: str = Query(""),
+    size: Optional[int] = Query(None),
+):
+    def norm_text(value: str) -> str:
+        return " ".join((value or "").strip().lower().split())
+
+    title_n = norm_text(title)
+    artist_n = norm_text(artist)
+    album_n = norm_text(album)
+    rel_path: Optional[str] = None
+
+    if title_n and artist_n:
+        rel_path = _track_art_by_artist_title.get(f"{artist_n}|{title_n}")
+    if not rel_path and title_n and album_n:
+        rel_path = _track_art_by_album_title.get(f"{album_n}|{title_n}")
+    if not rel_path and title_n:
+        rel_path = _track_art_by_title.get(title_n)
+
+    if not rel_path:
+        raise HTTPException(status_code=404, detail="Artwork not found")
+
+    url = f"api/get_artwork?file_name={quote(rel_path, safe='/')}"
+    if size:
+        url += f"&size={size}"
+    return {"artwork": url, "file_name": rel_path}
 
 @app.get("/api/lookup_year")
 def lookup_year(artist: str = Query(""), album: str = Query(""), title: str = Query("")):
@@ -794,19 +855,25 @@ def resize_image_file(path: str, size: int) -> bytes:
     return proc.stdout
 
 def file_response_with_optional_resize(path: str, size: Optional[int], key_hint: str):
+    try:
+        stat = os.stat(path)
+        stable_key_hint = f"{key_hint}:{stat.st_mtime_ns}:{stat.st_size}"
+    except Exception:
+        stable_key_hint = key_hint
+    cache_headers = {"Cache-Control": "public, max-age=86400"}
     if not size:
-        return FileResponse(path)
-    key = hashlib.sha1(f"{key_hint}:{size}".encode()).hexdigest()
+        return FileResponse(path, headers=cache_headers)
+    key = hashlib.sha1(f"{stable_key_hint}:{size}".encode()).hexdigest()
     cache_path = ARTWORK_CACHE_DIR / f"{key}.jpg"
     if cache_path.exists():
-        return FileResponse(str(cache_path))
+        return FileResponse(str(cache_path), headers=cache_headers)
     try:
         resized = resize_image_file(path, size)
         with open(cache_path, "wb") as f:
             f.write(resized)
-        return FileResponse(str(cache_path))
+        return FileResponse(str(cache_path), headers=cache_headers)
     except Exception:
-        return FileResponse(path)
+        return FileResponse(path, headers=cache_headers)
 
 @app.get("/api/get_artwork")
 def get_artwork(file_name: str = Query(...), size: Optional[int] = Query(None)):
@@ -837,19 +904,40 @@ def get_artwork(file_name: str = Query(...), size: Optional[int] = Query(None)):
                 tag_bytes = pic.data
                 tag_mime = pic.mime
         if tag_bytes:
+            cache_headers = {"Cache-Control": "public, max-age=86400"}
+            try:
+                src_stat = os.stat(full_path)
+                source_hint = f"{full_path}:{src_stat.st_mtime_ns}:{src_stat.st_size}"
+            except Exception:
+                source_hint = full_path
             if not size:
-                return StreamingResponse(io.BytesIO(tag_bytes), media_type=tag_mime or "image/jpeg")
-            key = hashlib.sha1(f"{full_path}:{size}:tag".encode()).hexdigest()
+                ext = "jpg"
+                if tag_mime and "png" in tag_mime.lower():
+                    ext = "png"
+                elif tag_mime and "webp" in tag_mime.lower():
+                    ext = "webp"
+                key = hashlib.sha1(f"{source_hint}:tag-original".encode()).hexdigest()
+                cache_path = ARTWORK_CACHE_DIR / f"{key}.{ext}"
+                if not cache_path.exists():
+                    try:
+                        with open(cache_path, "wb") as f:
+                            f.write(tag_bytes)
+                    except Exception:
+                        pass
+                if cache_path.exists():
+                    return FileResponse(str(cache_path), headers=cache_headers)
+                return StreamingResponse(io.BytesIO(tag_bytes), media_type=tag_mime or "image/jpeg", headers=cache_headers)
+            key = hashlib.sha1(f"{source_hint}:{size}:tag".encode()).hexdigest()
             cache_path = ARTWORK_CACHE_DIR / f"{key}.jpg"
             if cache_path.exists():
-                return FileResponse(str(cache_path))
+                return FileResponse(str(cache_path), headers=cache_headers)
             try:
                 resized = resize_image_bytes(tag_bytes, size)
                 with open(cache_path, "wb") as f:
                     f.write(resized)
-                return FileResponse(str(cache_path))
+                return FileResponse(str(cache_path), headers=cache_headers)
             except Exception:
-                return StreamingResponse(io.BytesIO(tag_bytes), media_type=tag_mime or "image/jpeg")
+                return StreamingResponse(io.BytesIO(tag_bytes), media_type=tag_mime or "image/jpeg", headers=cache_headers)
     except Exception:
         pass
         

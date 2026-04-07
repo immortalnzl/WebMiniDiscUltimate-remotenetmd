@@ -5,7 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
 import LinearProgress from '@mui/material/LinearProgress';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { alpha, createTheme, ThemeProvider } from '@mui/material/styles';
 import { makeStyles } from 'tss-react/mui';
 
 import Paper from '@mui/material/Paper';
@@ -229,24 +229,81 @@ const lightTheme = createTheme({
             disabled: 'rgba(0, 0, 0, 0.38)',
         },
         background: {
-            paper: '#fff',
-            default: '#fafafa',
+            paper: '#ffffff',
+            default: '#f3f5f7',
         },
+        divider: '#d7dce2',
         action: {
             active: 'rgba(0, 0, 0, 0.54)',
-            hover: 'rgba(0, 0, 0, 0.04)',
-            hoverOpacity: 0.04,
-            selected: 'rgba(0, 0, 0, 0.08)',
-            selectedOpacity: 0.08,
+            hover: 'rgba(15, 23, 42, 0.06)',
+            hoverOpacity: 0.06,
+            selected: 'rgba(15, 23, 42, 0.12)',
+            selectedOpacity: 0.12,
             disabled: 'rgba(0, 0, 0, 0.26)',
             disabledBackground: 'rgba(0, 0, 0, 0.12)',
             disabledOpacity: 0.38,
-            focus: 'rgba(0, 0, 0, 0.12)',
+            focus: 'rgba(15, 23, 42, 0.12)',
             focusOpacity: 0.12,
-            activatedOpacity: 0.12,
+            activatedOpacity: 0.16,
         },
     },
-    ...themeCommons,
+    components: {
+        ...themeCommons.components,
+        MuiPaper: {
+            ...themeCommons.components.MuiPaper,
+            styleOverrides: {
+                ...(themeCommons.components.MuiPaper.styleOverrides || {}),
+                root: {
+                    border: `1px solid ${alpha('#0f172a', 0.12)}`,
+                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.08), 0 8px 24px rgba(15, 23, 42, 0.08)',
+                },
+            },
+        },
+        MuiCard: {
+            styleOverrides: {
+                root: {
+                    border: `1px solid ${alpha('#0f172a', 0.12)}`,
+                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.08), 0 10px 26px rgba(15, 23, 42, 0.08)',
+                    backgroundImage: 'none',
+                },
+            },
+        },
+        MuiAppBar: {
+            styleOverrides: {
+                root: {
+                    backgroundColor: '#f6f8fb',
+                    borderBottom: `1px solid ${alpha('#0f172a', 0.12)}`,
+                    color: 'rgba(0, 0, 0, 0.84)',
+                },
+            },
+        },
+        MuiTabs: {
+            styleOverrides: {
+                root: {
+                    backgroundColor: '#f8fafc',
+                    borderBottom: `1px solid ${alpha('#0f172a', 0.12)}`,
+                },
+            },
+        },
+        MuiLinearProgress: {
+            styleOverrides: {
+                root: {
+                    borderRadius: 999,
+                    backgroundColor: alpha('#0f172a', 0.08),
+                },
+                bar: {
+                    borderRadius: 999,
+                },
+            },
+        },
+        MuiDivider: {
+            styleOverrides: {
+                root: {
+                    borderColor: alpha('#0f172a', 0.12),
+                },
+            },
+        },
+    },
 });
 
 const InternalApp = () => {
