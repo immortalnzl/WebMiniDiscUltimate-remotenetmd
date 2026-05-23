@@ -1616,7 +1616,7 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
             }
         };
 
-        function showFinishedNotificationIfNeeded() {
+        const showFinishedNotificationIfNeeded = () => {
             const { notifyWhenFinished, hasNotificationSupport } = getState().appState;
             if (!hasNotificationSupport || !notifyWhenFinished) {
                 return;
