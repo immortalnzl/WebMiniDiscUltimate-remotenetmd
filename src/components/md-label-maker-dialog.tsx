@@ -22,6 +22,7 @@ import {
     Print as PrintIcon,
     ContentCopy as ContentCopyIcon,
     Save as SaveIcon,
+    Person as PersonIcon,
 } from '@mui/icons-material';
 import miniDiscLogo from '../images/minidisc_logo_wiki.svg';
 
@@ -65,8 +66,10 @@ const withArtworkSizeHint = (src: string, size: number): string => {
         const isArtworkApi =
             u.pathname.includes('/api/get_artwork') ||
             u.pathname.includes('/api/get_artwork_cached') ||
+            u.pathname.includes('/api/get_artist_art') ||
             u.pathname.endsWith('api/get_artwork') ||
-            u.pathname.endsWith('api/get_artwork_cached');
+            u.pathname.endsWith('api/get_artwork_cached') ||
+            u.pathname.endsWith('api/get_artist_art');
         if (!isArtworkApi) return normalized;
         if (!u.searchParams.has('size')) {
             u.searchParams.set('size', `${Math.max(256, Math.min(1600, Math.round(size)))}`);
@@ -485,6 +488,17 @@ export const MDLabelMakerDialog = ({
                             <Button component="label" variant="outlined" startIcon={<FileUploadIcon />}>
                                 Upload Artwork
                                 <input hidden type="file" accept="image/*" onChange={onUploadFile} />
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                startIcon={<PersonIcon />}
+                                disabled={!artist.trim()}
+                                title={artist.trim() ? `Use artist image for "${artist.trim()}"` : 'Enter an artist name first'}
+                                onClick={() => {
+                                    setSourceImage(`/api/get_artist_art?artist=${encodeURIComponent(artist.trim())}&fallback_album=true`);
+                                }}
+                            >
+                                Artist Image
                             </Button>
                             <Button variant="outlined" onClick={newEntry}>New</Button>
                         </Stack>

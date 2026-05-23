@@ -50,9 +50,11 @@ import ArchiveIcon from '@mui/icons-material/Archive';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HomeRepairServiceIcon from '@mui/icons-material/HomeRepairService';
-import DiscFullIcon from '@mui/icons-material/DiscFull';
 
 import { Capability, ExploitCapability } from '../../services/interfaces/netmd';
+import type { AppDispatch, RootState } from '../../redux/store';
+
+type FactoryThunk = (dispatch: AppDispatch, getState: () => RootState) => Promise<unknown>;
 
 const useStyles = makeStyles()(theme => ({
     listItemIcon: {
@@ -64,12 +66,13 @@ const useStyles = makeStyles()(theme => ({
     },
 }));
 
-export const FactoryTopMenu = function(props: { onClick?: () => void }) {
+export const FactoryTopMenu = function() {
     const { classes } = useStyles();
     const dispatch = useDispatch();
 
     const { exploitCapabilities, spUploadSpeedupActive, deviceDiscSwapDetectionDisabled } = useShallowEqualSelector(state => state.factory);
     const { deviceCapabilities } = useShallowEqualSelector(state => state.main);
+    const canAccessEEPROM = exploitCapabilities.includes(ExploitCapability.eepromAccess);
 
     const githubLinkRef = React.useRef<null | HTMLAnchorElement>(null);
     const helpLinkRef = React.useRef<null | HTMLAnchorElement>(null);
@@ -103,6 +106,19 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
         handleMenuClose();
     }, [setSubmenuAnchorEl, handleMenuClose]);
 
+    const dispatchAsyncThunk = useCallback(
+        async (thunk: FactoryThunk) => {
+            try {
+                await dispatch(thunk);
+                return true;
+            } catch (err) {
+                console.error(err);
+                return false;
+            }
+        },
+        [dispatch]
+    );
+
     const handleShowSettings = useCallback(() => {
         dispatch(appActions.showSettingsDialog(true));
         handleMenuClose();
@@ -117,18 +133,18 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
         (event: React.ChangeEvent<HTMLInputElement>) => {
             const file = event.target.files?.[0];
             event.target.value = '';
-            if (file) dispatch(uploadToc(file));
+            if (file) void dispatchAsyncThunk(uploadToc(file));
         },
-        [dispatch]
+        [dispatchAsyncThunk]
     );
 
     const handleEEPROMRestore = useCallback(
         (event: React.ChangeEvent<HTMLInputElement>) => {
             const file = event.target.files?.[0];
             event.target.value = '';
-            if (file) dispatch(restoreEEPROMBackup(file));
+            if (file) void dispatchAsyncThunk(restoreEEPROMBackup(file));
         },
-        [dispatch]
+        [dispatchAsyncThunk]
     );
 
     const handleGithubLink = useCallback(
@@ -156,9 +172,9 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
     );
 
     const handleFactoryRefresh = useCallback(() => {
-        dispatch(readToc());
+        void dispatchAsyncThunk(readToc());
         handleMenuClose();
-    }, [dispatch, handleMenuClose]);
+    }, [dispatchAsyncThunk, handleMenuClose]);
 
     const handleEditOtherToCValues = useCallback(() => {
         dispatch(factoryEditOtherValuesDialogActions.setVisible(true));
@@ -166,19 +182,19 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
     }, [dispatch, handleMenuClose]);
 
     const handleReadRAM = useCallback(() => {
-        dispatch(downloadRam());
+        void dispatchAsyncThunk(downloadRam());
         handleMenuClose();
-    }, [dispatch, handleMenuClose]);
+    }, [dispatchAsyncThunk, handleMenuClose]);
 
     const handleReadFirmware = useCallback(() => {
-        dispatch(downloadRom());
+        void dispatchAsyncThunk(downloadRom());
         handleMenuClose();
-    }, [dispatch, handleMenuClose]);
+    }, [dispatchAsyncThunk, handleMenuClose]);
 
     const handleBackupEEPROM = useCallback(() => {
-        dispatch(downloadEEPROMBackup());
+        void dispatchAsyncThunk(downloadEEPROMBackup());
         handleMenuClose();
-    }, [dispatch, handleMenuClose]);
+    }, [dispatchAsyncThunk, handleMenuClose]);
 
     const handleRestoreEEPROM = useCallback(() => {
         hiddenEEPROMFileInputRef.current?.click();
@@ -186,9 +202,9 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
     }, [hiddenEEPROMFileInputRef, handleMenuClose]);
 
     const handleDownloadTOC = useCallback(() => {
-        dispatch(downloadToc());
+        void dispatchAsyncThunk(downloadToc());
         handleMenuClose();
-    }, [dispatch, handleMenuClose]);
+    }, [dispatchAsyncThunk, handleMenuClose]);
 
     const handleUploadTOC = useCallback(() => {
         hiddenTOCFileInputRef.current?.click();
@@ -196,45 +212,48 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
     }, [hiddenTOCFileInputRef, handleMenuClose]);
 
     const handlePlayTetris = useCallback(() => {
-        dispatch(runTetris());
-        dispatch(appActions.setMainView('WELCOME'));
-        handleMenuClose();
-    }, [dispatch, handleMenuClose]);
+        void (async () => {
+            if (await dispatchAsyncThunk(runTetris())) {
+                dispatch(appActions.setMainView('WELCOME'));
+                handleMenuClose();
+            }
+        })();
+    }, [dispatch, dispatchAsyncThunk, handleMenuClose]);
 
     const handleArchiveDisc = useCallback(() => {
-        dispatch(archiveDisc());
+        void dispatchAsyncThunk(archiveDisc());
         handleSubmenuClose();
-    }, [dispatch, handleSubmenuClose]);
+    }, [dispatchAsyncThunk, handleSubmenuClose]);
 
     const handleStripSCMS = useCallback(() => {
-        dispatch(stripSCMS());
+        void dispatchAsyncThunk(stripSCMS());
         handleSubmenuClose();
-    }, [dispatch, handleSubmenuClose]);
+    }, [dispatchAsyncThunk, handleSubmenuClose]);
 
     const handleAllUnprotect = useCallback(() => {
-        dispatch(stripTrProtect());
+        void dispatchAsyncThunk(stripTrProtect());
         handleSubmenuClose();
-    }, [dispatch, handleSubmenuClose]);
+    }, [dispatchAsyncThunk, handleSubmenuClose]);
 
     const handleEnterHiMDUnrestrictedMode = useCallback(() => {
-        dispatch(enterHiMDUnrestrictedMode());
+        void dispatchAsyncThunk(enterHiMDUnrestrictedMode());
         handleSubmenuClose();
-    }, [dispatch, handleSubmenuClose]);
+    }, [dispatchAsyncThunk, handleSubmenuClose]);
 
     const handleToggleSPUploadSpeedup = useCallback(() => {
-        dispatch(toggleSPUploadSpeedup());
+        void dispatchAsyncThunk(toggleSPUploadSpeedup());
         handleMenuClose();
-    }, [dispatch, handleMenuClose]);
+    }, [dispatchAsyncThunk, handleMenuClose]);
 
     const handleToggleDiscSwapDetection = useCallback(() => {
-        dispatch(toggleDiscSwapDetection());
+        void dispatchAsyncThunk(toggleDiscSwapDetection());
         handleMenuClose();
-    }, [dispatch, handleMenuClose]);
+    }, [dispatchAsyncThunk, handleMenuClose]);
 
     const handleEnterServiceMode = useCallback(() => {
-        dispatch(enterServiceMode());
+        void dispatchAsyncThunk(enterServiceMode());
         handleMenuClose();
-    }, [dispatch, handleMenuClose]);
+    }, [dispatchAsyncThunk, handleMenuClose]);
 
     const menuItems = [];
     menuItems.push(
@@ -295,22 +314,24 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
             <ListItemText>Read Firmware</ListItemText>
         </MenuItem>
     );
-    menuItems.push(
-        <MenuItem key="backupEEPROM" onClick={handleBackupEEPROM}>
-            <ListItemIcon className={classes.listItemIcon}>
-                <GetAppIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Backup EEPROM</ListItemText>
-        </MenuItem>
-    );
-    menuItems.push(
-        <MenuItem key="restoreEEPROM" onClick={handleRestoreEEPROM}>
-            <ListItemIcon className={classes.listItemIcon}>
-                <PublishIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Restore EEPROM</ListItemText>
-        </MenuItem>
-    );
+    if (canAccessEEPROM) {
+        menuItems.push(
+            <MenuItem key="backupEEPROM" onClick={handleBackupEEPROM}>
+                <ListItemIcon className={classes.listItemIcon}>
+                    <GetAppIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Backup EEPROM</ListItemText>
+            </MenuItem>
+        );
+        menuItems.push(
+            <MenuItem key="restoreEEPROM" onClick={handleRestoreEEPROM}>
+                <ListItemIcon className={classes.listItemIcon}>
+                    <PublishIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Restore EEPROM</ListItemText>
+            </MenuItem>
+        );
+    }
     menuItems.push(<Divider key="feature-divider-2" />);
     menuItems.push(
         <MenuItem key="downloadTOC" onClick={handleDownloadTOC}>

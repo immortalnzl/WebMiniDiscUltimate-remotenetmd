@@ -54,6 +54,9 @@ export const slice = createSlice({
     initialState,
     reducers: {
         setVisible: (state, action: PayloadAction<boolean>) => {
+            if (!action.payload) {
+                Object.assign(state, initialState);
+            }
             state.visible = action.payload;
         },
         setWriteProgress: (state, action: PayloadAction<{ written: number; encrypted: number; total: number; timestamp?: number }>) => {
@@ -121,7 +124,9 @@ export const selectAggregateUploadProgress = (state: RootState) => {
     const completedTracks = Math.floor(transferUnits);
     const elapsedMs = startedAt !== null && updatedAt !== null ? Math.max(0, updatedAt - startedAt) : 0;
     const estimatedRemainingMs =
-        completedUnits > 0 && elapsedMs > 0 ? Math.ceil((elapsedMs * (totalUnits - completedUnits)) / completedUnits) : null;
+        trackTotal > 0 && totalUnits > 0 && completedUnits > 0 && elapsedMs > 0
+            ? Math.ceil((elapsedMs * (totalUnits - completedUnits)) / completedUnits)
+            : null;
 
     return {
         completedTracks,

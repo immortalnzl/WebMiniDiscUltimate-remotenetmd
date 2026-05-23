@@ -29,7 +29,17 @@ const dispatchFactoryErrorDialog = (dispatch: AppDispatch, err: unknown, fallbac
 };
 
 const resetFactoryOperationUi = (dispatch: AppDispatch) =>
-    dispatch(batchActions([appStateActions.setLoading(false), factoryProgressDialogActions.setVisible(false)]));
+    dispatch(
+        batchActions([
+            appStateActions.setLoading(false),
+            factoryProgressDialogActions.setVisible(false),
+            factoryProgressDialogActions.setProgress({
+                current: 0,
+                total: 0,
+                additionalInfo: '',
+            }),
+        ])
+    );
 
 export function initializeFactoryMode() {
     return async function(dispatch: AppDispatch) {
@@ -44,6 +54,7 @@ export function initializeFactoryMode() {
             }
         } catch (err) {
             dispatchFactoryErrorDialog(dispatch, err, 'Factory mode initialization failed.');
+            throw err;
         } finally {
             resetFactoryOperationUi(dispatch);
         }
@@ -81,7 +92,12 @@ export function readToc() {
 
 export function editFragmentMode(index: number, mode: number) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        const toc = JSON.parse(JSON.stringify(getState().factory.toc));
+        const currentToc = getState().factory.toc;
+        if (!currentToc) {
+            dispatchFactoryErrorDialog(dispatch, new Error('No TOC loaded. Read the TOC before editing it.'), 'TOC edit failed.');
+            return;
+        }
+        const toc = JSON.parse(JSON.stringify(currentToc));
         if (toc.trackFragmentList[index].mode !== mode) {
             dispatch(factoryActions.setModified(true));
         }
@@ -94,7 +110,8 @@ export function writeModifiedTOC() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
         try {
             dispatch(appStateActions.setLoading(true));
-            const toc = getState().factory.toc!;
+            const toc = getState().factory.toc;
+            if (!toc) throw new Error('No TOC loaded. Read the TOC before writing it.');
             const sectors = reconstructTOC(toc, false);
             for (let i = 0; i < 4; i++) {
                 await serviceRegistry.netmdFactoryService!.writeUTOCSector(i, sectors[i]!);
@@ -110,8 +127,16 @@ export function writeModifiedTOC() {
 }
 
 export function runTetris() {
-    return async function(dispatch: AppDispatch, getState: () => RootState) {
-        await serviceRegistry.netmdFactoryService!.runTetris();
+    return async function(dispatch: AppDispatch) {
+        try {
+            dispatch(appStateActions.setLoading(true));
+            await serviceRegistry.netmdFactoryService!.runTetris();
+        } catch (err) {
+            dispatchFactoryErrorDialog(dispatch, err, 'Tetris exploit failed.');
+            throw err;
+        } finally {
+            resetFactoryOperationUi(dispatch);
+        }
     };
 }
 
@@ -163,6 +188,11 @@ export function downloadRom() {
                     factoryProgressDialogActions.setDetails({
                         name: 'Transferring Firmware',
                         units: 'bytes',
+                    }),
+                    factoryProgressDialogActions.setProgress({
+                        current: 0,
+                        total: 0,
+                        additionalInfo: '',
                     }),
                     factoryProgressDialogActions.setCanBeCancelled(false),
                     factoryProgressDialogActions.setVisible(true),
@@ -221,7 +251,9 @@ export function downloadToc(callback: (blob: Blob, name: string) => void = downl
                 dispatch(factoryProgressDialogActions.setProgress({ current: i, total: 6 }));
                 readSlices.push(await serviceRegistry.netmdFactoryService!.readUTOCSector(i));
             }
-            const fileName = `toc_${getTitleByTrackNumber(getState().factory.toc!, 0 /* Disc */)}.bin`;
+            const toc = getState().factory.toc;
+            const discTitle = toc ? getTitleByTrackNumber(toc, 0 /* Disc */) : getState().main.deviceName || 'disc';
+            const fileName = `toc_${discTitle}.bin`;
             callback(new Blob([concatUint8Arrays(...readSlices)]), fileName);
         } catch (err) {
             dispatchFactoryErrorDialog(dispatch, err, 'TOC download failed.');
@@ -232,7 +264,7 @@ export function downloadToc(callback: (blob: Blob, name: string) => void = downl
 }
 
 export function uploadToc(file: File) {
-    return async function(dispatch: AppDispatch, getState: () => RootState) {
+    return async function(dispatch: AppDispatch) {
         try {
             if (file.size !== 2352 * 6) {
                 window.alert('Not a valid TOC file');
@@ -354,9 +386,11 @@ let badSectorPromise: ((a: { response: BadSectorResponse; rememberForTheRestOfDo
 let sessionStoredBadSectorHandling: null | BadSectorResponse = null;
 
 export function reportBadSectorReponse(response: BadSectorResponse, rememberForTheRestOfDownload: boolean, rememberForTheRestOfSession: boolean) {
-    return async function(dispatch: AppDispatch, getState: () => RootState) {
+    return async function(dispatch: AppDispatch) {
         if (!badSectorPromise) {
-            throw new Error('Invalid state!');
+            console.warn('Ignoring bad sector response without a pending request.');
+            dispatch(factoryBadSectorDialogActions.setVisible(false));
+            return;
         }
         badSectorPromise({
             response,
@@ -374,49 +408,32 @@ export function exploitDownloadTracks(
     callback: (blob: Blob, name: string) => void = downloadBlob
 ) {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        // Verify if there even exists a track of that number
-        const disc = getState().main.disc!;
-        const useSlowerExploit = getState().appState.factoryModeUseSlowerExploit;
-        const nerawDownload = getState().appState.factoryModeNERAWDownload;
-        const tracks = getTracks(disc);
+        let timeout: ReturnType<typeof setTimeout> | null = null;
+        let downloadPrepared = false;
         try {
-            await serviceRegistry.netmdService!.stop();
-        } catch (ex) {
-            /* Ignore */
-        }
+            // Verify if there even exists a track of that number
+            const disc = getState().main.disc!;
+            const useSlowerExploit = getState().appState.factoryModeUseSlowerExploit;
+            const nerawDownload = getState().appState.factoryModeNERAWDownload;
+            const tracks = getTracks(disc);
+            try {
+                await serviceRegistry.netmdService!.stop();
+            } catch (ex) {
+                /* Ignore */
+            }
 
-        if (nerawDownload && convertOutputToWav) {
-            alert('Cannot convert to WAV and use NERAW files at the same time!');
-            return;
-        }
-
-        dispatch(
-            batchActions([
-                factoryProgressDialogActions.setVisible(true),
-                factoryProgressDialogActions.setCanBeCancelled(true),
-                factoryProgressDialogActions.setDetails({
-                    name: 'Initializing',
-                    units: '',
-                }),
-                factoryProgressDialogActions.setProgress({
-                    current: -1,
-                    total: 0,
-                    additionalInfo: 'Uploading code...',
-                }),
-            ])
-        );
-        await serviceRegistry.netmdFactoryService!.prepareDownload(useSlowerExploit);
-        for (const trackIndex of trackIndexes) {
-            if (trackIndex >= disc.trackCount) {
-                window.alert("This track does not exist. Make sure you've read the instructions on how to use the homebrew mode.");
+            if (nerawDownload && convertOutputToWav) {
+                alert('Cannot convert to WAV and use NERAW files at the same time!');
                 return;
             }
-            const track = tracks.find(n => n.index === trackIndex)!;
+
             dispatch(
                 batchActions([
+                    factoryProgressDialogActions.setVisible(true),
+                    factoryProgressDialogActions.setCanBeCancelled(true),
                     factoryProgressDialogActions.setDetails({
-                        name: `Transferring track ${trackIndex + 1}`,
-                        units: 'sectors',
+                        name: 'Initializing',
+                        units: '',
                     }),
                     factoryProgressDialogActions.setProgress({
                         current: -1,
@@ -425,68 +442,102 @@ export function exploitDownloadTracks(
                     }),
                 ])
             );
-
-            let timeout: ReturnType<typeof setTimeout> | null = null;
-
-            let storedBadSectorHandling: null | BadSectorResponse = null;
-
-            let trackData = await serviceRegistry.netmdFactoryService!.exploitDownloadTrack(
-                trackIndex,
-                nerawDownload,
-                ({ total, read, action, sector }: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => {
-                    if (timeout !== null) clearTimeout(timeout);
-                    timeout = setTimeout(() => {
-                        dispatch(
-                            factoryProgressDialogActions.setProgress({
-                                current: Math.min(read, total),
-                                total: total,
-                                additionalInfo: {
-                                    SEEK: 'Seeking...',
-                                    CHUNK: 'Receiving...',
-                                    READ: `Reading sector ${sector!}...`,
-                                }[action],
-                            })
-                        );
-                    }, 20);
-                },
-                {
-                    shouldCancelImmediately: () => getState().factoryProgressDialog.cancelled,
-                    handleBadSector: async (address: string, count: number, seconds: number) => {
-                        if (sessionStoredBadSectorHandling !== null) return sessionStoredBadSectorHandling;
-                        if (storedBadSectorHandling !== null) return storedBadSectorHandling;
-                        dispatch(
-                            batchActions([
-                                factoryBadSectorDialogActions.setAddress(address),
-                                factoryBadSectorDialogActions.setSeconds(seconds),
-                                factoryBadSectorDialogActions.setCount(count),
-                                factoryBadSectorDialogActions.setVisible(true),
-                            ])
-                        );
-                        const result = await new Promise<{
-                            response: BadSectorResponse;
-                            rememberForTheRestOfDownload: boolean;
-                            rememberForTheRestOfSession: boolean;
-                        }>(res => (badSectorPromise = res));
-                        if (result.rememberForTheRestOfDownload) {
-                            storedBadSectorHandling = result.response;
-                        }
-                        if (result.rememberForTheRestOfSession) {
-                            sessionStoredBadSectorHandling = result.response;
-                        }
-                        return result.response;
-                    },
+            await serviceRegistry.netmdFactoryService!.prepareDownload(useSlowerExploit);
+            downloadPrepared = true;
+            for (const trackIndex of trackIndexes) {
+                if (trackIndex >= disc.trackCount) {
+                    window.alert("This track does not exist. Make sure you've read the instructions on how to use the homebrew mode.");
+                    return;
                 }
-            );
-            let filename = createDownloadTrackName(track, trackData.extension);
-            if (convertOutputToWav) {
-                trackData.data = await convertToWAV(trackData, track);
-                filename = filename.slice(0, -3) + 'wav';
+                const track = tracks.find(n => n.index === trackIndex)!;
+                dispatch(
+                    batchActions([
+                        factoryProgressDialogActions.setDetails({
+                            name: `Transferring track ${trackIndex + 1}`,
+                            units: 'sectors',
+                        }),
+                        factoryProgressDialogActions.setProgress({
+                            current: -1,
+                            total: 0,
+                            additionalInfo: 'Uploading code...',
+                        }),
+                    ])
+                );
+
+                let storedBadSectorHandling: null | BadSectorResponse = null;
+
+                const trackData = await serviceRegistry.netmdFactoryService!.exploitDownloadTrack(
+                    trackIndex,
+                    nerawDownload,
+                    ({ total, read, action, sector }: { read: number; total: number; action: 'READ' | 'SEEK' | 'CHUNK'; sector?: string }) => {
+                        if (timeout !== null) clearTimeout(timeout);
+                        timeout = setTimeout(() => {
+                            dispatch(
+                                factoryProgressDialogActions.setProgress({
+                                    current: Math.min(read, total),
+                                    total: total,
+                                    additionalInfo: {
+                                        SEEK: 'Seeking...',
+                                        CHUNK: 'Receiving...',
+                                        READ: `Reading sector ${sector!}...`,
+                                    }[action],
+                                })
+                            );
+                        }, 20);
+                    },
+                    {
+                        shouldCancelImmediately: () => getState().factoryProgressDialog.cancelled,
+                        handleBadSector: async (address: string, count: number, seconds: number) => {
+                            if (sessionStoredBadSectorHandling !== null) return sessionStoredBadSectorHandling;
+                            if (storedBadSectorHandling !== null) return storedBadSectorHandling;
+                            dispatch(
+                                batchActions([
+                                    factoryBadSectorDialogActions.setAddress(address),
+                                    factoryBadSectorDialogActions.setSeconds(seconds),
+                                    factoryBadSectorDialogActions.setCount(count),
+                                    factoryBadSectorDialogActions.setVisible(true),
+                                ])
+                            );
+                            const result = await new Promise<{
+                                response: BadSectorResponse;
+                                rememberForTheRestOfDownload: boolean;
+                                rememberForTheRestOfSession: boolean;
+                            }>(res => (badSectorPromise = res));
+                            if (result.rememberForTheRestOfDownload) {
+                                storedBadSectorHandling = result.response;
+                            }
+                            if (result.rememberForTheRestOfSession) {
+                                sessionStoredBadSectorHandling = result.response;
+                            }
+                            return result.response;
+                        },
+                    }
+                );
+                if (timeout !== null) {
+                    clearTimeout(timeout);
+                    timeout = null;
+                }
+                let filename = createDownloadTrackName(track, trackData.extension);
+                if (convertOutputToWav) {
+                    trackData.data = await convertToWAV(trackData, track);
+                    filename = filename.slice(0, -3) + 'wav';
+                }
+                callback(new Blob([trackData.data]), filename);
+                if (getState().factoryProgressDialog.cancelled) break;
             }
-            callback(new Blob([trackData.data]), filename);
-            if (getState().factoryProgressDialog.cancelled) break;
+        } catch (err) {
+            dispatchFactoryErrorDialog(dispatch, err, 'Track download failed.');
+        } finally {
+            if (timeout !== null) clearTimeout(timeout);
+            if (downloadPrepared) {
+                try {
+                    await serviceRegistry.netmdFactoryService!.finalizeDownload();
+                } catch (err) {
+                    dispatchFactoryErrorDialog(dispatch, err, 'Track download finalization failed.');
+                }
+            }
+            resetFactoryOperationUi(dispatch);
         }
-        await serviceRegistry.netmdFactoryService!.finalizeDownload();
-        dispatch(factoryProgressDialogActions.setVisible(false));
     };
 }
 
@@ -499,7 +550,7 @@ export async function checkFactoryCapability(dispatch: AppDispatch, capability: 
 }
 
 export function enableFactoryRippingModeInMainUi() {
-    return async function(dispatch: AppDispatch, getState: () => RootState) {
+    return async function(dispatch: AppDispatch) {
         if (!(await checkFactoryCapability(dispatch, ExploitCapability.downloadAtrac))) {
             window.alert(
                 'Cannot enable homebrew mode ripping in main UI.\nThis device is not supported yet.\nStay tuned for future updates.'
@@ -516,8 +567,13 @@ export function enableFactoryRippingModeInMainUi() {
 
 export function stripSCMS() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        const toc = JSON.parse(JSON.stringify(getState().factory.toc));
-        for (let track = 1; track <= toc?.nTracks; track++) {
+        const currentToc = getState().factory.toc;
+        if (!currentToc) {
+            dispatchFactoryErrorDialog(dispatch, new Error('No TOC loaded. Read the TOC before modifying it.'), 'TOC modification failed.');
+            return;
+        }
+        const toc = JSON.parse(JSON.stringify(currentToc));
+        for (let track = 1; track <= toc.nTracks; track++) {
             updateFlagAllFragmentsOfTrack(toc, track, ModeFlag.F_SCMS_DIG_COPY | ModeFlag.F_SCMS_UNRESTRICTED, true);
         }
         dispatch(batchActions([factoryActions.setModified(true), factoryActions.setToc(toc)]));
@@ -526,8 +582,13 @@ export function stripSCMS() {
 
 export function stripTrProtect() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        const toc = JSON.parse(JSON.stringify(getState().factory.toc));
-        for (let track = 1; track <= toc?.nTracks; track++) {
+        const currentToc = getState().factory.toc;
+        if (!currentToc) {
+            dispatchFactoryErrorDialog(dispatch, new Error('No TOC loaded. Read the TOC before modifying it.'), 'TOC modification failed.');
+            return;
+        }
+        const toc = JSON.parse(JSON.stringify(currentToc));
+        for (let track = 1; track <= toc.nTracks; track++) {
             updateFlagAllFragmentsOfTrack(toc, track, ModeFlag.F_WRITABLE, true);
         }
         dispatch(batchActions([factoryActions.setModified(true), factoryActions.setToc(toc)]));
@@ -536,56 +597,70 @@ export function stripTrProtect() {
 
 export function archiveDisc() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        const { archiveDiscCreateZip } = getState().appState;
-        const { deviceCapabilities } = getState().main;
-        let callback = downloadBlob;
-        let zip: JSZip | null = null;
-        if (archiveDiscCreateZip) {
-            zip = new JSZip();
-            const disallowedCharacters = /[<>:"/\\|?*]/g;
-            callback = (blob: Blob, fileName: string) => zip!.file(fileName.replace(disallowedCharacters, '_'), blob);
-        }
-        let toc = getState().factory.toc;
-        if (!toc) {
-            await readToc()(dispatch);
-            toc = getState().factory.toc!;
-        }
+        try {
+            const { archiveDiscCreateZip } = getState().appState;
+            const { deviceCapabilities } = getState().main;
+            let callback = downloadBlob;
+            let zip: JSZip | null = null;
+            if (archiveDiscCreateZip) {
+                zip = new JSZip();
+                const disallowedCharacters = /[<>:"/\\|?*]/g;
+                callback = (blob: Blob, fileName: string) => zip!.file(fileName.replace(disallowedCharacters, '_'), blob);
+            }
+            let toc = getState().factory.toc;
+            if (!toc) {
+                await readToc()(dispatch);
+                toc = getState().factory.toc;
+            }
+            if (!toc) throw new Error('No TOC loaded. Read the TOC before archiving the disc.');
 
-        const trackDownloader: typeof downloadTracks = deviceCapabilities.includes(Capability.trackDownload)
-            ? downloadTracks
-            : exploitDownloadTracks;
+            const trackDownloader: typeof downloadTracks = deviceCapabilities.includes(Capability.trackDownload)
+                ? downloadTracks
+                : exploitDownloadTracks;
 
-        await downloadToc(callback)(dispatch, getState);
-        await exportCSV(callback)(dispatch, getState);
+            await downloadToc(callback)(dispatch, getState);
+            await exportCSV(callback)(dispatch, getState);
 
-        await trackDownloader(
-            Array(toc.nTracks)
-                .fill(0)
-                .map((_, i) => i),
-            false,
-            callback
-        )(dispatch, getState);
+            await trackDownloader(
+                Array(toc.nTracks)
+                    .fill(0)
+                    .map((_, i) => i),
+                false,
+                callback
+            )(dispatch, getState);
 
-        if (archiveDiscCreateZip) {
-            dispatch(appStateActions.setLoading(true));
-            const zipBlob = await zip!.generateAsync({ type: 'blob' });
-            dispatch(appStateActions.setLoading(false));
-            const zipName = (Object.keys(zip!.files).filter(n => n.endsWith('.csv'))[0] ?? 'Disc.csv').slice(0, -3) + 'zip';
-            downloadBlob(zipBlob, zipName);
+            if (archiveDiscCreateZip) {
+                dispatch(appStateActions.setLoading(true));
+                const zipBlob = await zip!.generateAsync({ type: 'blob' });
+                dispatch(appStateActions.setLoading(false));
+                const zipName = (Object.keys(zip!.files).filter(n => n.endsWith('.csv'))[0] ?? 'Disc.csv').slice(0, -3) + 'zip';
+                downloadBlob(zipBlob, zipName);
+            }
+        } catch (err) {
+            dispatchFactoryErrorDialog(dispatch, err, 'Disc archive failed.');
+        } finally {
+            resetFactoryOperationUi(dispatch);
         }
     };
 }
 
 export function toggleSPUploadSpeedup() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        const spUploadSpeedupActive = getState().factory.spUploadSpeedupActive;
-        await serviceRegistry.netmdFactoryService!.setSPSpeedupActive(!spUploadSpeedupActive);
-        dispatch(factoryActions.setSPUploadSpedUp(!spUploadSpeedupActive));
+        try {
+            dispatch(appStateActions.setLoading(true));
+            const spUploadSpeedupActive = getState().factory.spUploadSpeedupActive;
+            await serviceRegistry.netmdFactoryService!.setSPSpeedupActive(!spUploadSpeedupActive);
+            dispatch(factoryActions.setSPUploadSpedUp(!spUploadSpeedupActive));
+        } catch (err) {
+            dispatchFactoryErrorDialog(dispatch, err, 'SP upload speedup toggle failed.');
+        } finally {
+            resetFactoryOperationUi(dispatch);
+        }
     };
 }
 
 export function enterHiMDUnrestrictedMode() {
-    return async function(dispatch: AppDispatch, getState: () => RootState) {
+    return async function(dispatch: AppDispatch) {
         if (
             !window.confirm(
                 'Warning: To enable the unrestricted mode the device will be temporarily exploited by running non-Sony code on them. The developers of Web Minidisc Pro aren\'t responsible for damaged devices. Do you want to continue?'
@@ -593,35 +668,51 @@ export function enterHiMDUnrestrictedMode() {
         ) {
             return;
         }
-        dispatch(appStateActions.setLoading(true));
-        await serviceRegistry.netmdFactoryService!.enableHiMDFullMode();
-        window.alert('Loaded. Please insert a HiMD disc.');
-        dispatch(appStateActions.setMainView('WELCOME'));
+        try {
+            dispatch(appStateActions.setLoading(true));
+            await serviceRegistry.netmdFactoryService!.enableHiMDFullMode();
+            window.alert('Loaded. Please insert a HiMD disc.');
+            dispatch(appStateActions.setMainView('WELCOME'));
+        } catch (err) {
+            dispatchFactoryErrorDialog(dispatch, err, 'HiMD unrestricted mode failed.');
+        } finally {
+            resetFactoryOperationUi(dispatch);
+        }
     };
 }
 
 export function toggleDiscSwapDetection() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        const deviceDiscSwapDetectionDisabled = getState().factory.deviceDiscSwapDetectionDisabled;
-        dispatch(appStateActions.setLoading(true));
-        await serviceRegistry.netmdFactoryService!.setDiscSwapDetection(!deviceDiscSwapDetectionDisabled);
-        dispatch(appStateActions.setLoading(false));
-        dispatch(factoryActions.setDiscSwapDetectionDisabled(!deviceDiscSwapDetectionDisabled));
+        try {
+            const deviceDiscSwapDetectionDisabled = getState().factory.deviceDiscSwapDetectionDisabled;
+            dispatch(appStateActions.setLoading(true));
+            await serviceRegistry.netmdFactoryService!.setDiscSwapDetection(!deviceDiscSwapDetectionDisabled);
+            dispatch(factoryActions.setDiscSwapDetectionDisabled(!deviceDiscSwapDetectionDisabled));
+        } catch (err) {
+            dispatchFactoryErrorDialog(dispatch, err, 'Disc swap detection toggle failed.');
+        } finally {
+            resetFactoryOperationUi(dispatch);
+        }
     };
 }
 
 export function writeRecoveryTOC() {
     return async function(dispatch: AppDispatch, getState: () => RootState) {
-        const toc: ToC = JSON.parse(JSON.stringify(getState().factory.toc));
+        const currentToc = getState().factory.toc;
+        if (!currentToc) {
+            dispatchFactoryErrorDialog(dispatch, new Error('No TOC loaded. Read the TOC before modifying it.'), 'TOC modification failed.');
+            return;
+        }
+        const toc: ToC = JSON.parse(JSON.stringify(currentToc));
         toc.nTracks = 1;
         toc.discNonEmpty = 1;
         toc.nextFreeTrackSlot = 2;
         toc.trackMap[1] = 1;
-    }
+    };
 }
 
 export function enterServiceMode() {
-    return async function(dispatch: AppDispatch, getState: () => RootState) {
+    return async function(dispatch: AppDispatch) {
         dispatch(appStateActions.setMainView('WELCOME'));
         await serviceRegistry.netmdFactoryService!.enterServiceMode();
     }

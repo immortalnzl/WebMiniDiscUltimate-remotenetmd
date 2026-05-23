@@ -38,5 +38,5 @@ volumes:
     driver: local
     driver_opts:
       type: "${VOLUME_TYPE:-none}"
-      device: "${MUSIC_PATH}"
+      device: "${MUSIC_PATH:-/tmp}"
       o: "${VOLUME_OPTIONS:-bind}"

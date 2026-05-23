@@ -90,6 +90,7 @@ export enum ExploitCapability {
     uploadMonoSP,
     disableDiscSwapDetection,
     enterServiceMode,
+    eepromAccess,
 }
 
 export type CodecFamily = 'SPS' | 'SPM' | HiMDCodecName;
@@ -839,6 +840,11 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
     private getEEPROMMemoryType() {
         return this.exploitStateManager.device.isHimd ? MemoryType.EEPROM_3 : MemoryType.EEPROM_2;
     }
+
+    private isEEPROMAccessSupported() {
+        return !this.exploitStateManager.device.versionCode.startsWith('Hx');
+    }
+
     async getExploitCapabilities() {
         const capabilities: ExploitCapability[] = [];
         const bind = (a: any, b: ExploitCapability) => isCompatible(a, this.exploitStateManager.device) && capabilities.push(b);
@@ -857,15 +863,18 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
             // Non-HiMD devices can read the RAM using normal commands
             capabilities.push(ExploitCapability.readRam);
         }
+        if (this.isEEPROMAccessSupported()) {
+            capabilities.push(ExploitCapability.eepromAccess);
+        }
 
         if ((window as any).interface) {
             Object.defineProperty(window, 'exploitStateManager', { value: this.exploitStateManager, configurable: true });
             Object.defineProperty(window, 'exploits', { value: netmdExploits, configurable: true });
             Object.defineProperty(window, 'tocmanip', { value: netmdTocmanip, configurable: true });
             Object.defineProperty(window, 'getToC', { value: async () => {
-                let sector0 = await this.readUTOCSector(0);
-                let sector1 = await this.readUTOCSector(1);
-                let sector2 = await this.readUTOCSector(2);
+                const sector0 = await this.readUTOCSector(0);
+                const sector1 = await this.readUTOCSector(1);
+                const sector2 = await this.readUTOCSector(2);
                 return netmdTocmanip.parseTOC(sector0, sector1, sector2);
             } , configurable: true });
         }
