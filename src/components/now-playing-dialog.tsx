@@ -342,9 +342,12 @@ const NowPlayingContent = ({
             </Box>
             <Box className={classes.content}>
                 {activeArtwork && <Box className={classes.backdrop} sx={{ backgroundImage: `url(${activeArtwork})` }} key={`bg-${activeArtwork}`} />}
-                <Box className={classes.contentInner}>
+                <Box className={classes.contentInner} sx={isFullscreen ? { gridTemplateColumns: 'minmax(600px, 54%) 1fr' } : undefined}>
                     <Box className={classes.leftColumn}>
-                        <Box className={classes.artwork}>
+                        <Box
+                            className={classes.artwork}
+                            sx={isFullscreen ? { width: 'min(100%, 68vh)', height: 'min(68vh, 100%)' } : undefined}
+                        >
                             {activeArtwork ? (
                                 <img src={activeArtwork} alt={activeTitle ?? 'Artwork'} className={classes.artworkImg} key={`art-${activeArtwork}`} />
                             ) : (
