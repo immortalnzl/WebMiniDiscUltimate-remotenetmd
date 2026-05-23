@@ -19,21 +19,11 @@ Huge thanks to Asivery for creating and maintaining the core project that made t
 
 ## Quick Start
 
-1. **Configure Music Source** in `.env`.
-
-For SMB (network share):
-```env
-MUSIC_PATH=//10.1.4.10/Music
-VOLUME_TYPE=cifs
-VOLUME_OPTIONS=username=YOUR_USER,password=YOUR_PASS,vers=3.0
+1. **Configure Music Source**
+```bash
+cp .env.example .env
 ```
-
-For local folder:
-```env
-MUSIC_PATH=Z:/media/Music
-VOLUME_TYPE=none
-VOLUME_OPTIONS=bind
-```
+Then edit `.env` and set `MUSIC_PATH` to your music folder. Examples are included in the file for local folders, NFS, and SMB shares.
 
 2. **Launch Containers**
 ```bash
