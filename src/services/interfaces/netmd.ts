@@ -21,6 +21,7 @@ import {
     prepareDownload,
     getDescriptiveDeviceCode,
     cleanRead,
+    cleanWrite,
     MemoryType,
     formatQuery,
     scanQuery,
@@ -272,6 +273,9 @@ export interface NetMDFactoryService {
     getDeviceFirmware(): Promise<string>;
     getExploitCapabilities(): Promise<ExploitCapability[]>;
     readRAM(callback?: (progress: { readBytes: number; totalBytes: number }) => void): Promise<Uint8Array<ArrayBuffer>>;
+    getEEPROMSize(): Promise<number>;
+    readEEPROM(callback?: (progress: { readBytes: number; totalBytes: number }) => void): Promise<Uint8Array<ArrayBuffer>>;
+    writeEEPROM(data: Uint8Array, callback?: (progress: { writtenBytes: number; totalBytes: number }) => void): Promise<void>;
 
     // depend on netmd-exploits:
     flushUTOCCacheToDisc(): Promise<void>;
@@ -823,12 +827,18 @@ export class NetMDUSBService extends NetMDService {
 class NetMDFactoryUSBService implements NetMDFactoryService {
     private atracDownloader?: AtracRecovery;
     private fasterTransferEnabled = false;
+    private readonly eepromSize = 0x2000;
+    private readonly eepromTransferChunkSize = 0x10;
     constructor(
         private factoryInterface: NetMDFactoryInterface,
         private parent: NetMDUSBService,
         public mutex: Mutex,
         public exploitStateManager: ExploitStateManager
     ) {}
+
+    private getEEPROMMemoryType() {
+        return this.exploitStateManager.device.isHimd ? MemoryType.EEPROM_3 : MemoryType.EEPROM_2;
+    }
     async getExploitCapabilities() {
         const capabilities: ExploitCapability[] = [];
         const bind = (a: any, b: ExploitCapability) => isCompatible(a, this.exploitStateManager.device) && capabilities.push(b);
@@ -899,6 +909,39 @@ class NetMDFactoryUSBService implements NetMDFactoryService {
         }
 
         return concatUint8Arrays(...readSlices);
+    }
+
+    async getEEPROMSize() {
+        return this.eepromSize;
+    }
+
+    @asyncMutex
+    async readEEPROM(callback?: (progress: { readBytes: number; totalBytes: number }) => void): Promise<Uint8Array<ArrayBuffer>> {
+        const eepromSize = await this.getEEPROMSize();
+        const memoryType = this.getEEPROMMemoryType();
+        const readSlices: Uint8Array[] = [];
+        for (let i = 0; i < eepromSize; i += this.eepromTransferChunkSize) {
+            const length = Math.min(this.eepromTransferChunkSize, eepromSize - i);
+            readSlices.push(await cleanRead(this.factoryInterface, i, length, memoryType));
+            callback?.({ readBytes: i + length, totalBytes: eepromSize });
+        }
+
+        return concatUint8Arrays(...readSlices);
+    }
+
+    @asyncMutex
+    async writeEEPROM(data: Uint8Array, callback?: (progress: { writtenBytes: number; totalBytes: number }) => void) {
+        const eepromSize = await this.getEEPROMSize();
+        if (data.byteLength !== eepromSize) {
+            throw new Error(`Invalid EEPROM backup size. Expected ${eepromSize} bytes, got ${data.byteLength} bytes.`);
+        }
+
+        const memoryType = this.getEEPROMMemoryType();
+        for (let i = 0; i < data.byteLength; i += this.eepromTransferChunkSize) {
+            const chunk = data.slice(i, i + this.eepromTransferChunkSize);
+            await cleanWrite(this.factoryInterface, i, chunk, memoryType);
+            callback?.({ writtenBytes: i + chunk.byteLength, totalBytes: data.byteLength });
+        }
     }
 
     @asyncMutex

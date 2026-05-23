@@ -37,69 +37,133 @@ import { ExportParams } from '../services/audio/audio-export';
 import { LibraryServices } from '../services/library-services';
 import { s16LEToSamplesArray, Shazam } from 'shazam-api';
 
+const defaultUploadProgress = {
+    written: 0,
+    encrypted: 0,
+    total: 1,
+};
+
+const defaultUploadTrackProgress = {
+    total: 1,
+    current: 0,
+    converting: 0,
+    titleCurrent: '',
+    titleConverting: '',
+};
+
+const defaultRecordProgress = {
+    trackTotal: 1,
+    trackDone: 0,
+    trackCurrent: 0,
+    titleCurrent: '',
+};
+
+const getErrorMessage = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
+
+const dispatchErrorDialog = (dispatch: AppDispatch, err: unknown, fallback: string) => {
+    console.error(err);
+    dispatch(batchActions([errorDialogAction.setVisible(true), errorDialogAction.setErrorMessage(getErrorMessage(err, fallback))]));
+};
+
+const resetAppLoading = (dispatch: AppDispatch) => dispatch(appStateActions.setLoading(false));
+
+const resetUploadDialog = (dispatch: AppDispatch) =>
+    dispatch(
+        batchActions([
+            uploadDialogActions.setVisible(false),
+            uploadDialogActions.setCancelUpload(false),
+            uploadDialogActions.setWriteProgress(defaultUploadProgress),
+            uploadDialogActions.setTrackProgress(defaultUploadTrackProgress),
+            uploadDialogActions.setTrackEncodingProgress({ state: 0, total: 0 }),
+            uploadDialogActions.setProgressStartedAt(null),
+        ])
+    );
+
+const resetRecordDialog = (dispatch: AppDispatch) =>
+    dispatch(batchActions([recordDialogAction.setVisible(false), recordDialogAction.setProgress(defaultRecordProgress)]));
+
+const resetSongRecognitionProgressDialog = (dispatch: AppDispatch) =>
+    dispatch(
+        batchActions([
+            songRecognitionProgressDialogActions.setVisible(false),
+            songRecognitionProgressDialogActions.setCancelled(false),
+            songRecognitionProgressDialogActions.setCurrentTrack(-1),
+            songRecognitionProgressDialogActions.setTotalTracks(-1),
+            songRecognitionProgressDialogActions.setCurrentStep(-1),
+            songRecognitionProgressDialogActions.setCurrentStepProgress(-1),
+            songRecognitionProgressDialogActions.setCurrentStepTotal(-1),
+        ])
+    );
+
 export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pause' | 'seek', params?: unknown) {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
-        const state = getState();
-        const { netmdService } = serviceRegistry;
-        if (!netmdService) return;
-
-        switch (action) {
-            case 'play':
-                await netmdService.play();
-                break;
-            case 'stop':
-                await netmdService.stop();
-                break;
-            case 'next':
-                try {
-                    await netmdService.next();
-                } catch (e) {
-                    // Some devices don't support next() and prev()
-                    if (state.main.deviceStatus?.track === (state.main.disc?.trackCount ?? 0) - 1 || !state.main.deviceStatus) return;
-                    await netmdService.stop();
-                    await netmdService.gotoTrack(state.main.deviceStatus.track! + 1);
-                    await netmdService.play();
-                }
-                break;
-            case 'prev':
-                try {
-                    await netmdService.prev();
-                } catch (e) {
-                    // Some devices don't support next() and prev()
-                    if (state.main.deviceStatus?.track === 0 || !state.main.deviceStatus) return;
-                    await netmdService.stop();
-                    await netmdService.gotoTrack(state.main.deviceStatus.track! - 1);
-                    await netmdService.play();
-                }
-                break;
-            case 'pause':
-                await netmdService.pause();
-                break;
-            case 'goto': {
-                const trackNumber = assertNumber(params, 'Invalid track number for "goto" command');
-                await netmdService.gotoTrack(trackNumber);
-                break;
-            }
-            case 'seek': {
-                if (!(params instanceof Object)) {
-                    throw new Error('"seek" command has wrong params');
-                }
-                const typedParams: { trackNumber: number; time: number } = params as any;
-                const trackNumber = assertNumber(typedParams.trackNumber, 'Invalid track number for "seek" command');
-                const time = assertNumber(typedParams.time, 'Invalid time for "seek" command');
-                const timeArgs = timeToSeekArgs(time);
-                await netmdService.gotoTime(trackNumber, timeArgs[0], timeArgs[1], timeArgs[2], timeArgs[3]);
-                break;
-            }
-        }
-        // CAVEAT: change-track might take a up to a few seconds to complete.
-        // We wait 500ms and let the monitor do further updates
-        await sleep(500);
         try {
-            const deviceStatus = await netmdService.getDeviceStatus();
-            dispatch(mainActions.setDeviceStatus(deviceStatus));
-        } catch (e) {
-            console.log('control: Cannot get device status');
+            const state = getState();
+            const { netmdService } = serviceRegistry;
+            if (!netmdService) return;
+
+            switch (action) {
+                case 'play':
+                    await netmdService.play();
+                    break;
+                case 'stop':
+                    await netmdService.stop();
+                    break;
+                case 'next':
+                    try {
+                        await netmdService.next();
+                    } catch (e) {
+                        // Some devices don't support next() and prev()
+                        if (state.main.deviceStatus?.track === (state.main.disc?.trackCount ?? 0) - 1 || !state.main.deviceStatus) return;
+                        await netmdService.stop();
+                        await netmdService.gotoTrack(state.main.deviceStatus.track! + 1);
+                        await netmdService.play();
+                    }
+                    break;
+                case 'prev':
+                    try {
+                        await netmdService.prev();
+                    } catch (e) {
+                        // Some devices don't support next() and prev()
+                        if (state.main.deviceStatus?.track === 0 || !state.main.deviceStatus) return;
+                        await netmdService.stop();
+                        await netmdService.gotoTrack(state.main.deviceStatus.track! - 1);
+                        await netmdService.play();
+                    }
+                    break;
+                case 'pause':
+                    await netmdService.pause();
+                    break;
+                case 'goto': {
+                    const trackNumber = assertNumber(params, 'Invalid track number for "goto" command');
+                    await netmdService.gotoTrack(trackNumber);
+                    break;
+                }
+                case 'seek': {
+                    if (!(params instanceof Object)) {
+                        throw new Error('"seek" command has wrong params');
+                    }
+                    const typedParams: { trackNumber: number; time: number } = params as any;
+                    const trackNumber = assertNumber(typedParams.trackNumber, 'Invalid track number for "seek" command');
+                    const time = assertNumber(typedParams.time, 'Invalid time for "seek" command');
+                    const timeArgs = timeToSeekArgs(time);
+                    await netmdService.gotoTime(trackNumber, timeArgs[0], timeArgs[1], timeArgs[2], timeArgs[3]);
+                    break;
+                }
+            }
+            // CAVEAT: change-track might take a up to a few seconds to complete.
+            // We wait 500ms and let the monitor do further updates
+            await sleep(500);
+            try {
+                const deviceStatus = await netmdService.getDeviceStatus();
+                dispatch(mainActions.setDeviceStatus(deviceStatus));
+            } catch (e) {
+                console.log('control: Cannot get device status');
+            }
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Device control failed.');
+        } finally {
+            resetAppLoading(dispatch);
         }
     };
 }
@@ -107,9 +171,14 @@ export function control(action: 'play' | 'stop' | 'next' | 'prev' | 'goto' | 'pa
 export function renameGroup({ groupIndex, newName, newFullWidthName }: { groupIndex: number; newName: string; newFullWidthName?: string }) {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
         dispatch(appStateActions.setLoading(true));
-        await serviceRegistry.netmdService?.renameGroup(groupIndex, newName, newFullWidthName);
-        listContent()(dispatch);
-        dispatch(appStateActions.setLoading(false));
+        try {
+            await serviceRegistry.netmdService?.renameGroup(groupIndex, newName, newFullWidthName);
+            await listContent()(dispatch);
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Rename group failed.');
+        } finally {
+            resetAppLoading(dispatch);
+        }
     };
 }
 
@@ -120,11 +189,14 @@ export function groupTracks(indexes: number[]) {
         const { netmdService } = serviceRegistry;
         if (!netmdService) return;
 
-        netmdService.addGroup(begin, length, '');
-        listContent()(dispatch);
-
-        netmdService?.addGroup(begin, length, '');
-        listContent()(dispatch);
+        try {
+            await netmdService.addGroup(begin, length, '');
+            await listContent()(dispatch);
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Group tracks failed.');
+        } finally {
+            resetAppLoading(dispatch);
+        }
     };
 }
 
@@ -133,11 +205,17 @@ export function deleteGroups(indexes: number[]) {
         dispatch(appStateActions.setLoading(true));
         const { netmdService } = serviceRegistry;
         if (!netmdService) return;
-        const sorted = [...indexes].sort((a, b) => b - a);
-        for (const index of sorted) {
-            await netmdService.deleteGroup(index);
+        try {
+            const sorted = [...indexes].sort((a, b) => b - a);
+            for (const index of sorted) {
+                await netmdService.deleteGroup(index);
+            }
+            await listContent()(dispatch);
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Delete groups failed.');
+        } finally {
+            resetAppLoading(dispatch);
         }
-        listContent()(dispatch);
     };
 }
 
@@ -149,94 +227,100 @@ export function dragDropTrack(sourceList: number, sourceIndex: number, targetLis
         if (!netmdService) return;
 
         dispatch(appStateActions.setLoading(true));
-        const groupedTracks = getGroupedTracks(await netmdService.listContent());
-        // Remove the moved item from its current list
-        const movedItem = groupedTracks[sourceList].tracks.splice(sourceIndex, 1)[0];
-        let newIndex: number;
+        try {
+            const groupedTracks = getGroupedTracks(await netmdService.listContent());
+            // Remove the moved item from its current list
+            const movedItem = groupedTracks[sourceList].tracks.splice(sourceIndex, 1)[0];
+            let newIndex: number;
 
-        // Calculate bounds
-        let boundsStartList, boundsEndList, boundsStartIndex, boundsEndIndex, offset;
+            // Calculate bounds
+            let boundsStartList, boundsEndList, boundsStartIndex, boundsEndIndex, offset;
 
-        if (sourceList < targetList) {
-            boundsStartList = sourceList;
-            boundsStartIndex = sourceIndex;
-            boundsEndList = targetList;
-            boundsEndIndex = targetIndex;
-            offset = -1;
-        } else if (sourceList > targetList) {
-            boundsStartList = targetList;
-            boundsStartIndex = targetIndex;
-            boundsEndList = sourceList;
-            boundsEndIndex = sourceIndex;
-            offset = 1;
-        } else {
-            if (sourceIndex < targetIndex) {
-                boundsStartList = boundsEndList = sourceList;
+            if (sourceList < targetList) {
+                boundsStartList = sourceList;
                 boundsStartIndex = sourceIndex;
+                boundsEndList = targetList;
                 boundsEndIndex = targetIndex;
                 offset = -1;
-            } else {
-                boundsStartList = boundsEndList = targetList;
+            } else if (sourceList > targetList) {
+                boundsStartList = targetList;
                 boundsStartIndex = targetIndex;
+                boundsEndList = sourceList;
                 boundsEndIndex = sourceIndex;
                 offset = 1;
-            }
-        }
-
-        // Shift indices
-        for (let i = boundsStartList; i <= boundsEndList; i++) {
-            const startingIndex = i === boundsStartList ? boundsStartIndex : 0;
-            const endingIndex = i === boundsEndList ? boundsEndIndex : groupedTracks[i].tracks.length;
-            for (let j = startingIndex; j < endingIndex; j++) {
-                groupedTracks[i].tracks[j].index += offset;
-            }
-        }
-
-        // Calculate the moved track's destination index
-        if (targetList === 0) {
-            newIndex = targetIndex;
-        } else {
-            if (targetIndex === 0) {
-                let prevList = groupedTracks[targetList - 1];
-                let i = 2;
-                while (prevList && prevList.tracks.length === 0) {
-                    // Skip past all the empty lists
-                    prevList = groupedTracks[targetList - i++];
-                }
-                if (prevList) {
-                    // If there's a previous list, make this tracks's index previous list's last item's index + 1
-                    const lastIndexOfPrevList = prevList.tracks[prevList.tracks.length - 1].index;
-                    newIndex = lastIndexOfPrevList + 1;
-                } else newIndex = 0; // Else default to index 0
             } else {
-                newIndex = groupedTracks[targetList].tracks[0].index + targetIndex;
+                if (sourceIndex < targetIndex) {
+                    boundsStartList = boundsEndList = sourceList;
+                    boundsStartIndex = sourceIndex;
+                    boundsEndIndex = targetIndex;
+                    offset = -1;
+                } else {
+                    boundsStartList = boundsEndList = targetList;
+                    boundsStartIndex = targetIndex;
+                    boundsEndIndex = sourceIndex;
+                    offset = 1;
+                }
             }
-        }
 
-        if (movedItem.index !== newIndex) {
-            await netmdService.moveTrack(movedItem.index, newIndex, false);
-        }
+            // Shift indices
+            for (let i = boundsStartList; i <= boundsEndList; i++) {
+                const startingIndex = i === boundsStartList ? boundsStartIndex : 0;
+                const endingIndex = i === boundsEndList ? boundsEndIndex : groupedTracks[i].tracks.length;
+                for (let j = startingIndex; j < endingIndex; j++) {
+                    groupedTracks[i].tracks[j].index += offset;
+                }
+            }
 
-        movedItem.index = newIndex;
-        groupedTracks[targetList].tracks.splice(targetIndex, 0, movedItem);
-        const ungrouped = [];
+            // Calculate the moved track's destination index
+            if (targetList === 0) {
+                newIndex = targetIndex;
+            } else {
+                if (targetIndex === 0) {
+                    let prevList = groupedTracks[targetList - 1];
+                    let i = 2;
+                    while (prevList && prevList.tracks.length === 0) {
+                        // Skip past all the empty lists
+                        prevList = groupedTracks[targetList - i++];
+                    }
+                    if (prevList) {
+                        // If there's a previous list, make this tracks's index previous list's last item's index + 1
+                        const lastIndexOfPrevList = prevList.tracks[prevList.tracks.length - 1].index;
+                        newIndex = lastIndexOfPrevList + 1;
+                    } else newIndex = 0; // Else default to index 0
+                } else {
+                    newIndex = groupedTracks[targetList].tracks[0].index + targetIndex;
+                }
+            }
 
-        // Recompile the groups and update them on the player
-        const normalGroups = [];
-        for (const group of groupedTracks) {
-            if (group.tracks.length === 0) continue;
-            if (group.index === -1) ungrouped.push(...group.tracks);
-            else normalGroups.push(group);
+            if (movedItem.index !== newIndex) {
+                await netmdService.moveTrack(movedItem.index, newIndex, false);
+            }
+
+            movedItem.index = newIndex;
+            groupedTracks[targetList].tracks.splice(targetIndex, 0, movedItem);
+            const ungrouped = [];
+
+            // Recompile the groups and update them on the player
+            const normalGroups = [];
+            for (const group of groupedTracks) {
+                if (group.tracks.length === 0) continue;
+                if (group.index === -1) ungrouped.push(...group.tracks);
+                else normalGroups.push(group);
+            }
+            if (ungrouped.length)
+                normalGroups.unshift({
+                    index: 0,
+                    title: null,
+                    fullWidthTitle: null,
+                    tracks: ungrouped,
+                });
+            await netmdService.rewriteGroups(normalGroups);
+            await listContent()(dispatch);
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Move track failed.');
+        } finally {
+            resetAppLoading(dispatch);
         }
-        if (ungrouped.length)
-            normalGroups.unshift({
-                index: 0,
-                title: null,
-                fullWidthTitle: null,
-                tracks: ungrouped,
-            });
-        await netmdService.rewriteGroups(normalGroups);
-        listContent()(dispatch);
     };
 }
 
@@ -261,52 +345,56 @@ export function pair(serviceInstance: NetMDService, spec: MinidiscSpec) {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
         dispatch(batchActions([appStateActions.setPairingFailed(false), appStateActions.setConnectingInProgress(true), appStateActions.setFactoryModeRippingInMainUi(false)]));
 
-        serviceRegistry.mediaSessionService?.init(); // no need to await
-
-        serviceRegistry.audioExportService = new AudioServices[getState().appState.audioExportService].create(
-            getState().appState.audioExportServiceConfig
-        );
-        await serviceRegistry.audioExportService?.init();
-
-        let libraryServiceIndex = getState().appState.libraryService;
-        if (libraryServiceIndex !== -1) {
-            serviceRegistry.libraryService = new LibraryServices[libraryServiceIndex].create(getState().appState.libraryServiceConfig);
-        }
-
-        serviceRegistry.netmdService = serviceInstance;
-        serviceRegistry.netmdSpec = spec;
-        serviceRegistry.netmdFactoryService = undefined;
-
         try {
-            const connected = await serviceRegistry.netmdService?.connect();
-            if (connected) {
-                dispatch(appStateActions.setMainView('MAIN'));
-                return;
+            serviceRegistry.mediaSessionService?.init(); // no need to await
+
+            serviceRegistry.audioExportService = new AudioServices[getState().appState.audioExportService].create(
+                getState().appState.audioExportServiceConfig
+            );
+            await serviceRegistry.audioExportService?.init();
+
+            let libraryServiceIndex = getState().appState.libraryService;
+            if (libraryServiceIndex !== -1) {
+                serviceRegistry.libraryService = new LibraryServices[libraryServiceIndex].create(getState().appState.libraryServiceConfig);
+            }
+
+            serviceRegistry.netmdService = serviceInstance;
+            serviceRegistry.netmdSpec = spec;
+            serviceRegistry.netmdFactoryService = undefined;
+
+            try {
+                const connected = await serviceRegistry.netmdService?.connect();
+                if (connected) {
+                    dispatch(appStateActions.setMainView('MAIN'));
+                    return;
+                }
+            } catch (err) {
+                console.error(err);
+                // In case of error, just log and try to pair
+            }
+
+            try {
+                const paired = await serviceRegistry.netmdService?.pair();
+                if (paired) {
+                    dispatch(
+                        batchActions([
+                            appStateActions.setMainView('MAIN'),
+                            errorDialogAction.setErrorMessage(''),
+                            errorDialogAction.setVisible(false),
+                        ])
+                    );
+                    return;
+                }
+                dispatch(batchActions([appStateActions.setPairingMessage(`Connection Failed`), appStateActions.setPairingFailed(true)]));
+            } catch (err) {
+                console.error(err);
+                const message = (err as Error).message;
+                dispatch(batchActions([appStateActions.setPairingMessage(message ?? 'Unknown Error!'), appStateActions.setPairingFailed(true)]));
             }
         } catch (err) {
-            console.error(err);
-            // In case of error, just log and try to pair
-        }
-
-        try {
-            const paired = await serviceRegistry.netmdService?.pair();
-            if (paired) {
-                dispatch(
-                    batchActions([
-                        appStateActions.setMainView('MAIN'),
-                        errorDialogAction.setErrorMessage(''),
-                        errorDialogAction.setVisible(false),
-                    ])
-                );
-                return;
-            }
-            dispatch(batchActions([appStateActions.setPairingMessage(`Connection Failed`), appStateActions.setPairingFailed(true)]));
-        } catch (err) {
-            console.error(err);
-            const message = (err as Error).message;
-            dispatch(batchActions([appStateActions.setPairingMessage(message ?? 'Unknown Error!'), appStateActions.setPairingFailed(true)]));
+            dispatchErrorDialog(dispatch, err, 'Connection failed.');
         } finally {
-            dispatch(appStateActions.setConnectingInProgress(false));
+            dispatch(batchActions([appStateActions.setConnectingInProgress(false), appStateActions.setLoading(false)]));
         }
     };
 }
@@ -329,43 +417,48 @@ export function listContent(dropCache: boolean = false) {
 
         // Issue loading
         dispatch(appStateActions.setLoading(true));
-        let disc = null;
-        let deviceStatus = null;
         try {
-            deviceStatus = await netmdService.getDeviceStatus();
-        } catch (e) {
-            console.log('listContent: Cannot get device status');
-            console.log(e);
-        }
-        const deviceName = await netmdService.getDeviceName();
-        const deviceCapabilities = await netmdService.getServiceCapabilities();
-
-        if (deviceStatus?.discPresent) {
+            let disc = null;
+            let deviceStatus = null;
             try {
-                disc = await netmdService.listContent(dropCache);
-            } catch (err) {
-                console.log(err);
-                if (!(err as any).message.startsWith('Rejected')) {
-                    if (
-                        window.confirm(
-                            "This disc's title seems to be corrupted, do you wish to erase it?\nNone of the tracks will be deleted."
-                        )
-                    ) {
-                        await netmdService.wipeDiscTitleInfo();
-                        disc = await netmdService.listContent(true);
-                    } else throw err;
+                deviceStatus = await netmdService.getDeviceStatus();
+            } catch (e) {
+                console.log('listContent: Cannot get device status');
+                console.log(e);
+            }
+            const deviceName = await netmdService.getDeviceName();
+            const deviceCapabilities = await netmdService.getServiceCapabilities();
+
+            if (deviceStatus?.discPresent) {
+                try {
+                    disc = await netmdService.listContent(dropCache);
+                } catch (err) {
+                    console.log(err);
+                    if (!(err as any).message.startsWith('Rejected')) {
+                        if (
+                            window.confirm(
+                                "This disc's title seems to be corrupted, do you wish to erase it?\nNone of the tracks will be deleted."
+                            )
+                        ) {
+                            await netmdService.wipeDiscTitleInfo();
+                            disc = await netmdService.listContent(true);
+                        } else throw err;
+                    }
                 }
             }
+            dispatch(
+                batchActions([
+                    mainActions.setDisc(disc),
+                    mainActions.setDeviceName(deviceName),
+                    mainActions.setDeviceStatus(deviceStatus),
+                    mainActions.setDeviceCapabilities(deviceCapabilities),
+                ])
+            );
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Failed to read disc contents.');
+        } finally {
+            resetAppLoading(dispatch);
         }
-        dispatch(
-            batchActions([
-                mainActions.setDisc(disc),
-                mainActions.setDeviceName(deviceName),
-                mainActions.setDeviceStatus(deviceStatus),
-                mainActions.setDeviceCapabilities(deviceCapabilities),
-                appStateActions.setLoading(false),
-            ])
-        );
     };
 }
 
@@ -378,17 +471,12 @@ export function renameTrack(...entries: { index: number; newName: string; newFul
             for (const { index, newName, newFullWidthName } of entries) {
                 await netmdService.renameTrack(index, newName, newFullWidthName);
             }
+            await listContent()(dispatch);
         } catch (err) {
-            console.error(err);
-            dispatch(
-                batchActions([
-                    errorDialogAction.setVisible(true),
-                    errorDialogAction.setErrorMessage(`Rename failed.`),
-                    appStateActions.setLoading(false),
-                ])
-            );
+            dispatchErrorDialog(dispatch, err, 'Rename failed.');
+        } finally {
+            resetAppLoading(dispatch);
         }
-        listContent()(dispatch);
     };
 }
 
@@ -401,17 +489,12 @@ export function himdRenameTrack(...entries: { index: number; title?: string; alb
             for (const { index, title, album, artist } of entries) {
                 await netmdService.renameTrack(index, { title, album, artist });
             }
+            await listContent()(dispatch);
         } catch (err) {
-            console.error(err);
-            dispatch(
-                batchActions([
-                    errorDialogAction.setVisible(true),
-                    errorDialogAction.setErrorMessage(`Rename failed.`),
-                    appStateActions.setLoading(false),
-                ])
-            );
+            dispatchErrorDialog(dispatch, err, 'Rename failed.');
+        } finally {
+            resetAppLoading(dispatch);
         }
-        listContent()(dispatch);
     };
 }
 
@@ -419,12 +502,19 @@ export function renameDisc({ newName, newFullWidthName }: { newName: string; new
     return async function (dispatch: AppDispatch) {
         const { netmdService } = serviceRegistry;
         if (!netmdService) return;
-        await netmdService.renameDisc(
-            newName.replace(/\/\//g, ' /'), // Make sure the title doesn't interfere with the groups
-            newFullWidthName?.replace(/／／/g, '／')
-        );
-        dispatch(renameDialogActions.setVisible(false));
-        listContent()(dispatch);
+        dispatch(appStateActions.setLoading(true));
+        try {
+            await netmdService.renameDisc(
+                newName.replace(/\/\//g, ' /'), // Make sure the title doesn't interfere with the groups
+                newFullWidthName?.replace(/／／/g, '／')
+            );
+            dispatch(renameDialogActions.setVisible(false));
+            await listContent()(dispatch);
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Rename disc failed.');
+        } finally {
+            resetAppLoading(dispatch);
+        }
     };
 }
 
@@ -439,8 +529,14 @@ export function deleteTracks(indexes: number[]) {
         const { netmdService } = serviceRegistry;
         if (!netmdService) return;
         dispatch(appStateActions.setLoading(true));
-        await netmdService.deleteTracks(indexes);
-        listContent()(dispatch);
+        try {
+            await netmdService.deleteTracks(indexes);
+            await listContent()(dispatch);
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Delete tracks failed.');
+        } finally {
+            resetAppLoading(dispatch);
+        }
     };
 }
 
@@ -453,8 +549,14 @@ export function wipeDisc() {
         const { netmdService } = serviceRegistry;
         if (!netmdService) return;
         dispatch(appStateActions.setLoading(true));
-        await netmdService.wipeDisc();
-        listContent()(dispatch);
+        try {
+            await netmdService.wipeDisc();
+            await listContent()(dispatch);
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Wipe disc failed.');
+        } finally {
+            resetAppLoading(dispatch);
+        }
     };
 }
 
@@ -467,8 +569,14 @@ export function formatToHiMD() {
         const { netmdService } = serviceRegistry;
         if (!netmdService) return;
         dispatch(appStateActions.setLoading(true));
-        await netmdService.formatToHiMD();
-        dispatch(appStateActions.setMainView('WELCOME'));
+        try {
+            await netmdService.formatToHiMD();
+            dispatch(appStateActions.setMainView('WELCOME'));
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Format to HiMD failed.');
+        } finally {
+            resetAppLoading(dispatch);
+        }
     };
 }
 
@@ -476,8 +584,14 @@ export function ejectDisc() {
     return async function (dispatch: AppDispatch) {
         const { netmdService } = serviceRegistry;
         if (!netmdService) return;
-        netmdService.ejectDisc();
-        dispatch(mainActions.setDisc(null));
+        try {
+            await netmdService.ejectDisc();
+            dispatch(mainActions.setDisc(null));
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Eject disc failed.');
+        } finally {
+            resetAppLoading(dispatch);
+        }
     };
 }
 
@@ -485,8 +599,15 @@ export function moveTrack(srcIndex: number, destIndex: number) {
     return async function (dispatch: AppDispatch) {
         const { netmdService } = serviceRegistry;
         if (!netmdService) return;
-        await netmdService.moveTrack(srcIndex, destIndex);
-        listContent()(dispatch);
+        dispatch(appStateActions.setLoading(true));
+        try {
+            await netmdService.moveTrack(srcIndex, destIndex);
+            await listContent()(dispatch);
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Move track failed.');
+        } finally {
+            resetAppLoading(dispatch);
+        }
     };
 }
 
@@ -496,140 +617,153 @@ export function downloadTracks(
     callback: (blob: Blob, name: string) => void = downloadBlob
 ) {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
-        dispatch(
-            batchActions([
-                recordDialogAction.setVisible(true),
-                recordDialogAction.setProgress({ trackTotal: indexes.length, trackDone: 0, trackCurrent: 0, titleCurrent: '' }),
-            ])
-        );
-
-        const disc = getState().main.disc;
-        const tracks = getTracks(disc!).filter((t) => indexes.indexOf(t.index) >= 0);
-
-        const { netmdService } = serviceRegistry;
-        if (!netmdService) return;
-
-        for (const [i, track] of tracks.entries()) {
+        try {
             dispatch(
-                recordDialogAction.setProgress({
-                    trackTotal: tracks.length,
-                    trackDone: i,
-                    trackCurrent: -1,
-                    titleCurrent: track.title ?? '',
-                })
+                batchActions([
+                    recordDialogAction.setVisible(true),
+                    recordDialogAction.setProgress({ trackTotal: indexes.length, trackDone: 0, trackCurrent: 0, titleCurrent: '' }),
+                ])
             );
-            try {
-                let received = (await netmdService!.download(track.index, ({ read, total }) => {
-                    dispatch(
-                        recordDialogAction.setProgress({
-                            trackTotal: tracks.length,
-                            trackDone: i,
-                            trackCurrent: (100 * read) / total,
-                            titleCurrent: track.title ?? '',
-                        })
-                    );
-                }))!;
-                let fileName = createDownloadTrackName(track, received.extension);
-                if (convertOutputToWav) {
-                    received.data = await convertToWAV(received, track);
-                    fileName = fileName.slice(0, -3) + 'wav';
-                }
-                callback(new Blob([received.data], { type: 'application/octet-stream' }), fileName);
-            } catch (err) {
-                console.error(err);
-                dispatch(
-                    batchActions([
-                        recordDialogAction.setVisible(false),
-                        errorDialogAction.setVisible(true),
-                        errorDialogAction.setErrorMessage(`Download failed. Are you using a disc recorded by SonicStage?`),
-                    ])
-                );
-            }
-        }
 
-        dispatch(recordDialogAction.setVisible(false));
+            const disc = getState().main.disc;
+            const tracks = getTracks(disc!).filter((t) => indexes.indexOf(t.index) >= 0);
+
+            const { netmdService } = serviceRegistry;
+            if (!netmdService) return;
+
+            for (const [i, track] of tracks.entries()) {
+                dispatch(
+                    recordDialogAction.setProgress({
+                        trackTotal: tracks.length,
+                        trackDone: i,
+                        trackCurrent: -1,
+                        titleCurrent: track.title ?? '',
+                    })
+                );
+                try {
+                    let received = (await netmdService!.download(track.index, ({ read, total }) => {
+                        dispatch(
+                            recordDialogAction.setProgress({
+                                trackTotal: tracks.length,
+                                trackDone: i,
+                                trackCurrent: total > 0 ? (100 * read) / total : 0,
+                                titleCurrent: track.title ?? '',
+                            })
+                        );
+                    }))!;
+                    let fileName = createDownloadTrackName(track, received.extension);
+                    if (convertOutputToWav) {
+                        received.data = await convertToWAV(received, track);
+                        fileName = fileName.slice(0, -3) + 'wav';
+                    }
+                    callback(new Blob([received.data], { type: 'application/octet-stream' }), fileName);
+                } catch (err) {
+                    dispatchErrorDialog(dispatch, err, 'Download failed. Are you using a disc recorded by SonicStage?');
+                    break;
+                }
+            }
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Download failed.');
+        } finally {
+            resetRecordDialog(dispatch);
+            resetAppLoading(dispatch);
+        }
     };
 }
 
 export function recordTracks(indexes: number[], deviceId: string) {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
-        dispatch(
-            batchActions([
-                recordDialogAction.setVisible(true),
-                recordDialogAction.setProgress({ trackTotal: indexes.length, trackDone: 0, trackCurrent: 0, titleCurrent: '' }),
-            ])
-        );
-
-        const disc = getState().main.disc;
-        const tracks = getTracks(disc!).filter((t) => indexes.indexOf(t.index) >= 0);
-
         const { netmdService, mediaRecorderService } = serviceRegistry;
         if (!netmdService) return;
-        await netmdService.stop();
-
-        for (const [i, track] of tracks.entries()) {
+        try {
             dispatch(
-                recordDialogAction.setProgress({
-                    trackTotal: tracks.length,
-                    trackDone: i,
-                    trackCurrent: -1,
-                    titleCurrent: track.title ?? '',
-                })
+                batchActions([
+                    recordDialogAction.setVisible(true),
+                    recordDialogAction.setProgress({ trackTotal: indexes.length, trackDone: 0, trackCurrent: 0, titleCurrent: '' }),
+                ])
             );
 
-            // Wait for the track to be ready to play from 0:00
-            await netmdService!.gotoTrack(track.index);
-            await netmdService!.play();
-            console.log('Waiting for track to be ready to play');
-            let position = await netmdService!.getPosition();
-            const expected = [track.index, 0, 0, 1];
+            const disc = getState().main.disc;
+            const tracks = getTracks(disc!).filter((t) => indexes.indexOf(t.index) >= 0);
 
-            while (position === null || !expected.every((_, i) => expected[i] === position![i])) {
-                await sleep(250);
-                position = await netmdService!.getPosition();
-            }
-            await netmdService!.pause();
-            await netmdService?.gotoTrack(track.index);
-            console.log('Track is ready to play');
+            await netmdService.stop();
 
-            // Start recording and play track
-            await mediaRecorderService?.initStream(deviceId);
-            await mediaRecorderService?.startRecording();
-            await netmdService!.play();
-
-            // Wait until track is finished
-            // await sleep(durationInSec * 1000);
-            await sleepWithProgressCallback(track.duration * 1000, (perc: number) => {
+            for (const [i, track] of tracks.entries()) {
                 dispatch(
                     recordDialogAction.setProgress({
                         trackTotal: tracks.length,
                         trackDone: i,
-                        trackCurrent: perc,
+                        trackCurrent: -1,
                         titleCurrent: track.title ?? '',
                     })
                 );
-            });
 
-            // Stop recording and download the wav
-            await mediaRecorderService?.stopRecording();
-            let title;
-            if (track.title) {
-                title = `${track.index + 1}. ${track.title}`;
-                if (track.fullWidthTitle) {
-                    title += ` (${track.fullWidthTitle})`;
+                // Wait for the track to be ready to play from 0:00
+                await netmdService!.gotoTrack(track.index);
+                await netmdService!.play();
+                console.log('Waiting for track to be ready to play');
+                let position = await netmdService!.getPosition();
+                const expected = [track.index, 0, 0, 1];
+
+                while (position === null || !expected.every((_, i) => expected[i] === position![i])) {
+                    await sleep(250);
+                    position = await netmdService!.getPosition();
                 }
-            } else if (track.fullWidthTitle) {
-                title = `${track.index + 1}. ${track.fullWidthTitle}`;
-            } else {
-                title = `Track ${track.index + 1}`;
+                await netmdService!.pause();
+                await netmdService?.gotoTrack(track.index);
+                console.log('Track is ready to play');
+
+                // Start recording and play track
+                await mediaRecorderService?.initStream(deviceId);
+                await mediaRecorderService?.startRecording();
+                await netmdService!.play();
+
+                // Wait until track is finished
+                // await sleep(durationInSec * 1000);
+                await sleepWithProgressCallback(track.duration * 1000, (perc: number) => {
+                    dispatch(
+                        recordDialogAction.setProgress({
+                            trackTotal: tracks.length,
+                            trackDone: i,
+                            trackCurrent: perc,
+                            titleCurrent: track.title ?? '',
+                        })
+                    );
+                });
+
+                // Stop recording and download the wav
+                await mediaRecorderService?.stopRecording();
+                let title;
+                if (track.title) {
+                    title = `${track.index + 1}. ${track.title}`;
+                    if (track.fullWidthTitle) {
+                        title += ` (${track.fullWidthTitle})`;
+                    }
+                } else if (track.fullWidthTitle) {
+                    title = `${track.index + 1}. ${track.fullWidthTitle}`;
+                } else {
+                    title = `Track ${track.index + 1}`;
+                }
+                mediaRecorderService?.downloadRecorded(`${title}`);
+
+                await mediaRecorderService?.closeStream();
             }
-            mediaRecorderService?.downloadRecorded(`${title}`);
-
-            await mediaRecorderService?.closeStream();
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Recording failed.');
+        } finally {
+            try {
+                await mediaRecorderService?.closeStream();
+            } catch (err) {
+                console.error(err);
+            }
+            try {
+                await netmdService?.stop();
+            } catch (err) {
+                console.error(err);
+            }
+            resetRecordDialog(dispatch);
+            resetAppLoading(dispatch);
         }
-
-        await netmdService!.stop();
-        dispatch(recordDialogAction.setVisible(false));
     };
 }
 
@@ -901,187 +1035,198 @@ export function exportCSV(callback: (blob: Blob, name: string) => void = downloa
         const { netmdService } = serviceRegistry;
         if (!netmdService) return;
         dispatch(appStateActions.setLoading(true));
-        const disc = await netmdService.listContent();
-        const rows: string[][] = [];
-        rows.push([
-            '0', // track index - 0 is disc title
-            '0-0', // No group range
-            '', // No group name
-            '', // No group fw name
-            disc.title ?? '',
-            disc.fullWidthTitle ?? '',
-            '', // no album
-            '', // no artist
-            '' + disc.used,
-            '',
-            '',
-        ]);
-        for (const group of disc.groups) {
-            const groupStart = Math.min(...group.tracks.map((e) => e.index));
-            const groupEnd = Math.max(...group.tracks.map((e) => e.index));
-            const groupRange = group.title === null ? '' : `${groupStart}-${groupEnd}`;
-            for (const track of group.tracks) {
-                rows.push([
-                    '' + (track.index + 1),
-                    groupRange,
-                    group.title ?? '',
-                    group.fullWidthTitle ?? '',
-                    track.title ?? '',
-                    track.fullWidthTitle ?? '',
-                    track.album ?? '',
-                    track.artist ?? '',
-                    '' + track.duration,
-                    track.encoding.codec,
-                    track.encoding.bitrate?.toString() ?? '',
-                ]);
+        try {
+            const disc = await netmdService.listContent();
+            const rows: string[][] = [];
+            rows.push([
+                '0', // track index - 0 is disc title
+                '0-0', // No group range
+                '', // No group name
+                '', // No group fw name
+                disc.title ?? '',
+                disc.fullWidthTitle ?? '',
+                '', // no album
+                '', // no artist
+                '' + disc.used,
+                '',
+                '',
+            ]);
+            for (const group of disc.groups) {
+                const groupStart = Math.min(...group.tracks.map((e) => e.index));
+                const groupEnd = Math.max(...group.tracks.map((e) => e.index));
+                const groupRange = group.title === null ? '' : `${groupStart}-${groupEnd}`;
+                for (const track of group.tracks) {
+                    rows.push([
+                        '' + (track.index + 1),
+                        groupRange,
+                        group.title ?? '',
+                        group.fullWidthTitle ?? '',
+                        track.title ?? '',
+                        track.fullWidthTitle ?? '',
+                        track.album ?? '',
+                        track.artist ?? '',
+                        '' + track.duration,
+                        track.encoding.codec,
+                        track.encoding.bitrate?.toString() ?? '',
+                    ]);
+                }
             }
-        }
-        const csvDocument = [csvHeader.map(e => e[0]), ...rows].map((e) => e.map((q) => q.toString().replace(/,/g, '\\,')).join(',')).join('\n');
+            const csvDocument = [csvHeader.map(e => e[0]), ...rows].map((e) => e.map((q) => q.toString().replace(/,/g, '\\,')).join(',')).join('\n');
 
-        let title;
-        if (disc.title) {
-            title = disc.title;
-            if (disc.fullWidthTitle) {
-                title += ` (${disc.fullWidthTitle})`;
+            let title;
+            if (disc.title) {
+                title = disc.title;
+                if (disc.fullWidthTitle) {
+                    title += ` (${disc.fullWidthTitle})`;
+                }
+            } else if (disc.fullWidthTitle) {
+                title = disc.fullWidthTitle;
+            } else {
+                title = 'Disc';
             }
-        } else if (disc.fullWidthTitle) {
-            title = disc.fullWidthTitle;
-        } else {
-            title = 'Disc';
-        }
 
-        callback(new Blob([csvDocument]), title + '.csv');
-        dispatch(appStateActions.setLoading(false));
+            callback(new Blob([csvDocument]), title + '.csv');
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Export CSV failed.');
+        } finally {
+            resetAppLoading(dispatch);
+        }
     };
 }
 
 export function importCSV(file: File) {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
-        const text = new TextDecoder('utf-8').decode(await file.arrayBuffer());
-        const usesHiMDTitles = getState().main.deviceCapabilities.includes(Capability.himdTitles);
-        const records = text
-            .split('\n')
-            .map((e) => e.trim())
-            .filter((e) => e.length !== 0)
-            .map((e) => e.split(/(?<!\\),/g).map((x) => x.replace(/\\,/g, ',')));
+        try {
+            const text = new TextDecoder('utf-8').decode(await file.arrayBuffer());
+            const usesHiMDTitles = getState().main.deviceCapabilities.includes(Capability.himdTitles);
+            const records = text
+                .split('\n')
+                .map((e) => e.trim())
+                .filter((e) => e.length !== 0)
+                .map((e) => e.split(/(?<!\\),/g).map((x) => x.replace(/\\,/g, ',')));
 
-        if (records.length === 0) {
-            alert('Empty CSV file');
-            return;
-        }
-
-        // Backwards-compatibility
-        if (records[0].every((e, i) => e === csvHeaderOld[i])) {
-            // It's using the old format
-            records[0] = csvHeader.map(e => e[0]);
-            for (let i = 1; i < records.length; i++) {
-                records[i].splice(6, 0, '', ''); // ALBUM, ARTIST
-                records[i].push(''); // BITRATE
-            }
-        }
-
-        if (records[0].some((e, i) => !csvHeader[i].includes(e))) {
-            alert('Malformed CSV file');
-            return;
-        }
-
-        const addedGroupRanges = new Set<string>();
-
-        const isTimeDifferenceAcceptable = (a: number, b: number) => Math.abs(a - b) < 2;
-
-        // Make sure the CSV matches the disc
-        dispatch(appStateActions.setLoading(true));
-        const { netmdService } = serviceRegistry;
-        if (!netmdService) return;
-        const disc = await netmdService.listContent();
-        const ungroupedTracks = getTracks(disc).sort((a, b) => a.index - b.index);
-        if (disc.trackCount !== records.length - 2) {
-            // - 2 - one for the header, second for the disc title / info
-            if (
-                !window.confirm(
-                    `The CSV file describes a disc with ${records.length - 2} tracks.\nThe disc inserted has ${
-                        disc.trackCount
-                    } tracks.\nContinue importing?`
-                )
-            ) {
-                dispatch(appStateActions.setLoading(false));
+            if (records.length === 0) {
+                alert('Empty CSV file');
                 return;
             }
-        }
 
-        await netmdService.wipeDiscTitleInfo();
-
-        for (const [
-            sIndex,
-            grRange,
-            groupName,
-            groupFullWidthName,
-            name,
-            fwName,
-            album,
-            artist,
-            sDuration,
-            codec,
-            bitrate,
-        ] of records.slice(1)) {
-            const index = parseInt(sIndex),
-                duration = parseInt(sDuration),
-                gRange = grRange.replace(/ /g, '');
-            if (index === 0) {
-                // Disc title info
-                await netmdService.renameDisc(name, fwName);
-                continue;
-            }
-            if (!ungroupedTracks[index - 1]) {
-                // Editing track that's not part of the disc.
-                // Skip.
-                continue;
+            // Backwards-compatibility
+            if (records[0].every((e, i) => e === csvHeaderOld[i])) {
+                // It's using the old format
+                records[0] = csvHeader.map(e => e[0]);
+                for (let i = 1; i < records.length; i++) {
+                    records[i].splice(6, 0, '', ''); // ALBUM, ARTIST
+                    records[i].push(''); // BITRATE
+                }
             }
 
-            const currentTrackEncoding = ungroupedTracks[index - 1].encoding;
-            if (
-                !isTimeDifferenceAcceptable(ungroupedTracks[index - 1].duration, duration) ||
-                currentTrackEncoding.codec.toLowerCase() !== codec.toLowerCase() ||
-                (bitrate !== '' && currentTrackEncoding.bitrate !== parseInt(bitrate))
-            ) {
-                const bitrateDescription = bitrate === '' ? '' : ` (${bitrate} kbps)`;
-                const actualBitrateDescription =
-                    currentTrackEncoding.bitrate === undefined ? '' : ` (${currentTrackEncoding.bitrate} kbps)`;
+            if (records[0].some((e, i) => !csvHeader[i].includes(e))) {
+                alert('Malformed CSV file');
+                return;
+            }
+
+            const addedGroupRanges = new Set<string>();
+
+            const isTimeDifferenceAcceptable = (a: number, b: number) => Math.abs(a - b) < 2;
+
+            // Make sure the CSV matches the disc
+            dispatch(appStateActions.setLoading(true));
+            const { netmdService } = serviceRegistry;
+            if (!netmdService) return;
+            const disc = await netmdService.listContent();
+            const ungroupedTracks = getTracks(disc).sort((a, b) => a.index - b.index);
+            if (disc.trackCount !== records.length - 2) {
+                // - 2 - one for the header, second for the disc title / info
                 if (
                     !window.confirm(
-                        `
-                    The CSV file describes track ${index} as a ${secondsToHumanReadable(
-                        duration
-                    )} ${codec}${bitrateDescription} track. The actual track ${index} is a ${secondsToHumanReadable(
-                        ungroupedTracks[index - 1].duration
-                    )} ${currentTrackEncoding.codec}${actualBitrateDescription} track. Label it according to the file?
-                        `.trim()
+                        `The CSV file describes a disc with ${records.length - 2} tracks.\nThe disc inserted has ${
+                            disc.trackCount
+                        } tracks.\nContinue importing?`
                     )
                 ) {
+                    dispatch(appStateActions.setLoading(false));
+                    return;
+                }
+            }
+
+            await netmdService.wipeDiscTitleInfo();
+
+            for (const [
+                sIndex,
+                grRange,
+                groupName,
+                groupFullWidthName,
+                name,
+                fwName,
+                album,
+                artist,
+                sDuration,
+                codec,
+                bitrate,
+            ] of records.slice(1)) {
+                const index = parseInt(sIndex),
+                    duration = parseInt(sDuration),
+                    gRange = grRange.replace(/ /g, '');
+                if (index === 0) {
+                    // Disc title info
+                    await netmdService.renameDisc(name, fwName);
                     continue;
                 }
-            }
+                if (!ungroupedTracks[index - 1]) {
+                    // Editing track that's not part of the disc.
+                    // Skip.
+                    continue;
+                }
 
-            if (gRange !== '') {
-                // Is part of group
-                if (!addedGroupRanges.has(gRange)) {
-                    addedGroupRanges.add(gRange);
-                    const [startS, endS] = gRange.split('-');
-                    const start = parseInt(startS),
-                        end = parseInt(endS),
-                        length = end - start + 1;
-                    await netmdService.addGroup(start, length, groupName, groupFullWidthName);
+                const currentTrackEncoding = ungroupedTracks[index - 1].encoding;
+                if (
+                    !isTimeDifferenceAcceptable(ungroupedTracks[index - 1].duration, duration) ||
+                    currentTrackEncoding.codec.toLowerCase() !== codec.toLowerCase() ||
+                    (bitrate !== '' && currentTrackEncoding.bitrate !== parseInt(bitrate))
+                ) {
+                    const bitrateDescription = bitrate === '' ? '' : ` (${bitrate} kbps)`;
+                    const actualBitrateDescription =
+                        currentTrackEncoding.bitrate === undefined ? '' : ` (${currentTrackEncoding.bitrate} kbps)`;
+                    if (
+                        !window.confirm(
+                            `
+                    The CSV file describes track ${index} as a ${secondsToHumanReadable(
+                            duration
+                        )} ${codec}${bitrateDescription} track. The actual track ${index} is a ${secondsToHumanReadable(
+                            ungroupedTracks[index - 1].duration
+                        )} ${currentTrackEncoding.codec}${actualBitrateDescription} track. Label it according to the file?
+                        `.trim()
+                        )
+                    ) {
+                        continue;
+                    }
+                }
+
+                if (gRange !== '') {
+                    // Is part of group
+                    if (!addedGroupRanges.has(gRange)) {
+                        addedGroupRanges.add(gRange);
+                        const [startS, endS] = gRange.split('-');
+                        const start = parseInt(startS),
+                            end = parseInt(endS),
+                            length = end - start + 1;
+                        await netmdService.addGroup(start, length, groupName, groupFullWidthName);
+                    }
+                }
+
+                if (usesHiMDTitles) {
+                    await netmdService.renameTrack(index - 1, { title: name, album, artist });
+                } else {
+                    await netmdService.renameTrack(index - 1, name, fwName);
                 }
             }
 
-            if (usesHiMDTitles) {
-                await netmdService.renameTrack(index - 1, { title: name, album, artist });
-            } else {
-                await netmdService.renameTrack(index - 1, name, fwName);
-            }
+            await listContent()(dispatch);
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Import CSV failed.');
+        } finally {
+            resetAppLoading(dispatch);
         }
-
-        listContent()(dispatch);
     };
 }
 
@@ -1127,6 +1272,9 @@ export function openRecognizeTrackDialog(selectedTracks: number[]) {
 export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 'line-in', inputModeConfiguration?: { deviceId?: string }) {
     const trackEntries = [..._trackEntries];
     return async function (dispatch: AppDispatch, getState: () => RootState) {
+        let factoryDownloadPrepared = false;
+        const { mediaRecorderService, netmdService } = serviceRegistry;
+        try {
         const shazam = new Shazam();
 
         // Bypass CORS
@@ -1158,9 +1306,10 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
                 return;
             }
             await serviceRegistry.netmdFactoryService!.prepareDownload(getState().appState.factoryModeUseSlowerExploit);
+            factoryDownloadPrepared = true;
         }
 
-        const { netmdService, mediaRecorderService, netmdFactoryService } = serviceRegistry;
+        const { netmdFactoryService } = serviceRegistry;
         if (mode === 'exploits' && !netmdFactoryService) return;
         if (mode === 'line-in' && (!netmdService || !mediaRecorderService)) return;
 
@@ -1290,10 +1439,32 @@ export function recognizeTracks(_trackEntries: TitleEntry[], mode: 'exploits' | 
             }
             if (getState().songRecognitionProgressDialog.cancelled) break;
         }
-        if (mode === 'exploits') await serviceRegistry.netmdFactoryService!.finalizeDownload();
-        dispatch(
-            batchActions([songRecognitionDialogActions.setTitles(trackEntries), songRecognitionProgressDialogActions.setVisible(false)])
-        );
+        if (factoryDownloadPrepared) await serviceRegistry.netmdFactoryService!.finalizeDownload();
+        factoryDownloadPrepared = false;
+        dispatch(batchActions([songRecognitionDialogActions.setTitles(trackEntries)]));
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Song recognition failed.');
+        } finally {
+            if (factoryDownloadPrepared) {
+                try {
+                    await serviceRegistry.netmdFactoryService!.finalizeDownload();
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+            try {
+                await mediaRecorderService?.closeStream();
+            } catch (err) {
+                console.error(err);
+            }
+            try {
+                await netmdService?.stop();
+            } catch (err) {
+                console.error(err);
+            }
+            resetSongRecognitionProgressDialog(dispatch);
+            resetAppLoading(dispatch);
+        }
     };
 }
 
@@ -1302,13 +1473,26 @@ export function flushDevice() {
         const { netmdService } = serviceRegistry;
         if (!netmdService) return;
         dispatch(appStateActions.setLoading(true));
-        await netmdService.flush();
-        dispatch(batchActions([appStateActions.setLoading(false), mainActions.setFlushable(false)]));
+        try {
+            await netmdService.flush();
+            dispatch(mainActions.setFlushable(false));
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, 'Flush device failed.');
+        } finally {
+            resetAppLoading(dispatch);
+        }
     };
 }
 
 export function convertAndUpload(files: TitledFile[], format: Codec, additionalParameters?: { enableReplayGain: boolean }) {
     return async function (dispatch: AppDispatch, getState: () => RootState) {
+        let screenWakeLock: any = null;
+        const originalTitle = document.title;
+        let monoUploadEnabled = false;
+        let uploadPrepared = false;
+        let shouldRefreshContent = false;
+        let uploadErrorMessage = '';
+        try {
         const deviceCapabilities = getState().main.deviceCapabilities;
         if (files.some((e) => e.forcedEncoding?.codec === 'SPS' || e.forcedEncoding?.codec === 'SPM')) {
             const removeSPFiles = () =>
@@ -1359,11 +1543,11 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
 
             // All good - load the exploit
             await netmdFactoryService!.enableMonoUpload(true);
+            monoUploadEnabled = true;
         }
 
         console.log(await netmdService?.getDeviceStatus());
 
-        let screenWakeLock: any = null;
         if ('wakeLock' in navigator) {
             try {
                 screenWakeLock = await (navigator as any).wakeLock.request('screen');
@@ -1377,13 +1561,13 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
             batchActions([
                 uploadDialogActions.setVisible(true),
                 uploadDialogActions.setCancelUpload(false),
+                uploadDialogActions.setProgressStartedAt(new Date().getTime()),
                 uploadDialogActions.setWriteProgress({ written: 0, encrypted: 0, total: 1 }),
             ])
         );
 
         let lastUploadProgress = new Date().getTime(),
             lastConvertProgress = lastUploadProgress;
-        const originalTitle = document.title;
         let totalBytesAllTracks = 0,
             totalBytesCalc = 0,
             bytesSentFromPrevTracks = 0,
@@ -1392,17 +1576,21 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
         const updateUploadProgressCallback = ({ written, encrypted, total }: { written: number; encrypted: number; total: number }) => {
             const now = new Date().getTime();
             if (now - lastUploadProgress > 200) {
-                queueMicrotask(() => dispatch(uploadDialogActions.setWriteProgress({ written, encrypted, total })));
+                queueMicrotask(() => dispatch(uploadDialogActions.setWriteProgress({ written, encrypted, total, timestamp: now })));
                 lastUploadProgress = now;
                 bytesSentFromThisTrack = written;
                 updateTitle();
             }
         };
 
-        const updateEncodeProgressCallback = (object: { state: number, total: number }) => {
+        const markCurrentUploadComplete = () => {
+            dispatch(uploadDialogActions.setWriteProgress({ written: 1, encrypted: 1, total: 1, timestamp: new Date().getTime() }));
+        };
+
+        const updateEncodeProgressCallback = (object: { state: number; total: number }) => {
             const now = new Date().getTime();
             if (now - lastConvertProgress > 200) {
-                queueMicrotask(() => dispatch(uploadDialogActions.setTrackEncodingProgress(object)));
+                queueMicrotask(() => dispatch(uploadDialogActions.setTrackEncodingProgress({ ...object, timestamp: now })));
                 lastConvertProgress = now;
                 updateTitle();
             }
@@ -1456,10 +1644,13 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
             titleConverting: '',
         };
         const updateTrack = () => {
-            dispatch(batchActions([
-                uploadDialogActions.setTrackProgress(trackUpdate),
-                uploadDialogActions.setTrackEncodingProgress({ state: 0, total: 0 }),
-            ]));
+            const timestamp = new Date().getTime();
+            dispatch(
+                batchActions([
+                    uploadDialogActions.setTrackProgress({ ...trackUpdate, timestamp }),
+                    uploadDialogActions.setTrackEncodingProgress({ state: 0, total: 0, timestamp }),
+                ])
+            );
             updateTitle();
         };
         updateTrack();
@@ -1529,7 +1720,7 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
                                 resolve({ file: f, data: data });
                             } catch (err) {
                                 error = err;
-                                errorMessage = `${f.file.name}: Unsupported or unrecognized format`;
+                                uploadErrorMessage = `${f.file.name}: Unsupported or unrecognized format`;
                                 reject(err);
                             }
                         }
@@ -1566,9 +1757,11 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
             netmdSpec.getRemainingCharactersForTitles(disc);
 
         let error: any;
-        let errorMessage = ``;
+        let successfulUploads = 0;
         let i = 1;
         await netmdService.prepareUpload();
+        uploadPrepared = true;
+        shouldRefreshContent = true;
 
         for await (const item of conversionIterator(files)) {
             if (hasUploadBeenCancelled()) {
@@ -1627,15 +1820,19 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
                     );
                 } catch (err) {
                     error = err;
-                    errorMessage = `${file.file.name}: Error uploading to device. There might not be enough space left, or an unknown error occurred.`;
+                    uploadErrorMessage = `${file.file.name}: Error uploading to device. There might not be enough space left, or an unknown error occurred.`;
                     break;
                 }
             }
+            markCurrentUploadComplete();
+            successfulUploads += 1;
         }
         await netmdService?.finalizeUpload();
+        uploadPrepared = false;
 
-        if (format.codec === 'SPM' && !deviceCapabilities.includes(Capability.nativeMonoUpload)) {
-            netmdFactoryService!.enableMonoUpload(false);
+        if (monoUploadEnabled) {
+            await netmdFactoryService!.enableMonoUpload(false);
+            monoUploadEnabled = false;
         }
 
         document.title = originalTitle;
@@ -1646,14 +1843,47 @@ export function convertAndUpload(files: TitledFile[], format: Codec, additionalP
             console.error(error);
             actionToDispatch = actionToDispatch.concat([
                 errorDialogAction.setVisible(true),
-                errorDialogAction.setErrorMessage(errorMessage),
+                errorDialogAction.setErrorMessage(uploadErrorMessage),
             ]);
         }
 
         dispatch(batchActions(actionToDispatch));
-        showFinishedNotificationIfNeeded();
+        if (!error && successfulUploads === files.length && !hasUploadBeenCancelled()) {
+            showFinishedNotificationIfNeeded();
+        }
         releaseScreenLockIfPresent();
-        listContent()(dispatch);
+        await listContent()(dispatch);
+        } catch (err) {
+            dispatchErrorDialog(dispatch, err, uploadErrorMessage || 'Upload failed.');
+        } finally {
+            if (uploadPrepared) {
+                try {
+                    await serviceRegistry.netmdService?.finalizeUpload();
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+            if (monoUploadEnabled) {
+                try {
+                    await serviceRegistry.netmdFactoryService!.enableMonoUpload(false);
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+            document.title = originalTitle;
+            if (screenWakeLock) {
+                try {
+                    await screenWakeLock.release();
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+            resetUploadDialog(dispatch);
+            resetAppLoading(dispatch);
+            if (shouldRefreshContent) {
+                await listContent()(dispatch);
+            }
+        }
     };
 }
 

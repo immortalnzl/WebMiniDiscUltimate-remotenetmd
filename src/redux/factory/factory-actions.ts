@@ -4,6 +4,7 @@ import { actions as factoryActions } from '../factory/factory-feature';
 import { batchActions } from '../../frontend-utils';
 import { AppDispatch, RootState } from '../store';
 import { actions as appStateActions } from '../app-feature';
+import { actions as errorDialogActions } from '../error-dialog-feature';
 import serviceRegistry from '../../services/registry';
 import { convertToWAV, createDownloadTrackName, downloadBlob, getTracks, Promised } from '../../utils';
 import { concatUint8Arrays } from 'netmd-js/dist/utils';
@@ -12,6 +13,20 @@ import { parseTOC, getTitleByTrackNumber, reconstructTOC, updateFlagAllFragments
 import { downloadTracks, exportCSV } from '../actions';
 import JSZip from 'jszip';
 import { AtracRecoveryConfig } from 'netmd-exploits';
+
+const getErrorMessage = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
+
+const dispatchFactoryErrorDialog = (dispatch: AppDispatch, err: unknown, fallback: string) => {
+    console.error(err);
+    dispatch(
+        batchActions([
+            factoryProgressDialogActions.setVisible(false),
+            appStateActions.setLoading(false),
+            errorDialogActions.setVisible(true),
+            errorDialogActions.setErrorMessage(getErrorMessage(err, fallback)),
+        ])
+    );
+};
 
 export function initializeFactoryMode() {
     return async function(dispatch: AppDispatch) {
@@ -229,6 +244,100 @@ export function uploadToc(file: File) {
         }
         const toc = parseTOC(...sectors);
         dispatch(batchActions([factoryActions.setModified(true), factoryActions.setToc(toc), appStateActions.setLoading(false)]));
+    };
+}
+
+export function downloadEEPROMBackup(callback: (blob: Blob, name: string) => void = downloadBlob) {
+    return async function(dispatch: AppDispatch, getState: () => RootState) {
+        try {
+            await initializeFactoryMode()(dispatch);
+            const expectedSize = await serviceRegistry.netmdFactoryService!.getEEPROMSize();
+            dispatch(
+                batchActions([
+                    factoryProgressDialogActions.setDetails({
+                        name: 'Backing up EEPROM',
+                        units: 'bytes',
+                    }),
+                    factoryProgressDialogActions.setProgress({
+                        current: 0,
+                        total: expectedSize,
+                        additionalInfo: '',
+                    }),
+                    factoryProgressDialogActions.setCanBeCancelled(false),
+                    factoryProgressDialogActions.setVisible(true),
+                ])
+            );
+
+            const eepromData = await serviceRegistry.netmdFactoryService!.readEEPROM(
+                ({ readBytes, totalBytes }: { readBytes: number; totalBytes: number }) => {
+                    dispatch(
+                        factoryProgressDialogActions.setProgress({
+                            current: readBytes,
+                            total: totalBytes,
+                        })
+                    );
+                }
+            );
+
+            if (eepromData.byteLength !== expectedSize) {
+                throw new Error(`Invalid EEPROM backup size. Expected ${expectedSize} bytes, got ${eepromData.byteLength} bytes.`);
+            }
+
+            const firmwareVersion = getState().factory.firmwareVersion;
+            const fileName = `eeprom_${getState().main.deviceName}_${firmwareVersion}.bin`;
+            callback(new Blob([eepromData]), fileName);
+            dispatch(factoryProgressDialogActions.setVisible(false));
+        } catch (err) {
+            dispatchFactoryErrorDialog(dispatch, err, 'EEPROM backup failed.');
+        }
+    };
+}
+
+export function restoreEEPROMBackup(file: File) {
+    return async function(dispatch: AppDispatch) {
+        try {
+            await initializeFactoryMode()(dispatch);
+            const expectedSize = await serviceRegistry.netmdFactoryService!.getEEPROMSize();
+            if (file.size !== expectedSize) {
+                throw new Error(`Invalid EEPROM backup size. Expected ${expectedSize} bytes, got ${file.size} bytes.`);
+            }
+
+            const eepromData = new Uint8Array(await file.arrayBuffer());
+            if (eepromData.byteLength !== expectedSize) {
+                throw new Error(`Invalid EEPROM backup size. Expected ${expectedSize} bytes, got ${eepromData.byteLength} bytes.`);
+            }
+
+            dispatch(
+                batchActions([
+                    factoryProgressDialogActions.setDetails({
+                        name: 'Restoring EEPROM',
+                        units: 'bytes',
+                    }),
+                    factoryProgressDialogActions.setProgress({
+                        current: 0,
+                        total: expectedSize,
+                        additionalInfo: '',
+                    }),
+                    factoryProgressDialogActions.setCanBeCancelled(false),
+                    factoryProgressDialogActions.setVisible(true),
+                ])
+            );
+
+            await serviceRegistry.netmdFactoryService!.writeEEPROM(
+                eepromData,
+                ({ writtenBytes, totalBytes }: { writtenBytes: number; totalBytes: number }) => {
+                    dispatch(
+                        factoryProgressDialogActions.setProgress({
+                            current: writtenBytes,
+                            total: totalBytes,
+                        })
+                    );
+                }
+            );
+            dispatch(factoryProgressDialogActions.setVisible(false));
+        } catch (err) {
+            dispatchFactoryErrorDialog(dispatch, err, 'EEPROM restore failed.');
+        }
     };
 }
 export type BadSectorResponse = Promised<ReturnType<AtracRecoveryConfig['handleBadSector'] extends infer R | undefined ? R : never>>;

@@ -11,7 +11,9 @@ import {
     downloadRam,
     downloadRom,
     downloadToc,
+    downloadEEPROMBackup,
     uploadToc,
+    restoreEEPROMBackup,
     readToc,
     runTetris,
     stripSCMS,
@@ -71,7 +73,8 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
 
     const githubLinkRef = React.useRef<null | HTMLAnchorElement>(null);
     const helpLinkRef = React.useRef<null | HTMLAnchorElement>(null);
-    const hiddenFileInputRef = React.useRef<null | HTMLInputElement>(null);
+    const hiddenTOCFileInputRef = React.useRef<null | HTMLInputElement>(null);
+    const hiddenEEPROMFileInputRef = React.useRef<null | HTMLInputElement>(null);
     const [menuAnchorEl, setMenuAnchorEl] = React.useState<null | HTMLElement>(null);
     const [submenuAnchorEl, setSubmenuAnchorEl] = React.useState<null | HTMLElement>(null);
     const menuOpen = Boolean(menuAnchorEl);
@@ -111,9 +114,19 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
     }, [dispatch, handleMenuClose]);
 
     const handleTOCUpload = useCallback(
-        (event: any) => {
-            const file = event.target.files[0];
-            dispatch(uploadToc(file));
+        (event: React.ChangeEvent<HTMLInputElement>) => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            if (file) dispatch(uploadToc(file));
+        },
+        [dispatch]
+    );
+
+    const handleEEPROMRestore = useCallback(
+        (event: React.ChangeEvent<HTMLInputElement>) => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            if (file) dispatch(restoreEEPROMBackup(file));
         },
         [dispatch]
     );
@@ -162,15 +175,25 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
+    const handleBackupEEPROM = useCallback(() => {
+        dispatch(downloadEEPROMBackup());
+        handleMenuClose();
+    }, [dispatch, handleMenuClose]);
+
+    const handleRestoreEEPROM = useCallback(() => {
+        hiddenEEPROMFileInputRef.current?.click();
+        handleMenuClose();
+    }, [hiddenEEPROMFileInputRef, handleMenuClose]);
+
     const handleDownloadTOC = useCallback(() => {
         dispatch(downloadToc());
         handleMenuClose();
     }, [dispatch, handleMenuClose]);
 
     const handleUploadTOC = useCallback(() => {
-        hiddenFileInputRef.current?.click();
+        hiddenTOCFileInputRef.current?.click();
         handleMenuClose();
-    }, [hiddenFileInputRef, handleMenuClose]);
+    }, [hiddenTOCFileInputRef, handleMenuClose]);
 
     const handlePlayTetris = useCallback(() => {
         dispatch(runTetris());
@@ -270,6 +293,22 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
                 <CodeIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Read Firmware</ListItemText>
+        </MenuItem>
+    );
+    menuItems.push(
+        <MenuItem key="backupEEPROM" onClick={handleBackupEEPROM}>
+            <ListItemIcon className={classes.listItemIcon}>
+                <GetAppIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Backup EEPROM</ListItemText>
+        </MenuItem>
+    );
+    menuItems.push(
+        <MenuItem key="restoreEEPROM" onClick={handleRestoreEEPROM}>
+            <ListItemIcon className={classes.listItemIcon}>
+                <PublishIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Restore EEPROM</ListItemText>
         </MenuItem>
     );
     menuItems.push(<Divider key="feature-divider-2" />);
@@ -451,7 +490,14 @@ export const FactoryTopMenu = function(props: { onClick?: () => void }) {
             >
                 {submenuItems}
             </Menu>
-            <input type="file" ref={hiddenFileInputRef} style={{ display: 'none' }} onChange={handleTOCUpload} />
+            <input type="file" ref={hiddenTOCFileInputRef} style={{ display: 'none' }} onChange={handleTOCUpload} />
+            <input
+                type="file"
+                accept=".bin,application/octet-stream"
+                ref={hiddenEEPROMFileInputRef}
+                style={{ display: 'none' }}
+                onChange={handleEEPROMRestore}
+            />
         </React.Fragment>
     );
 };

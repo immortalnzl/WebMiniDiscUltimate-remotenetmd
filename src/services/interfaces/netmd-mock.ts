@@ -519,6 +519,28 @@ class NetMDFactoryMockService implements NetMDFactoryService {
         return new Uint8Array(Buffer.from('***MOCK DATA***'));
     }
 
+    async getEEPROMSize() {
+        return 0x2000;
+    }
+
+    async readEEPROM(callback?: (progress: { readBytes: number; totalBytes: number }) => void): Promise<Uint8Array<ArrayBuffer>> {
+        const data = new Uint8Array(this.getMockEEPROMSize()).fill(0xff);
+        callback?.({ readBytes: data.byteLength, totalBytes: data.byteLength });
+        return data;
+    }
+
+    async writeEEPROM(data: Uint8Array, callback?: (progress: { writtenBytes: number; totalBytes: number }) => void) {
+        const eepromSize = await this.getEEPROMSize();
+        if (data.byteLength !== eepromSize) {
+            throw new Error(`Invalid EEPROM backup size. Expected ${eepromSize} bytes, got ${data.byteLength} bytes.`);
+        }
+        callback?.({ writtenBytes: data.byteLength, totalBytes: data.byteLength });
+    }
+
+    private getMockEEPROMSize() {
+        return 0x2000;
+    }
+
     async exploitDownloadTrack(
         track: number,
         nerawDownload: boolean,

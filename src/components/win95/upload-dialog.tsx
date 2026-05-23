@@ -17,6 +17,14 @@ export const W95UploadDialog = (props: {
     progressValue: number;
     bufferValue: number;
     convertedValue: number;
+    aggregateProgress: {
+        completedTracks: number;
+        totalTracks: number;
+        progressPercent: number;
+        elapsedMs: number;
+        estimatedRemainingMs: number | null;
+    };
+    formatDuration: (milliseconds: number | null) => string;
     notifyWhenFinished: boolean;
     hasNotificationSupport: boolean;
     handleNotifyWhenFinishedChanged: () => void;
@@ -33,6 +41,15 @@ export const W95UploadDialog = (props: {
                 </WindowHeader>
                 <DialogWindowContent>
                     <div style={{ width: '100%' }}>
+                        Overall progress: {props.aggregateProgress.completedTracks} of {props.aggregateProgress.totalTracks} tracks complete
+                    </div>
+                    <Progress value={props.aggregateProgress.progressPercent} />
+                    <div style={{ width: '100%', marginTop: 4 }}>
+                        {props.aggregateProgress.progressPercent}% | Elapsed: {props.formatDuration(props.aggregateProgress.elapsedMs)} |
+                        Remaining: {props.formatDuration(props.aggregateProgress.estimatedRemainingMs)}
+                    </div>
+
+                    <div style={{ width: '100%', marginTop: 16 }}>
                         {props.convertedValue === 100 && props.trackConverting === props.trackTotal
                             ? `Conversion completed`
                             : `Converting ${props.trackConverting + 1} of ${props.trackTotal}: ${props.titleConverting}`}

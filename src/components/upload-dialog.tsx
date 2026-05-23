@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { useDispatch } from '../frontend-utils';
 import { useShallowEqualSelector } from '../frontend-utils';
 
-import { actions as uploadDialogActions } from '../redux/upload-dialog-feature';
+import { actions as uploadDialogActions, selectAggregateUploadProgress } from '../redux/upload-dialog-feature';
 
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -41,6 +41,25 @@ const Transition = React.forwardRef(function Transition(props: SlideProps, ref: 
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
+const formatDuration = (milliseconds: number | null) => {
+    if (milliseconds === null) {
+        return 'calculating...';
+    }
+
+    const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+    }
+    if (minutes > 0) {
+        return `${minutes}m ${seconds}s`;
+    }
+    return `${seconds}s`;
+};
+
 export const UploadDialog = (props: {}) => {
     const { classes } = useStyles();
     const dispatch = useDispatch();
@@ -61,6 +80,7 @@ export const UploadDialog = (props: {}) => {
         trackEncodeProgress,
         trackEncodeProgressOutOf,
     } = useShallowEqualSelector((state) => state.uploadDialog);
+    const aggregateProgress = useShallowEqualSelector(selectAggregateUploadProgress);
     const { vintageMode, notifyWhenFinished, hasNotificationSupport } = useShallowEqualSelector((state) => state.appState);
 
     const handleCancelUpload = useCallback(() => {
@@ -74,7 +94,8 @@ export const UploadDialog = (props: {}) => {
     const progressValue = Math.floor((writtenProgress / totalProgress) * 100);
     const bufferValue = Math.floor((encryptedProgress / totalProgress) * 100);
     const convertedValue = Math.floor((trackConverting / trackTotal) * 100);
-    const currentTrackConversionProgress = trackEncodeProgressOutOf === 0 ? undefined : Math.floor((trackEncodeProgress / trackEncodeProgressOutOf) * 100);
+    const currentTrackConversionProgress =
+        trackEncodeProgressOutOf === 0 ? undefined : Math.floor((trackEncodeProgress / trackEncodeProgressOutOf) * 100);
 
     if (vintageMode) {
         const p = {
@@ -94,6 +115,8 @@ export const UploadDialog = (props: {}) => {
             progressValue,
             bufferValue,
             convertedValue,
+            aggregateProgress,
+            formatDuration,
             notifyWhenFinished,
             hasNotificationSupport,
             handleNotifyWhenFinishedChanged,
@@ -111,20 +134,34 @@ export const UploadDialog = (props: {}) => {
         >
             <DialogTitle id="alert-dialog-slide-title">Recording...</DialogTitle>
             <DialogContent>
-                <DialogContentText id="alert-dialog-slide-description">
+                <DialogContentText>
+                    Overall progress: {aggregateProgress.completedTracks} of {aggregateProgress.totalTracks} tracks complete
+                </DialogContentText>
+                <LinearProgress
+                    className={classes.progressBar}
+                    variant="determinate"
+                    color="primary"
+                    value={aggregateProgress.progressPercent}
+                />
+                <Box className={classes.progressPerc}>
+                    {aggregateProgress.progressPercent}% | Elapsed: {formatDuration(aggregateProgress.elapsedMs)} | Remaining:{' '}
+                    {formatDuration(aggregateProgress.estimatedRemainingMs)}
+                </Box>
+
+                <DialogContentText id="alert-dialog-slide-description" className={classes.uploadLabel}>
                     {convertedValue === 100 && trackConverting === trackTotal
                         ? `Conversion completed`
                         : `Converting ${trackConverting + 1} of ${trackTotal}: ${titleConverting}`}
                 </DialogContentText>
                 <LinearProgress
                     className={classes.progressBar}
-                    variant={((currentTrackConversionProgress ?? convertedValue) === 0) ? 'indeterminate' : 'determinate'}
+                    variant={(currentTrackConversionProgress ?? convertedValue) === 0 ? 'indeterminate' : 'determinate'}
                     color="primary"
                     value={currentTrackConversionProgress ?? convertedValue}
                 />
                 <Box className={classes.progressPerc}>{currentTrackConversionProgress ?? convertedValue}%</Box>
 
-                <DialogContentText id="alert-dialog-slide-description" className={classes.uploadLabel}>
+                <DialogContentText className={classes.uploadLabel}>
                     Uploading {trackCurrent} of {trackTotal}: {titleCurrent}
                 </DialogContentText>
                 <LinearProgress
