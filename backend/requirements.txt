@@ -4,3 +4,4 @@ mutagen
 aiofiles
 python-multipart
 requests
+httpx
