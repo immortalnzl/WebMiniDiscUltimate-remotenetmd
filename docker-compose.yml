@@ -24,6 +24,7 @@ services:
     environment:
       - MUSIC_DIR=/music
       - DOTENV_PATH=/app/.env
+      - REMOTEMD_URL=http://remotemd:11396
     volumes:
       - music_volume:/music:ro
       - ./.env:/app/.env
@@ -32,6 +33,15 @@ services:
     ports:
       - "8001:8000"
     restart: unless-stopped
+  remotemd:
+  image: seedstohr/remotenetmd-docker:latest
+  container_name: remotemd
+  restart: unless-stopped
+  privileged: true
+  volumes:
+    - "/dev:/dev:rw"
+  ports:
+    - "11396:11396" 
 
 volumes:
   music_volume:
