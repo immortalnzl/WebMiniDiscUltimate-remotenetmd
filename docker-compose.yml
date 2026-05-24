@@ -13,8 +13,8 @@ services:
     build: .
     container_name: webminidisc-frontend
     ports:
-      - "8080:80"
-      - "8443:443"
+      - "5080:80"
+      - "5443:443"
     restart: unless-stopped
 
   backend:
